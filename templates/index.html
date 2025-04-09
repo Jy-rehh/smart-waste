@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32-CAM Object Detection Stream</title>
 </head>
 <body>
     <h1>ESP32-CAM Object Detection</h1>
-    <img src="/video_feed" width="640" height="480">  <!-- Video feed from Flask server -->
+    <img src="{{ url_for('video_feed') }}" width="640" height="480">
 </body>
 </html>
