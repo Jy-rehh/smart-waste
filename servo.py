@@ -1,18 +1,24 @@
-from gpiozero import Servo
-from gpiozero.pins.pigpio import PiGPIOFactory
+# We imports the GPIO module
+import RPi.GPIO as GPIO
+# We import the command sleep from time
 from time import sleep
 
-# Use the pigpio pin factory
-factory = PiGPIOFactory()
+# Stops all warnings from appearing
+GPIO.setwarnings(False)
 
-# Initialize the servo on the GPIO pin, in this case, GPIO17
-servo = Servo(17, pin_factory=factory)
+# We name all the pins on BOARD mode
+GPIO.setmode(GPIO.BOARD)
+# Set an output for the PWM Signal
+GPIO.setup(16, GPIO.OUT)
 
-# Sweep the servo back and forth
-while True:
-    servo.min()  # Move the servo to its minimum position
-    sleep(1)
-    servo.max()  # Move the servo to its maximum position
-    sleep(1)
-    servo.mid()  # Move the servo to its neutral/middle position
-    sleep(1)
+# Set up the PWM on pin #16 at 50Hz
+pwm = GPIO.PWM(16, 50)
+pwm.start(0) # Start the servo with 0 duty cycle ( at 0 deg position )
+pwm.ChangeDutyCycle(5) # Tells the servo to turn to the left ( -90 deg position )
+sleep(0.5) # Tells the servo to Delay for 5sec
+pwm.ChangeDutyCycle(7.5) # Tells the servo to turn to the neutral position ( at 0 deg position )
+sleep(0.5) # Tells the servo to Delay for 5sec
+pwm.ChangeDutyCycle(10) # Tells the servo to turn to the right ( +90 deg position )
+sleep(0.5) # Tells the servo to Delay for 5sec
+pwm.stop(0) # Stop the servo with 0 duty cycle ( at 0 deg position )
+GPIO.cleanup() # Clean up all the ports we've used.
