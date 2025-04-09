@@ -1,13 +1,17 @@
 import threading
 import cv2
+import serial
 import time
 from ultralytics import YOLO
 from gpiozero import Servo
-from time import sleep
+import matplotlib.pyplot as plt
 
-# Set up the Servo (GPIO pin 17 for example)
-servo_left = Servo(17)  # Move left for plastic bottle
-servo_right = Servo(18)  # Move right for non-plastic
+# Serial connection to Arduino (if needed)
+# arduino = serial.Serial('COM5', 9600, timeout=1)
+# time.sleep(2)  # Wait for Arduino to be ready
+
+# Initialize the servo pin on the Raspberry Pi (GPIO pin 17 is used here, adjust as needed)
+servo = Servo(17)
 
 # Load YOLO model
 model = YOLO('yolov8n.pt')
@@ -75,21 +79,29 @@ while True:
     # Decide label based on detection
     if plastic_detected:
         detected_label = "PLASTIC"
-        servo_left.value = 1  # Move servo to the left
-        servo_right.value = None  # Reset the right servo
+        servo.value = -1  # Move servo to the left (adjust value based on your servo setup)
+        print(f"✅ {detected_label} detected. Servo moved to the left.")
     elif non_plastic_detected:
         detected_label = "NON_PLASTIC"
-        servo_right.value = 1  # Move servo to the right
-        servo_left.value = None  # Reset the left servo
+        servo.value = 1  # Move servo to the right (adjust value based on your servo setup)
+        print(f"❌ {detected_label} detected. Servo moved to the right.")
 
-    # Wait for the servo to move before detecting again
-    sleep(1)  # Adjust as needed
+    # Show the frame using matplotlib
+    plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    plt.axis('off')  # Hide the axis
+    plt.show(block=False)
+    plt.pause(0.001)  # Pause to allow the plot to update
 
-    # Show frame
-    cv2.imshow('ESP32-CAM Object Detection', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    # Optional: Send label to Arduino (if needed)
+    # current_time = time.time()
+    # if detected_label and (current_time - last_sent_time) >= detection_cooldown:
+    #     arduino.write((detected_label + "\n").encode())
+    #     print(f"✅ {detected_label} sent to Arduino.")
+    #     last_sent_time = current_time
+
+    # Wait for a short time before processing the next frame
+    time.sleep(0.1)
 
 # Cleanup
 cap.release()
-cv2.destroyAllWindows()
+# arduino.close()  # Close the serial connection if used
