@@ -17,22 +17,16 @@ pi.set_mode(servo_pin, pigpio.OUTPUT)
 
 # LCD setup
 import smbus
-I2C_ADDR = 0x27
+from time import sleep
+
+# LCD setup (24x4 LCD)
+I2C_ADDR = 0x27  # Ensure this matches your device's address
 bus = smbus.SMBus(1)
-LCD_WIDTH = 16
+LCD_WIDTH = 24  # For 24 characters per line
 
 # Define the modes for command and character
 LCD_CMD = 0x00  # For sending command to the LCD
 LCD_CHR = 0x01  # For sending character to the LCD
-
-def lcd_init():
-    sleep(0.5)
-    lcd_byte(0x33, LCD_CMD)
-    lcd_byte(0x32, LCD_CMD)
-    lcd_byte(0x06, LCD_CMD)
-    lcd_byte(0x0C, LCD_CMD)
-    lcd_byte(0x01, LCD_CMD)
-    sleep(0.5)
 
 def lcd_byte(bits, mode):
     bus.write_byte(I2C_ADDR, mode)
@@ -45,7 +39,7 @@ def lcd_string(message, line):
         if i < len(message):
             lcd_byte(ord(message[i]), LCD_CHR)
         else:
-            lcd_byte(0x20, LCD_CHR)
+            lcd_byte(0x20, LCD_CHR)  # Fill with spaces if the message is shorter than 24 characters
 
 def display_message(message):
     lcd_string(message, 0)  # Display message on the first line
