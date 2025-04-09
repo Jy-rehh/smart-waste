@@ -5,19 +5,20 @@ import RPi.GPIO as GPIO
 from ultralytics import YOLO
 from gpiozero import Servo
 from time import sleep
+import smbus
 
 # Setup GPIO pins for Servo control (Change pin number as needed)
 servo_pin = 17  # Example GPIO pin for servo motor
 servo = Servo(servo_pin)
 
-# Setup LCD (using I2C LCD, change the address if needed)
-import smbus
-from time import sleep
-
 # LCD I2C setup
 I2C_ADDR = 0x27  # Replace with your LCD I2C address
 bus = smbus.SMBus(1)
 LCD_WIDTH = 16  # Maximum characters per line
+
+# LCD Constants
+LCD_CMD = 0
+LCD_CHR = 1
 
 def lcd_init():
     sleep(0.5)
@@ -40,10 +41,6 @@ def lcd_string(message, line):
             lcd_byte(ord(message[i]), LCD_CHR)
         else:
             lcd_byte(0x20, LCD_CHR)
-
-# LCD Constants
-LCD_CMD = 0
-LCD_CHR = 1
 
 # Function to display messages on LCD
 def display_message(message):
