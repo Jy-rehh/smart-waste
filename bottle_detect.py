@@ -112,13 +112,13 @@ while True:
         detected_label = "PLASTIC"
         display_message("Plastic Bottle")
         sleep(1)
-        display_message("Accepting...")
+        display_message("Accepting...")  # Ensure that it is updated clearly
         move_servo(1)  # Move to accepting position
     elif non_plastic_detected:
         detected_label = "NON_PLASTIC"
         display_message("Not a Plastic")
         sleep(1)
-        display_message("Rejecting...")
+        display_message("Rejecting...")  # Ensure that it is updated clearly
         move_servo(0)  # Move to rejecting position
 
     sleep(2)  # Hold for 2 seconds
@@ -126,6 +126,8 @@ while True:
 
     if detected_label:
         last_sent_time = time.time()
+    
+    # Only update the frame display at the end
     cv2.imshow('Detection', frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
