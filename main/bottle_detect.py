@@ -15,7 +15,10 @@ pwm = GPIO.PWM(SERVO_PIN, 50)  # 50Hz for standard servo
 pwm.start(7.5)  # Neutral position (middle of servo's range)
 
 # Setup LCD (Assumes you have a 16x2 LCD with I2C)
+GPIO.setwarnings(False)  # Disable GPIO warnings
 lcd = LCD.Adafruit_CharLCDPlate()  # Set up the LCD plate
+lcd.clear()
+lcd.message("LCD Initialized!")  # Test the LCD by showing a message
 
 # Load YOLO model
 model = YOLO('yolov8n.pt')
