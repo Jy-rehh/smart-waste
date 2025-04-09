@@ -1,10 +1,14 @@
 from gpiozero import Servo
+from gpiozero.pins.pigpio import PiGPIOFactory
 from time import sleep
 import smbus
 import time
 
-# Initialize the servo
-servo = Servo(17)  # You can change to any GPIO pin supporting PWM
+# Use pigpio pin factory to reduce servo jitter
+factory = PiGPIOFactory()
+
+# Initialize the servo with the pigpio factory
+servo = Servo(17, pin_factory=factory)  # You can change to any GPIO pin supporting PWM
 
 # Initialize the I2C bus and LCD (using smbus for I2C communication)
 bus = smbus.SMBus(1)
