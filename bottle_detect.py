@@ -15,7 +15,7 @@ if not pi.connected:
 servo_pin = 17
 pi.set_mode(servo_pin, pigpio.OUTPUT)
 
-# LCD setup (same as before)
+# LCD setup
 import smbus
 I2C_ADDR = 0x27
 bus = smbus.SMBus(1)
@@ -76,7 +76,7 @@ thread.start()
 
 # Function to move the servo based on detection
 def move_servo(position):
-    pulsewidth = int(500 + (position * 2000))
+    pulsewidth = int(500 + (position * 2000))  # Adjust the servo pulse width to move it to the desired position
     pi.set_servo_pulsewidth(servo_pin, pulsewidth)
 
 # Default message
@@ -92,6 +92,7 @@ while True:
     non_plastic_detected = False
     detected_label = ""
 
+    # Process the results from the YOLO model
     for info in results:
         for box in info.boxes:
             confidence = box.conf[0].item()
@@ -102,36 +103,39 @@ while True:
             class_id = int(box.cls[0])
             class_name = model.names[class_id]
 
+            # Draw bounding box and label on the frame
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
             cv2.putText(frame, f'{class_name} {int(confidence * 100)}%',
                         (x1 + 8, y1 - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (255, 255, 255), 2)
 
+            # Check if the detected object is a plastic bottle
             if "bottle" in class_name.lower():
                 plastic_detected = True
             else:
                 non_plastic_detected = True
 
+    # Update the LCD and move the servo based on detection
     if plastic_detected:
         detected_label = "PLASTIC"
         display_message("Plastic Bottle")
         sleep(1)
-        display_message("Accepting...")  # Ensure that it is updated clearly
-        move_servo(1)  # Move to accepting position
+        display_message("Accepting...")  # Display message while accepting the bottle
+        move_servo(1)  # Move the servo to the accepting position
     elif non_plastic_detected:
         detected_label = "NON_PLASTIC"
         display_message("Not a Plastic")
         sleep(1)
-        display_message("Rejecting...")  # Ensure that it is updated clearly
-        move_servo(0)  # Move to rejecting position
+        display_message("Rejecting...")  # Display message while rejecting the bottle
+        move_servo(0)  # Move the servo to the rejecting position
 
-    sleep(2)  # Hold for 2 seconds
-    move_servo(0.5)  # Reset servo to middle position
+    sleep(2)  # Hold the position for 2 seconds
+    move_servo(0.5)  # Reset the servo to the middle position
 
     if detected_label:
         last_sent_time = time.time()
     
-    # Only update the frame display at the end
+    # Show the frame in a window (optional)
     cv2.imshow('Detection', frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
