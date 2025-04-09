@@ -1,18 +1,28 @@
 import threading
 import cv2
-import serial
 import time
 from ultralytics import YOLO
+import RPi.GPIO as GPIO
+import smbus2
+import lcddriver  # You may need to install an LCD driver library like this one
 
-# Serial connection to Arduino
-arduino = serial.Serial('COM5', 9600, timeout=1)
-time.sleep(2)  # Wait for Arduino to be ready
+# Setup GPIO for Servo control
+SERVO_PIN = 17  # GPIO pin for your servo
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(SERVO_PIN, GPIO.OUT)
+
+# Servo PWM setup
+pwm = GPIO.PWM(SERVO_PIN, 50)  # 50Hz for standard servo
+pwm.start(7.5)  # Neutral position (middle of servo's range)
+
+# Setup LCD (Assumes you have a 16x2 LCD with I2C)
+lcd = lcddriver.lcd()
 
 # Load YOLO model
 model = YOLO('yolov8n.pt')
 
 # ESP32-CAM stream URL
-esp32_cam_url = "http://192.168.1.11:81/stream"
+esp32_cam_url = "http://192.168.1.11:81/stream"  # Update with the correct IP
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
@@ -77,12 +87,21 @@ while True:
     elif non_plastic_detected:
         detected_label = "NON_PLASTIC"
 
-    # Send label to Arduino if cooldown passed
-    current_time = time.time()
-    if detected_label and (current_time - last_sent_time) >= detection_cooldown:
-        arduino.write((detected_label + "\n").encode())
-        print(f"✅ {detected_label} detected and sent to Arduino.")
-        last_sent_time = current_time
+    # Control the servo based on detection label
+    if detected_label == "PLASTIC":
+        print("✅ Plastic Bottle detected. Accepting...")
+        pwm.ChangeDutyCycle(12.5)  # Move to 180° (accept position)
+        time.sleep(2)
+        pwm.ChangeDutyCycle(7.5)  # Return to neutral position
+        lcd.lcd_clear()
+        lcd.lcd_display_string("Plastic Bottle", 1)
+    elif detected_label == "NON_PLASTIC":
+        print("❌ Non-Plastic detected. Rejecting...")
+        pwm.ChangeDutyCycle(2.5)  # Move to 0° (reject position)
+        time.sleep(2)
+        pwm.ChangeDutyCycle(7.5)  # Return to neutral position
+        lcd.lcd_clear()
+        lcd.lcd_display_string("Non-Plastic", 1)
 
     # Show frame
     cv2.imshow('ESP32-CAM Object Detection', frame)
@@ -92,4 +111,5 @@ while True:
 # Cleanup
 cap.release()
 cv2.destroyAllWindows()
-arduino.close()
+pwm.stop()
+GPIO.cleanup()
