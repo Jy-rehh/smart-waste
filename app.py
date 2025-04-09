@@ -1,5 +1,5 @@
 from flask import Flask, render_template, Response
-from yolo_detect import generate_frames
+from main import generate_frames
 
 app = Flask(__name__)
 
