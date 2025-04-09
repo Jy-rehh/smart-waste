@@ -5,6 +5,7 @@ from ultralytics import YOLO
 import RPi.GPIO as GPIO
 import smbus2
 import lcddriver  # You may need to install an LCD driver library like this one
+import Adafruit_CharLCD as LCD
 
 # Setup GPIO for Servo control
 SERVO_PIN = 17  # GPIO pin for your servo
