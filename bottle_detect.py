@@ -21,6 +21,10 @@ I2C_ADDR = 0x27
 bus = smbus.SMBus(1)
 LCD_WIDTH = 16
 
+# Define the modes for command and character
+LCD_CMD = 0x00  # For sending command to the LCD
+LCD_CHR = 0x01  # For sending character to the LCD
+
 def lcd_init():
     sleep(0.5)
     lcd_byte(0x33, LCD_CMD)
