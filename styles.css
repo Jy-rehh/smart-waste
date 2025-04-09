@@ -1,0 +1,787 @@
+/* General Styles */
+body {
+    font-family: 'Poppins', Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-image: url('Designs/index.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    margin: 0;
+    padding: 20px;
+}
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.2); /* Black overlay with 50% transparency */
+    z-index: -1; /* Places the overlay behind content */
+}
+
+/* Header Text - Moved Outside the Container */
+.header {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.header h1 {
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 55px;
+    font-weight: bold;
+    line-height: 1.4;
+    margin: 0;
+    color:rgb(35, 182, 69); /* Left side is green */
+    text-shadow: 5px 5px 5px rgba(0, 0, 0, 0.28);
+}
+
+
+.green-text {
+    background: linear-gradient(to right, #28a745, rgba(14, 1, 1, 0.62)); /* Green on left, black on right */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Main Container */
+.container {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.93);
+    width: 100%;
+    max-width: 380px;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Status Card */
+.status-card {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 10px;
+    margin: 10px 0;
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.status {
+    color: red;
+    font-weight: bold;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon {
+    font-size: 24px;
+    margin-right: 8px;
+}
+
+.disconnected {
+    color: darkred;
+}
+
+.ip {
+    font-size: 14px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.remaining-time {
+    font-weight: bold;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+.time {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Buttons */
+.btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 25px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+.btn i {
+    margin-right: 8px; /* Adds space between icon and text */
+}
+
+
+/* Smooth Gradient Colors */
+.green {
+    background: linear-gradient(135deg, #38b000, #70e000);
+    box-shadow: 0 4px 10px rgba(56, 176, 0, 0.3);
+}
+
+.blue {
+    background: linear-gradient(135deg, #007bff, #00c6ff);
+    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+}
+
+/* Soft Hover Effect */
+.green:hover {
+    background: linear-gradient(135deg, #218838, #38b000);
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(56, 176, 0, 0.6);
+}
+
+.blue:hover {
+    background: linear-gradient(135deg, #0056b3, #007bff);
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0, 123, 255, 0.6);
+}
+
+/* Ripple Click Animation */
+.btn:active::after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: inherit;
+    animation: ripple 0.4s ease-out;
+}
+
+/* Ripple Animation */
+@keyframes ripple {
+    0% {
+        opacity: 1;
+        transform: scale(0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(2);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .btn {
+        font-size: 14px;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .btn {
+        width: 90%; /* Make buttons take up more space on smaller screens */
+        max-width: 200px; /* Prevent them from getting too large */
+        font-size: 14px; /* Reduce font size for better fit */
+        padding: 8px 12px; /* Adjust padding to maintain proportion */
+    }
+}
+
+ /*insert bottle*/
+/* Modal Background */
+/* Modal Background */
+.modal {
+    display: none; /* Hide modal initially */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Black overlay */
+    justify-content: center;
+    align-items: center;
+}
+
+/* Modal Content */
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    width: 400px;
+    position: relative;
+}
+
+/* Close Button */
+.close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Heading */
+.insert-container h2 {
+    color: #3366cc;
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+/* Image Styling */
+.image-container img {
+    width: 80px;
+}
+
+/* Status Styling */
+.status {
+    font-size: 14px;
+    font-weight: bold;
+    margin: 10px 0;
+    margin-left: 10px;
+}
+
+/* Status Time */
+.my-b {
+    color: #007f00;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+/* Info Box */
+.info {
+    background: #f1f1f1;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 17px;
+    margin: 10px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Align items to the left */
+    text-align: left;
+    width: 95%;
+    font-weight: bold;
+}
+
+.info p {
+    margin: 5px 0;
+    position: relative;
+    padding-bottom: 5px;
+    width: 100%;
+}
+.info span {
+    margin-left:10px;
+    color:green;
+}
+
+.info p:not(:last-child)::after {
+    content: "";
+    display: block;
+    width: 100%; /* Full width divider */
+    height: 1px;
+    background: #ccc; /* Divider color */
+    margin-top: 5px;
+}
+
+
+/* Buttons */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.action-btn {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.2);
+    text-transform: uppercase;
+}
+
+.action-cancel {
+    background: linear-gradient(to right, #ff4d4d, #ff1a1a);
+    color: white;
+}
+
+.action-done {
+    background: linear-gradient(to right, #28a745, #34d058);
+    color: white;
+}
+
+/* Hover Effects */
+.action-btn:hover {
+    transform: scale(1.10);
+    opacity: 0.9;
+}
+
+/* Click Effect */
+.action-btn:active {
+    transform: scale(1);
+}
+
+/* Loading Spinner */
+.progress-container {
+    width: 100%;
+    height: 25px;
+    border-radius: 5px;
+    background-color: #ddd;
+    overflow: hidden;
+    margin-top: 10px; /* Space below the waiting text */
+}
+
+.progress-bar {
+    width: 100%;
+    height: 100%;
+    background-color: #4caf50; /* Green color */
+    transition: width 1s linear;
+}
+
+/* Fade-out Animation */
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+
+/*rates*/ 
+.rates-container h2{
+    color: #3366cc;
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Rates Box */
+.rates-box {
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+/* Rate Items */
+.rate-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+/* Image Icons */
+.rate-item img {
+    width: 100px;
+}
+
+/* Placeholder Circle */
+.placeholder-circle {
+    width: 40px;
+    height: 40px;
+    background: lightgray;
+    border-radius: 50%;
+}
+
+/*login css */
+.buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+/* Slim Buttons */
+.btn.guest, .btn.login {
+    border: none;
+    padding: 8px 37px; /* Adjusted padding */
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: 0.1s ease-in-out;
+    font-weight: normal;
+    box-shadow: 5px 3px 5px rgba(0, 0, 0, 0.2); /* Soft shadow */
+    font-weight: bold;
+}
+
+ /* Guess Button Default */
+.btn.guess {
+    background-color: white;
+    border: 2px solid black;
+    color: black;
+}
+
+/* Log In Button Default */
+.btn.login {
+    background-color: white;
+    border: 2px solid black;
+    color: black;
+}
+
+/* Active Button (Green) */
+.btn.active {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+}
+
+/* Hover Effects */
+.btn.guest:hover, .btn.login:hover {
+    opacity: 0.8;
+    transform: scale(1.02);
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3); /* Stronger shadow on hover */
+}
+
+/* Login Container */
+.container-login {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: linear-gradient(to right, #CAF086 , #99E216);
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 360px;
+    margin-top: 30px;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Form Labels */
+.container-login label {
+    margin-left:1px;
+    font-family: sans-serif;
+    font-weight: bold;
+    width: 100%;
+    margin-top: 10px;
+    color: #333;
+    font-size: 16px;
+}
+
+/* Input Fields */
+.container-login input {
+    padding: 12px;
+    margin-top: 8px;
+    border: 2px solid #ccc;
+    border-radius: 19px;
+    width: 90%;  /* Adjusted width for better responsiveness */
+    font-size: 15px;
+    transition: all 0.3s ease-in-out;
+    background: #fff;
+    color: #333;
+    outline: none;
+}
+
+/* Hover Effect */
+.container-login input:hover {
+    border-color: #4CAF50;
+}
+
+/* Input Focus */
+.container-login input:focus {
+    border-color: #2e7d32;
+    box-shadow: 0 0 12px rgba(46, 125, 50, 0.6);
+    transform: scale(1.03);
+}
+
+/* Placeholder Styling */
+.container-login input::placeholder {
+    color: #aaa;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* Mobile Friendly Adjustments */
+@media (max-width: 768px) {
+    .container-login input {
+        width: 100%;
+        font-size: 14px;
+    }
+}
+
+
+/* Login Button */
+.login-btn {
+    margin-top: 15px;
+    margin-left: 85px;
+    padding: 10px;
+    width: 50%;
+    border: none;
+    border-radius: 15px;
+    background-color: #1e88e5;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+}
+
+/* Login Button Hover */
+.login-btn:hover {
+    background-color: #1565c0;
+    transform: scale(1.05);
+}
+
+/* Register Link */
+.register-text {
+    margin-top: 20px;
+    font-size: 15px;
+    text-align: center;
+}
+
+.create-account {
+    color:rgb(0, 8, 1);
+    font-weight: bold;
+    text-decoration: none;
+    text-decoration: underline;
+    font-size: 16px;
+}
+
+.create-account:hover {
+    color:blue;
+}
+
+/* Create Account Section */
+.create-account-container {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 20px;
+}
+
+.create-account-container h2 {
+    color: #3366cc;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.create-account-container input {
+    width: 90%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    font-size: 16px;
+    outline: none;
+    transition: all 0.3s ease-in-out;
+}
+
+.create-account-container input:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 12px rgba(46, 125, 50, 0.6);
+    transform: scale(1.03);
+}
+
+.create-account-btn {
+    margin-top: 15px;
+    padding: 10px;
+    width: 60%;
+    border: none;
+    border-radius: 15px;
+    background-color: #1e88e5;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+}
+
+.create-account-btn:hover {
+    background-color: #1565c0;
+    transform: scale(1.05);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .create-account-container {
+        width: 90%;
+    }
+    .create-account-btn {
+        width: 80%;
+    }
+}
+
+/* Resize the GIF */
+.gif-logo {
+    width: 100%;  /* Adjust width to fit container */
+    max-width: 250px; /* Limit max size */
+    display: block;
+    margin: 0 auto; /* Center it */
+}
+
+/*Create Account Form styling */
+/* Create Account Container */
+.create-account-container {
+    background: rgba(255, 255, 255, 0.97);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 350px;
+    margin: 20px auto;
+    text-align: center;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Resize the GIF */
+.create-account-container .gif-logo {
+    width: 100%;
+    max-width: 220px;
+    display: block;
+    margin: 0 auto 15px;
+}
+
+/* Create Account Form styling */
+.create-account-container {
+    background: rgba(255, 255, 255, 0.97);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto; /* Centers the container */
+    text-align: left; /* Centers text content */
+}
+
+.create-account-container h2 {
+    text-align: left;
+    color: #004AAD;
+    font-weight: bold;
+}
+
+/* Form Alignment */
+.create-account-container .form-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centers elements horizontally */
+    width: 100%;
+}
+
+/* Input Fields */
+.create-account-container .form-group input {
+    width: 90%; /* Adjust input width */
+    max-width: 300px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px; /* Space between inputs */
+}
+
+/* Button */
+.create-account-container button {
+    width: 50%;
+    padding: 10px;
+    background-color: #ccc;
+    border: none;
+    border-radius: 5px;
+    /* cursor: not-allowed; */
+}
+
+/* Dashboard Container Styling */
+/* Dashboard Container Styling */
+.dashboard-container {
+    background: transparent; /* Fully transparent */ 
+    padding: 25px; /* Spacious padding */
+    border-radius: 12px; /* Soft rounded corners */
+    width: 12;
+    max-width: 800px; /* Wider for dashboard */
+    margin: 20px auto; /* Centers horizontally */
+    text-align: center; /* Aligns content */
+}
+
+/* User Info Styling */
+.user-info {
+    background:white;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25); /* Subtle shadow */
+    margin: 10px;
+    padding: 20px;
+}
+
+.user-info h2 {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.pause-btn {
+    background: green;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Points Section */
+.points-section {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    background:white;
+    padding: 20px;
+    
+}
+
+.points-box {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* Options Buttons */
+.options {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.option-btn {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Logout Button */
+.logout-btn {
+    display: block;
+    background: blue;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+}
+
+    

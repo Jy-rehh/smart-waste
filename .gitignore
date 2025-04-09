@@ -1,0 +1,19 @@
+# 🔒 Firebase service account JSON
+templates/firebase_config.json
+
+# 🔐 Optional: ignore sensitive config files
+config/*.env
+config/*.secret.*
+
+# 🐍 Python
+__pycache__/
+*.pyc
+
+# 🧩 Node.js
+node_modules/
+
+# 🗝️ Env files
+.env
+
+# 🍏 macOS system file
+.DS_Store
