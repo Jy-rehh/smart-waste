@@ -1,9 +1,9 @@
-import threading
-import cv2
+import serial
 import time
-from ultralytics import YOLO
 import RPi.GPIO as GPIO
-import lcddriver  # Assuming this is compatible for your hardware
+import Adafruit_CharLCD as LCD
+from ultralytics import YOLO
+import cv2
 
 # Setup GPIO for Servo control
 SERVO_PIN = 17  # GPIO pin for your servo
@@ -15,13 +15,21 @@ pwm = GPIO.PWM(SERVO_PIN, 50)  # 50Hz for standard servo
 pwm.start(7.5)  # Neutral position (middle of servo's range)
 
 # Setup LCD (Assumes you have a 16x2 LCD with I2C)
-lcd = lcddriver.lcd()  # Use lcddriver if compatible with your setup
+lcd = LCD.Adafruit_CharLCDPlate()  # Set up the LCD plate
 
 # Load YOLO model
 model = YOLO('yolov8n.pt')
 
-# ESP32-CAM stream URL
-esp32_cam_url = "http://192.168.1.11:81/stream"  # Update with the correct IP of your ESP32-CAM
+# Initialize serial connection to ESP32 on /dev/ttyUSB0
+arduino = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+time.sleep(2)  # Give it time to initialize
+
+# Function to send data to the ESP32 (for testing)
+def send_data_to_esp32(message):
+    arduino.write(message.encode())
+
+# ESP32-CAM stream URL (if you're also using it)
+esp32_cam_url = "http://192.168.1.11:81/stream"  # Change to your ESP32's IP address
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
@@ -31,7 +39,7 @@ if not cap.isOpened():
 # Shared frame variable
 frame = None
 
-# Function to keep capturing frames
+# Function to keep capturing frames from ESP32-CAM
 def capture_frames():
     global frame
     while True:
@@ -40,9 +48,11 @@ def capture_frames():
             frame = new_frame
 
 # Start frame capture thread
+import threading
 thread = threading.Thread(target=capture_frames, daemon=True)
 thread.start()
 
+# Main loop for detecting bottles
 while True:
     if frame is None:
         continue  # Wait until frames are available
@@ -50,7 +60,6 @@ while True:
     # Run YOLO detection on the frame
     results = model(frame)
 
-    # Detection flags
     plastic_detected = False
     non_plastic_detected = False
     detected_label = ""
@@ -72,19 +81,16 @@ while True:
                         (x1 + 8, y1 - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (255, 255, 255), 2)
 
-            # Label detection
             if "bottle" in class_name.lower():
                 plastic_detected = True
             else:
                 non_plastic_detected = True
 
-    # Decide label based on detection
     if plastic_detected:
         detected_label = "PLASTIC"
     elif non_plastic_detected:
         detected_label = "NON_PLASTIC"
 
-    # Control the servo based on detection label
     if detected_label == "PLASTIC":
         print("✅ Plastic Bottle detected. Accepting...")
         pwm.ChangeDutyCycle(12.5)  # Move to 180° (accept position)
@@ -92,6 +98,8 @@ while True:
         pwm.ChangeDutyCycle(7.5)  # Return to neutral position
         lcd.clear()
         lcd.message("Plastic Bottle")
+        send_data_to_esp32("PLASTIC DETECTED")
+
     elif detected_label == "NON_PLASTIC":
         print("❌ Non-Plastic detected. Rejecting...")
         pwm.ChangeDutyCycle(2.5)  # Move to 0° (reject position)
@@ -99,6 +107,7 @@ while True:
         pwm.ChangeDutyCycle(7.5)  # Return to neutral position
         lcd.clear()
         lcd.message("Non-Plastic")
+        send_data_to_esp32("NON-PLASTIC DETECTED")
 
     # Show frame
     cv2.imshow('ESP32-CAM Object Detection', frame)
@@ -110,3 +119,4 @@ cap.release()
 cv2.destroyAllWindows()
 pwm.stop()
 GPIO.cleanup()
+arduino.close()
