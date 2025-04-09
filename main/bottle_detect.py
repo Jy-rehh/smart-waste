@@ -3,7 +3,7 @@ import cv2
 import time
 from ultralytics import YOLO
 import RPi.GPIO as GPIO
-import Adafruit_CharLCD as LCD
+import lcddriver  # Assuming this is compatible for your hardware
 
 # Setup GPIO for Servo control
 SERVO_PIN = 17  # GPIO pin for your servo
@@ -15,7 +15,7 @@ pwm = GPIO.PWM(SERVO_PIN, 50)  # 50Hz for standard servo
 pwm.start(7.5)  # Neutral position (middle of servo's range)
 
 # Setup LCD (Assumes you have a 16x2 LCD with I2C)
-lcd = LCD.Adafruit_CharLCDPlate()  # Set up the LCD plate
+lcd = lcddriver.lcd()  # Use lcddriver if compatible with your setup
 
 # Load YOLO model
 model = YOLO('yolov8n.pt')
