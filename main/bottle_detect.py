@@ -1,7 +1,7 @@
 import serial
 import time
 import RPi.GPIO as GPIO
-import Adafruit_CharLCD as LCD
+import Adafruit_CharLCD as LCD  # Use Adafruit_CharLCD instead of lcddriver
 from ultralytics import YOLO
 import cv2
 
