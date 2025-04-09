@@ -4,6 +4,7 @@ import serial
 import time
 from ultralytics import YOLO
 from gpiozero import Servo
+import smbus
 import matplotlib.pyplot as plt
 
 # Serial connection to Arduino (if needed)
@@ -12,6 +13,26 @@ import matplotlib.pyplot as plt
 
 # Initialize the servo pin on the Raspberry Pi (GPIO pin 17 is used here, adjust as needed)
 servo = Servo(17)
+
+# Initialize the I2C bus and LCD (using smbus for I2C communication)
+bus = smbus.SMBus(1)
+LCD_ADDR = 0x27  # Default I2C address for most LCDs, check if it's different
+
+# Function to send a command to the LCD
+def lcd_command(command):
+    bus.write_byte(LCD_ADDR, command)
+    time.sleep(0.001)
+
+# Function to write data to the LCD
+def lcd_write(message):
+    for char in message:
+        bus.write_byte(LCD_ADDR, ord(char))
+        time.sleep(0.001)
+
+# Function to clear the display
+def lcd_clear():
+    lcd_command(0x01)  # Clear the display
+    time.sleep(0.001)
 
 # Load YOLO model
 model = YOLO('yolov8n.pt')
@@ -40,6 +61,11 @@ def capture_frames():
 # Start frame capture thread
 thread = threading.Thread(target=capture_frames, daemon=True)
 thread.start()
+
+# Test LCD (initial message)
+lcd_clear()
+lcd_command(0x80)  # Move cursor to the beginning of the first line
+lcd_write("24x4 LCD Test")
 
 while True:
     if frame is None:
@@ -81,10 +107,16 @@ while True:
         detected_label = "PLASTIC"
         servo.value = -1  # Move servo to the left (adjust value based on your servo setup)
         print(f"✅ {detected_label} detected. Servo moved to the left.")
+        lcd_clear()
+        lcd_command(0x80)  # Move cursor to beginning of first line
+        lcd_write("PLASTIC DETECTED")
     elif non_plastic_detected:
         detected_label = "NON_PLASTIC"
         servo.value = 1  # Move servo to the right (adjust value based on your servo setup)
         print(f"❌ {detected_label} detected. Servo moved to the right.")
+        lcd_clear()
+        lcd_command(0x80)  # Move cursor to beginning of first line
+        lcd_write("NON-PLASTIC DETECTED")
 
     # Show the frame using matplotlib
     plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
