@@ -5,7 +5,7 @@ import time
 from ultralytics import YOLO
 
 # Serial connection to Arduino (using Raspberry Pi's serial port)
-arduino = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)  # Replace with your Raspberry Pi's serial port
+arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)  # Replace with your Raspberry Pi's serial port
 time.sleep(2)  # Wait for Arduino to be ready
 
 # Load YOLO model
