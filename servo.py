@@ -1,25 +1,19 @@
-import pigpio
-from time import sleep
+# Set up libraries and overall settings
+import RPi.GPIO as GPIO  # Imports the standard Raspberry Pi GPIO library
+from time import sleep   # Imports sleep (aka wait or pause) into the program
+GPIO.setmode(GPIO.BOARD) # Sets the pin numbering system to use the physical layout
 
-# Setup pigpio for PWM control
-pi = pigpio.pi()
-if not pi.connected:
-    print("❌ Failed to connect to pigpio daemon.")
-    exit()
+# Set up pin 11 for PWM
+GPIO.setup(11,GPIO.OUT)  # Sets up pin 11 to an output (instead of an input)
+p = GPIO.PWM(11, 50)     # Sets up pin 11 as a PWM pin
+p.start(0)               # Starts running PWM on the pin and sets it to 0
 
-servo_pin = 17
-pi.set_mode(servo_pin, pigpio.OUTPUT)
+# Move the servo back and forth
+p.ChangeDutyCycle(3)     # Changes the pulse width to 3 (so moves the servo)
+sleep(1)                 # Wait 1 second
+p.ChangeDutyCycle(12)    # Changes the pulse width to 12 (so moves the servo)
+sleep(1)
 
-# Function to move the servo based on position
-def move_servo(position):
-    print(f"Moving servo to position {position}")
-    pulsewidth = int(500 + (position * 2000))
-    pi.set_servo_pulsewidth(servo_pin, pulsewidth)
-    sleep(2)  # Sleep for 2 seconds to allow servo to move
-    pi.set_servo_pulsewidth(servo_pin, 0)  # Stop the servo
-
-print("Testing servo movement...")
-move_servo(1)  # Move to accepting position
-move_servo(0)  # Move to rejecting position
-move_servo(0.5)  # Reset to middle position
-print("Servo test complete.")
+# Clean up everything
+p.stop()                 # At the end of the program, stop the PWM
+GPIO.cleanup()           # Resets the GPIO pins back to defaults
