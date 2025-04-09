@@ -3,9 +3,7 @@ import cv2
 import time
 from ultralytics import YOLO
 import RPi.GPIO as GPIO
-import smbus2
-import lcddriver  # Assuming this is installed correctly
-import Adafruit_CharLCD as LCD  # LCD display library
+import Adafruit_CharLCD as LCD
 
 # Setup GPIO for Servo control
 SERVO_PIN = 17  # GPIO pin for your servo
@@ -17,13 +15,13 @@ pwm = GPIO.PWM(SERVO_PIN, 50)  # 50Hz for standard servo
 pwm.start(7.5)  # Neutral position (middle of servo's range)
 
 # Setup LCD (Assumes you have a 16x2 LCD with I2C)
-lcd = lcddriver.lcd()
+lcd = LCD.Adafruit_CharLCDPlate()  # Set up the LCD plate
 
 # Load YOLO model
 model = YOLO('yolov8n.pt')
 
 # ESP32-CAM stream URL
-esp32_cam_url = "http://192.168.1.11:81/stream"  # Update with the correct IP
+esp32_cam_url = "http://192.168.1.11:81/stream"  # Update with the correct IP of your ESP32-CAM
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
@@ -32,8 +30,6 @@ if not cap.isOpened():
 
 # Shared frame variable
 frame = None
-last_sent_time = 0
-detection_cooldown = 5  # Seconds between sending detections
 
 # Function to keep capturing frames
 def capture_frames():
@@ -94,15 +90,15 @@ while True:
         pwm.ChangeDutyCycle(12.5)  # Move to 180° (accept position)
         time.sleep(2)
         pwm.ChangeDutyCycle(7.5)  # Return to neutral position
-        lcd.lcd_clear()
-        lcd.lcd_display_string("Plastic Bottle", 1)
+        lcd.clear()
+        lcd.message("Plastic Bottle")
     elif detected_label == "NON_PLASTIC":
         print("❌ Non-Plastic detected. Rejecting...")
         pwm.ChangeDutyCycle(2.5)  # Move to 0° (reject position)
         time.sleep(2)
         pwm.ChangeDutyCycle(7.5)  # Return to neutral position
-        lcd.lcd_clear()
-        lcd.lcd_display_string("Non-Plastic", 1)
+        lcd.clear()
+        lcd.message("Non-Plastic")
 
     # Show frame
     cv2.imshow('ESP32-CAM Object Detection', frame)
