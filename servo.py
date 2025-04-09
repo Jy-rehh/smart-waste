@@ -1,15 +1,18 @@
 from gpiozero import Servo
-from time import sleep
 from gpiozero.pins.pigpio import PiGPIOFactory
+from time import sleep
 
-# Use pigpio for better accuracy
+# Use the pigpio pin factory
 factory = PiGPIOFactory()
-servo = Servo(17, pin_factory=factory)  # GPIO 17
 
-# Move the servo
-servo.min()   # one end
-sleep(1)
-servo.mid()   # center
-sleep(1)
-servo.max()   # other end
-sleep(1)
+# Initialize the servo on the GPIO pin, in this case, GPIO17
+servo = Servo(17, pin_factory=factory)
+
+# Sweep the servo back and forth
+while True:
+    servo.min()  # Move the servo to its minimum position
+    sleep(1)
+    servo.max()  # Move the servo to its maximum position
+    sleep(1)
+    servo.mid()  # Move the servo to its neutral/middle position
+    sleep(1)
