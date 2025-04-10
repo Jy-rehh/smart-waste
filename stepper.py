@@ -1,33 +1,35 @@
 import RPi.GPIO as GPIO
 import time
 
-# Define GPIO pins
-IN1 = 17
-IN2 = 18
-IN3 = 27
-IN4 = 22
+# Define BCM GPIO pins connected to IN1–IN4 of ULN2003
+IN1 = 17  # GPIO17 (Pin 11)
+IN2 = 18  # GPIO18 (Pin 12)
+IN3 = 27  # GPIO27 (Pin 13)
+IN4 = 22  # GPIO22 (Pin 15)
 
-# Set up GPIO
+# Setup GPIO mode
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
+
+# Setup GPIO pins as outputs
 GPIO.setup(IN1, GPIO.OUT)
 GPIO.setup(IN2, GPIO.OUT)
 GPIO.setup(IN3, GPIO.OUT)
 GPIO.setup(IN4, GPIO.OUT)
 
-# Define the sequence for half-stepping
+# Half-step sequence for 28BYJ-48
 step_sequence = [
-    [1,0,0,1],
-    [1,0,0,0],
-    [1,1,0,0],
-    [0,1,0,0],
-    [0,1,1,0],
-    [0,0,1,0],
-    [0,0,1,1],
-    [0,0,0,1]
+    [1, 0, 0, 1],
+    [1, 0, 0, 0],
+    [1, 1, 0, 0],
+    [0, 1, 0, 0],
+    [0, 1, 1, 0],
+    [0, 0, 1, 0],
+    [0, 0, 1, 1],
+    [0, 0, 0, 1]
 ]
 
-# Function to perform steps
+# Step function
 def step_motor(steps, delay):
     for _ in range(steps):
         for step in step_sequence:
@@ -38,9 +40,13 @@ def step_motor(steps, delay):
             time.sleep(delay)
 
 try:
-    print("Rotating motor...")
-    step_motor(512, 0.001)  # 512 steps = 1 full rotation for 28BYJ-48
-    print("Done!")
+    print("Starting motor rotation...")
+    
+    # Rotate 1 full turn clockwise
+    step_motor(512, 0.002)  # Try 0.002 or 0.005 if it's not moving
+
+    print("Done rotating!")
 
 finally:
     GPIO.cleanup()
+    print("GPIO cleaned up.")
