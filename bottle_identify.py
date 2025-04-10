@@ -1,41 +1,49 @@
 import RPi.GPIO as GPIO
 import time
 
-TRIG = 23
-ECHO = 24
-
+# Set up GPIO for the first ultrasonic sensor
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(TRIG, GPIO.OUT)
-GPIO.setup(ECHO, GPIO.IN)
+GPIO.setwarnings(False)
 
-def measure_distance():
-    # Trigger pulse
-    GPIO.output(TRIG, True)
-    time.sleep(0.00001)  # 10µs pulse
-    GPIO.output(TRIG, False)
+TRIG1 = 23  # GPIO Pin 23
+ECHO1 = 24  # GPIO Pin 24
 
-    # Wait for echo start
-    while GPIO.input(ECHO) == 0:
+GPIO.setup(TRIG1, GPIO.OUT)
+GPIO.setup(ECHO1, GPIO.IN)
+
+def get_distance(TRIG, ECHO):
+    # Send a pulse to the TRIG pin
+    GPIO.output(TRIG, GPIO.LOW)
+    time.sleep(0.5)
+    GPIO.output(TRIG, GPIO.HIGH)
+    time.sleep(0.00001)
+    GPIO.output(TRIG, GPIO.LOW)
+
+    # Measure the pulse duration from the ECHO pin
+    while GPIO.input(ECHO) == GPIO.LOW:
         pulse_start = time.time()
 
-    # Wait for echo end
-    while GPIO.input(ECHO) == 1:
+    while GPIO.input(ECHO) == GPIO.HIGH:
         pulse_end = time.time()
 
-    # Calculate distance (speed of sound = 34300 cm/s)
+    # Calculate the distance in cm
     pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150  # cm
-    return round(distance, 2)
+    distance = pulse_duration * 17150
+    distance = round(distance, 2)
+
+    return distance
 
 try:
     while True:
-        dist = measure_distance()
-        print(f"Bottle Distance: {dist} cm")
-        if dist < 10:
-            print("✅ Bottle Detected!")
-        else:
-            print("⚠️ No Bottle")
+        distance1 = get_distance(TRIG1, ECHO1)
+        print(f"Sensor 1 Distance: {distance1} cm")
+
+        # Logic for bottle detection
+        if distance1 < 5:  # If the distance is less than 5 cm, a bottle is close
+            print("Bottle detected!")
+
         time.sleep(1)
 
 except KeyboardInterrupt:
+    print("Program stopped.")
     GPIO.cleanup()
