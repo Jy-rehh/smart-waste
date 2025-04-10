@@ -28,59 +28,76 @@ def capture_frames():
 thread = threading.Thread(target=capture_frames, daemon=True)
 thread.start()
 
-last_action_time = time.time()
-
-# Display "Insert Bottle" at startup
+# Initial LCD message
 display_message("Insert bottle")
 
-# Detection loop
-while True:
-    if frame is None:
-        continue
+# ========================
+# 1. Only detect every 5s
+# 2. Prevent servo jitter by only moving if needed
+# ========================
 
-    results = model(frame)
-    plastic_detected = False
-    non_plastic_detected = False
+last_detection_time = time.time()
+last_servo_position = None  # Track last position to avoid jitter
 
-    for info in results:
-        for box in info.boxes:
-            confidence = box.conf[0].item()
-            if confidence < 0.5:
-                continue
+def set_servo_position(pos):
+    global last_servo_position
+    if last_servo_position != pos:
+        move_servo(pos)
+        last_servo_position = pos
 
-            class_id = int(box.cls[0])
-            class_name = model.names[class_id]
+try:
+    while True:
+        if frame is None:
+            continue
 
-            if "bottle" in class_name.lower():
-                plastic_detected = True
+        current_time = time.time()
+        if current_time - last_detection_time >= 5:
+            results = model(frame)
+            plastic_detected = False
+            non_plastic_detected = False
+
+            for info in results:
+                for box in info.boxes:
+                    confidence = box.conf[0].item()
+                    if confidence < 0.5:
+                        continue
+
+                    class_id = int(box.cls[0])
+                    class_name = model.names[class_id]
+
+                    if "bottle" in class_name.lower():
+                        plastic_detected = True
+                    else:
+                        non_plastic_detected = True
+
+            if plastic_detected:
+                display_message("Plastic Bottle\nAccepting")
+                set_servo_position(1)
+                sleep(1.5)
+                set_servo_position(0.5)  # Neutral/resting position
+                display_message("Insert bottle")
+
+            elif non_plastic_detected:
+                display_message("Not a Plastic\nBottle Rejecting")
+                set_servo_position(0)
+                sleep(1.5)
+                set_servo_position(0.5)  # Neutral/resting position
+                display_message("Insert bottle")
+
             else:
-                non_plastic_detected = True
+                display_message("Insert bottle")
 
-    if plastic_detected:
-        display_message("Plastic Bottle\nAccepting...")
-        move_servo(1)
-        sleep(2)
-        move_servo(0.5)
-        display_message("Insert bottle")
+            last_detection_time = current_time
 
-    elif non_plastic_detected:
-        display_message("Not a Plastic\nRejecting...")
-        move_servo(0)
-        sleep(2)
-        move_servo(0.5)
-        display_message("Insert bottle")
+        # Show the current frame for debugging
+        cv2.imshow("Detection", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
 
-    else:
-        # Only refresh message every few seconds
-        if time.time() - last_action_time > 5:
-            display_message("Insert bottle")
+except KeyboardInterrupt:
+    print("🛑 Exiting gracefully...")
 
-    last_action_time = time.time()
-
-    cv2.imshow("Detection", frame)
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
-stop_servo()
+finally:
+    cap.release()
+    cv2.destroyAllWindows()
+    stop_servo()
