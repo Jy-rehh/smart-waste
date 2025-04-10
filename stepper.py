@@ -15,28 +15,27 @@ GPIO.setup(IN2, GPIO.OUT)
 GPIO.setup(IN3, GPIO.OUT)
 GPIO.setup(IN4, GPIO.OUT)
 
-# Clockwise (Forward) Sequence
+# CORRECTED STEP SEQUENCES (SWAPPED CW/CCW)
 step_sequence_cw = [
-    [1, 0, 0, 0],
-    [1, 1, 0, 0],
-    [0, 1, 0, 0],
-    [0, 1, 1, 0],
-    [0, 0, 1, 0],
-    [0, 0, 1, 1],
-    [0, 0, 0, 1],
-    [1, 0, 0, 1]
+    [1, 0, 0, 1],  # (Originally Step 8)
+    [0, 0, 0, 1],  # (Originally Step 7)
+    [0, 0, 1, 1],  # (Originally Step 6)
+    [0, 0, 1, 0],  # (Originally Step 5)
+    [0, 1, 1, 0],  # (Originally Step 4)
+    [0, 1, 0, 0],  # (Originally Step 3)
+    [1, 1, 0, 0],  # (Originally Step 2)
+    [1, 0, 0, 0]   # (Originally Step 1)
 ]
 
-# Counter-Clockwise (Backward) Sequence = REVERSE of CW
 step_sequence_ccw = [
-    [1, 0, 0, 1],
-    [0, 0, 0, 1],
-    [0, 0, 1, 1],
-    [0, 0, 1, 0],
-    [0, 1, 1, 0],
-    [0, 1, 0, 0],
-    [1, 1, 0, 0],
-    [1, 0, 0, 0]
+    [1, 0, 0, 0],  # (Originally Step 1)
+    [1, 1, 0, 0],  # (Originally Step 2)
+    [0, 1, 0, 0],  # (Originally Step 3)
+    [0, 1, 1, 0],  # (Originally Step 4)
+    [0, 0, 1, 0],  # (Originally Step 5)
+    [0, 0, 1, 1],  # (Originally Step 6)
+    [0, 0, 0, 1],  # (Originally Step 7)
+    [1, 0, 0, 1]   # (Originally Step 8)
 ]
 
 def move_steps(steps, delay=0.005, direction="cw"):
@@ -51,12 +50,12 @@ def move_steps(steps, delay=0.005, direction="cw"):
             time.sleep(delay)
 
 try:
-    print("Rotating CLOCKWISE (512 steps)...")
-    move_steps(512, 0.005, "cw")  # CW rotation
+    print("Rotating CLOCKWISE (should turn RIGHT)...")
+    move_steps(512, 0.005, "cw")  # Should now physically turn CW (right)
     time.sleep(1)
     
-    print("Rotating COUNTER-CLOCKWISE (512 steps)...")
-    move_steps(512, 0.005, "ccw")  # CCW rotation
+    print("Rotating COUNTER-CLOCKWISE (should turn LEFT)...")
+    move_steps(512, 0.005, "ccw")  # Should now physically turn CCW (left)
     
     print("Test complete.")
 
