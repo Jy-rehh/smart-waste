@@ -1,23 +1,21 @@
 import RPi.GPIO as GPIO
 import time
 
-# Define BCM GPIO pins connected to IN1–IN4 of ULN2003
-IN1 = 17  # GPIO17 (Pin 11)
-IN2 = 18  # GPIO18 (Pin 12)
-IN3 = 27  # GPIO27 (Pin 13)
-IN4 = 22  # GPIO22 (Pin 15)
+# BCM pin definitions
+IN1 = 17
+IN2 = 18
+IN3 = 27
+IN4 = 22
 
-# Setup GPIO mode
+# Setup
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-
-# Setup GPIO pins as outputs
 GPIO.setup(IN1, GPIO.OUT)
 GPIO.setup(IN2, GPIO.OUT)
 GPIO.setup(IN3, GPIO.OUT)
 GPIO.setup(IN4, GPIO.OUT)
 
-# Half-step sequence for 28BYJ-48
+# Half-step sequence
 step_sequence = [
     [1, 0, 0, 1],
     [1, 0, 0, 0],
@@ -29,10 +27,11 @@ step_sequence = [
     [0, 0, 0, 1]
 ]
 
-# Step function
-def step_motor(steps, delay):
+# Move steps in a given direction
+def step_motor(steps, delay, reverse=False):
+    sequence = step_sequence[::-1] if reverse else step_sequence
     for _ in range(steps):
-        for step in step_sequence:
+        for step in sequence:
             GPIO.output(IN1, step[0])
             GPIO.output(IN2, step[1])
             GPIO.output(IN3, step[2])
@@ -40,12 +39,26 @@ def step_motor(steps, delay):
             time.sleep(delay)
 
 try:
-    print("Starting motor rotation...")
+    print("Servo-like sweep started...")
     
-    # Rotate 1 full turn clockwise
-    step_motor(512, 0.002)  # Try 0.002 or 0.005 if it's not moving
+    delay = 0.0015  # Adjust for speed
+    angle_90 = 128  # ~90 degrees
 
-    print("Done rotating!")
+    # Move Left
+    step_motor(angle_90, delay, reverse=True)
+    
+    # Return to Center
+    step_motor(angle_90, delay, reverse=False)
+    
+    time.sleep(1)  # Pause before next sweep
+
+    # Move Right
+    step_motor(angle_90, delay, reverse=False)
+    
+    # Return to Center
+    step_motor(angle_90, delay, reverse=True)
+
+    print("Finished servo-like sweep.")
 
 finally:
     GPIO.cleanup()
