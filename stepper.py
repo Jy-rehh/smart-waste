@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 
-# Define GPIO pins
+# GPIO pin assignments
 IN1 = 17
 IN2 = 18
 IN3 = 27
@@ -27,11 +27,11 @@ step_sequence = [
     [0, 0, 0, 1]
 ]
 
-# Function to move steps
-def move_steps(step_count, delay, direction):
-    sequence = step_sequence[::-1] if direction == "backward" else step_sequence
-    for _ in range(step_count):
-        for step in sequence:
+# Move a number of steps in a given direction
+def move_steps(steps, delay, direction):
+    seq = step_sequence[::-1] if direction == "backward" else step_sequence
+    for _ in range(steps):
+        for step in seq:
             GPIO.output(IN1, step[0])
             GPIO.output(IN2, step[1])
             GPIO.output(IN3, step[2])
@@ -39,29 +39,23 @@ def move_steps(step_count, delay, direction):
             time.sleep(delay)
 
 try:
-    print("Stepper acting like servo...")
+    print("Sweeping from left → center → right...")
 
-    delay = 0.0015
-    angle_90 = 128  # 90 degrees
-    angle_180 = 256  # 180 degrees
+    delay = 0.0012  # Speed (lower is faster)
+    angle_90 = 128
+    angle_180 = 256
 
-    # Center is assumed to be 0 steps from boot
-
-    # Move left (−90°)
+    # Start at center
+    # Move to left (backward 90°)
     move_steps(angle_90, delay, "backward")
 
-    # Return to center
-    move_steps(angle_90, delay, "forward")
-
-    time.sleep(1)
-
-    # Move right (+180°)
+    # Sweep smoothly to right (forward 180°)
     move_steps(angle_180, delay, "forward")
 
-    # Return to center
-    move_steps(angle_180, delay, "backward")
+    # (Optional: Return to center)
+    move_steps(angle_90, delay, "backward")
 
-    print("Sweep complete.")
+    print("Done!")
 
 finally:
     GPIO.cleanup()
