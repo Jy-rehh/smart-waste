@@ -1,49 +1,45 @@
 import RPi.GPIO as GPIO
 import time
 
-# Set up GPIO for the first ultrasonic sensor
+# Use BCM pin numbering
 GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
 
-TRIG1 = 23  # GPIO Pin 23
-ECHO1 = 24  # GPIO Pin 24
+# Define GPIO pins for TRIG and ECHO
+TRIG = 23
+ECHO = 24
 
-GPIO.setup(TRIG1, GPIO.OUT)
-GPIO.setup(ECHO1, GPIO.IN)
+print("Distance Measurement In Progress")
 
-def get_distance(TRIG, ECHO):
-    # Send a pulse to the TRIG pin
-    GPIO.output(TRIG, GPIO.LOW)
-    time.sleep(0.5)
-    GPIO.output(TRIG, GPIO.HIGH)
-    time.sleep(0.00001)
-    GPIO.output(TRIG, GPIO.LOW)
+# Set up the GPIO pins
+GPIO.setup(TRIG, GPIO.OUT)
+GPIO.setup(ECHO, GPIO.IN)
 
-    # Measure the pulse duration from the ECHO pin
-    while GPIO.input(ECHO) == GPIO.LOW:
-        pulse_start = time.time()
+# Ensure TRIG is low initially
+GPIO.output(TRIG, False)
+print("Waiting For Sensor To Settle")
+time.sleep(2)
 
-    while GPIO.input(ECHO) == GPIO.HIGH:
-        pulse_end = time.time()
+# Send a 10µs pulse to trigger the sensor
+GPIO.output(TRIG, True)
+time.sleep(0.00001)
+GPIO.output(TRIG, False)
 
-    # Calculate the distance in cm
-    pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150
-    distance = round(distance, 2)
+# Wait for the echo start
+while GPIO.input(ECHO) == 0:
+    pulse_start = time.time()
 
-    return distance
+# Wait for the echo end
+while GPIO.input(ECHO) == 1:
+    pulse_end = time.time()
 
-try:
-    while True:
-        distance1 = get_distance(TRIG1, ECHO1)
-        print(f"Sensor 1 Distance: {distance1} cm")
+# Calculate pulse duration
+pulse_duration = pulse_end - pulse_start
 
-        # Logic for bottle detection
-        if distance1 < 5:  # If the distance is less than 5 cm, a bottle is close
-            print("Bottle detected!")
+# Calculate distance (speed of sound is ~34300 cm/s)
+distance = pulse_duration * 17150
+distance = round(distance, 2)
 
-        time.sleep(1)
+print("Distance:", distance, "cm")
 
-except KeyboardInterrupt:
-    print("Program stopped.")
-    GPIO.cleanup()
+# Clean up GPIO settings
+GPIO.cleanup()
