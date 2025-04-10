@@ -41,25 +41,27 @@ def move_steps(step_count, delay, direction):
 try:
     print("Stepper acting like servo...")
 
-    delay = 0.0012
-    angle_90 = 256  # 90 degrees in half-step mode
-    angle_180 = 512  # 180 degrees in half-step
+    delay = 0.0015
+    angle_90 = 128  # 90 degrees
+    angle_180 = 256  # 180 degrees
 
-    # Go 90° left
+    # Center is assumed to be 0 steps from boot
+
+    # Move left (−90°)
     move_steps(angle_90, delay, "backward")
 
     # Return to center
     move_steps(angle_90, delay, "forward")
+
     time.sleep(1)
 
-    # Go 90° right
-    move_steps(angle_90, delay, "forward")
+    # Move right (+180°)
+    move_steps(angle_180, delay, "forward")
 
     # Return to center
-    move_steps(angle_90, delay, "backward")
-    time.sleep(1)
+    move_steps(angle_180, delay, "backward")
 
-    print("Done sweeping like servo.")
+    print("Sweep complete.")
 
 finally:
     GPIO.cleanup()

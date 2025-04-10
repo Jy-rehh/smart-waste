@@ -4,7 +4,7 @@ import cv2
 from ultralytics import YOLO
 from time import sleep
 
-from stepper import move_steps  # Assuming you have the stepper motor functions here
+from servo import move_servo, stop_servo
 from lcd import display_message
 
 model = YOLO('yolov8n.pt')
@@ -33,20 +33,17 @@ display_message("Insert bottle")
 
 # ========================
 # 1. Only detect every 5s
-# 2. Prevent stepper jitter by only moving if needed
+# 2. Prevent servo jitter by only moving if needed
 # ========================
 
 last_detection_time = time.time()
-last_stepper_position = None  # Track last position to avoid jitter
+last_servo_position = None  # Track last position to avoid jitter
 
-def set_stepper_position(pos):
-    global last_stepper_position
-    if last_stepper_position != pos:
-        if pos == "accept":
-            move_steps(512, 0.0015, "forward")  # 180° to accept position
-        elif pos == "reject":
-            move_steps(256, 0.0015, "backward")  # 90° to reject position
-        last_stepper_position = pos
+def set_servo_position(pos):
+    global last_servo_position
+    if last_servo_position != pos:
+        move_servo(pos)
+        last_servo_position = pos
 
 try:
     while True:
@@ -75,16 +72,16 @@ try:
 
             if plastic_detected:
                 display_message("Plastic Bottle\nAccepting")
-                set_stepper_position("accept")
+                set_servo_position(1)
                 sleep(1.5)
-                move_steps(512, 0.0015, "backward")  # Move back to center
+                set_servo_position(0.5)  # Neutral/resting position
                 display_message("Insert bottle")
 
             elif non_plastic_detected:
                 display_message("Not a Plastic\nBottle Rejecting")
-                set_stepper_position("reject")
+                set_servo_position(0)
                 sleep(1.5)
-                move_steps(256, 0.0015, "forward")  # Move back to center
+                set_servo_position(0.5)  # Neutral/resting position
                 display_message("Insert bottle")
 
             else:
@@ -103,5 +100,4 @@ except KeyboardInterrupt:
 finally:
     cap.release()
     cv2.destroyAllWindows()
-    # Make sure the stepper is at the resting position
-    move_steps(512, 0.0015, "backward")  # Move back to center
+    stop_servo()
