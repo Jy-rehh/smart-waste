@@ -16,7 +16,7 @@ GPIO.setup(IN3, GPIO.OUT)
 GPIO.setup(IN4, GPIO.OUT)
 
 # Half-step sequence for 28BYJ-48
-step_sequence = [
+step_sequence_forward = [
     [1, 0, 0, 1],
     [1, 0, 0, 0],
     [1, 1, 0, 0],
@@ -27,9 +27,24 @@ step_sequence = [
     [0, 0, 0, 1]
 ]
 
+step_sequence_backward = [
+    [0, 0, 0, 1],
+    [0, 0, 1, 1],
+    [0, 0, 1, 0],
+    [0, 1, 1, 0],
+    [0, 1, 0, 0],
+    [1, 1, 0, 0],
+    [1, 0, 0, 0],
+    [1, 0, 0, 1]
+]
+
 # Function to move steps
 def move_steps(step_count, delay, direction):
-    sequence = step_sequence[::-1] if direction == "backward" else step_sequence
+    if direction == "backward":
+        sequence = step_sequence_backward  # Use the backward sequence
+    else:
+        sequence = step_sequence_forward  # Use the forward sequence
+    
     for _ in range(step_count):
         for step in sequence:
             GPIO.output(IN1, step[0])
