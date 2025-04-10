@@ -1,19 +1,18 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO
-from main import generate_frames  # Import the frame generation function from main.py
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-app = Flask(__name__)
-socketio = SocketIO(app)
+# Path to your JSON key
+cred = credentials.Certificate("firebase-key.json")
+firebase_admin.initialize_app(cred)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Connect to Firestore
+db = firestore.client()
 
-# When the client connects, start the background task
-@socketio.on('connect')
-def on_connect():
-    print('Client connected')
-    socketio.start_background_task(generate_frames, socketio)
+# Example: Add data
+doc_ref = db.collection("bins").document("bin1")
+doc_ref.set({
+    "status": "empty",
+    "last_updated": firestore.SERVER_TIMESTAMP
+})
 
-if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000)
+print("Data sent to Firestore!")
