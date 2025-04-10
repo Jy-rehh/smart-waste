@@ -1,23 +1,36 @@
+import RPi.GPIO as GPIO
 import time
-from full_container import measure_container_distance, is_container_full
+
+TRIG = 27
+ECHO = 22
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(TRIG, GPIO.OUT)
+GPIO.setup(ECHO, GPIO.IN)
+
+def measure_distance():
+    GPIO.output(TRIG, True)
+    time.sleep(0.00001)
+    GPIO.output(TRIG, False)
+
+    while GPIO.input(ECHO) == 0:
+        pulse_start = time.time()
+    while GPIO.input(ECHO) == 1:
+        pulse_end = time.time()
+
+    pulse_duration = pulse_end - pulse_start
+    distance = pulse_duration * 17150
+    return round(distance, 2)
 
 try:
-    print("🧪 Testing container fullness sensor... Press Ctrl+C to stop.")
     while True:
-        distance = measure_container_distance()
-        print(f"Container distance: {distance} cm")
-
-        if is_container_full():
-            print("🟥 Container is FULL")
+        dist = measure_distance()
+        print(f"Container Level: {dist} cm")
+        if dist < 5:
+            print("🟥 Container is FULL!")
         else:
-            print("🟩 Container is NOT full")
-
+            print("🟩 Container has space.")
         time.sleep(1)
 
 except KeyboardInterrupt:
-    print("🛑 Test stopped by user")
-
-finally:
-    from full_container import cleanup
-    cleanup()
-    print("🔌 GPIO cleaned up")
+    GPIO.cleanup()
