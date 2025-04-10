@@ -41,24 +41,26 @@ def move_steps(step_count, delay, direction):
 try:
     print("Stepper acting like servo...")
 
-    delay = 0.0015
-    angle_90 = 128  # 90 degrees
-    angle_180 = 256  # 180 degrees
+    delay = 0.0015  # Delay between steps (adjust for speed)
+    
+    # Define the number of steps for 90 and 180 degrees (based on stepper motor's step count)
+    angle_90 = 128  # 90 degrees (change based on actual motor characteristics)
+    angle_180 = 256  # 180 degrees (change based on actual motor characteristics)
 
     # Center is assumed to be 0 steps from boot
 
-    # Move left (−90°)
+    # Move counter-clockwise (−90°)
     move_steps(angle_90, delay, "backward")
 
-    # Return to center
+    # Return to center (0°)
     move_steps(angle_90, delay, "forward")
 
-    time.sleep(1)
+    time.sleep(2)  # Wait a few seconds
 
-    # Move right (+180°)
+    # Move clockwise (+180°)
     move_steps(angle_180, delay, "forward")
 
-    # Return to center
+    # Return to center (0°)
     move_steps(angle_180, delay, "backward")
 
     print("Sweep complete.")
