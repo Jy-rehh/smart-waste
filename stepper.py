@@ -15,7 +15,7 @@ GPIO.setup(IN2, GPIO.OUT)
 GPIO.setup(IN3, GPIO.OUT)
 GPIO.setup(IN4, GPIO.OUT)
 
-# Half-step sequence for 28BYJ-48
+# Half-step sequence for 28BYJ-48 (to move stepper motor)
 step_sequence_forward = [
     [1, 0, 0, 1],
     [1, 0, 0, 0],
@@ -41,9 +41,9 @@ step_sequence_backward = [
 # Function to move steps
 def move_steps(step_count, delay, direction):
     if direction == "backward":
-        sequence = step_sequence_backward  # Use the backward sequence
+        sequence = step_sequence_backward  # Use backward sequence for counter-clockwise
     else:
-        sequence = step_sequence_forward  # Use the forward sequence
+        sequence = step_sequence_forward  # Use forward sequence for clockwise
     
     for _ in range(step_count):
         for step in sequence:
