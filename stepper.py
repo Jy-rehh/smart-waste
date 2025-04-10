@@ -2,10 +2,10 @@ import RPi.GPIO as GPIO
 import time
 
 # GPIO Pins (BCM numbering)
-IN1 = 17
-IN2 = 18
-IN3 = 27
-IN4 = 22
+IN1 = 17  # GPIO 17 (Pin 11)
+IN2 = 18  # GPIO 18 (Pin 12)
+IN3 = 27  # GPIO 27 (Pin 13)
+IN4 = 22  # GPIO 22 (Pin 15)
 
 # Setup GPIO
 GPIO.setmode(GPIO.BCM)
@@ -15,8 +15,8 @@ GPIO.setup(IN2, GPIO.OUT)
 GPIO.setup(IN3, GPIO.OUT)
 GPIO.setup(IN4, GPIO.OUT)
 
-# Correct Half-Step Sequence for 28BYJ-48
-step_sequence = [
+# Clockwise (Forward) Sequence
+step_sequence_cw = [
     [1, 0, 0, 0],
     [1, 1, 0, 0],
     [0, 1, 0, 0],
@@ -27,10 +27,23 @@ step_sequence = [
     [1, 0, 0, 1]
 ]
 
-def move_steps(steps, delay=0.005, direction=1):
+# Counter-Clockwise (Backward) Sequence = REVERSE of CW
+step_sequence_ccw = [
+    [1, 0, 0, 1],
+    [0, 0, 0, 1],
+    [0, 0, 1, 1],
+    [0, 0, 1, 0],
+    [0, 1, 1, 0],
+    [0, 1, 0, 0],
+    [1, 1, 0, 0],
+    [1, 0, 0, 0]
+]
+
+def move_steps(steps, delay=0.005, direction="cw"):
+    sequence = step_sequence_cw if direction == "cw" else step_sequence_ccw
+    
     for _ in range(steps):
-        for i in range(8) if direction == 1 else range(7, -1, -1):
-            step = step_sequence[i]
+        for step in sequence:
             GPIO.output(IN1, step[0])
             GPIO.output(IN2, step[1])
             GPIO.output(IN3, step[2])
@@ -39,11 +52,11 @@ def move_steps(steps, delay=0.005, direction=1):
 
 try:
     print("Rotating CLOCKWISE (512 steps)...")
-    move_steps(512, 0.005, 1)  # CW
+    move_steps(512, 0.005, "cw")  # CW rotation
     time.sleep(1)
     
     print("Rotating COUNTER-CLOCKWISE (512 steps)...")
-    move_steps(512, 0.005, -1)  # CCW
+    move_steps(512, 0.005, "ccw")  # CCW rotation
     
     print("Test complete.")
 
