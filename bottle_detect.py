@@ -8,7 +8,7 @@ from servo import move_servo, stop_servo
 from lcd import display_message
 
 model = YOLO('yolov8n.pt')
-esp32_cam_url = "http://192.168.1.11:81/stream"
+esp32_cam_url = "http://192.168.1.10:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
