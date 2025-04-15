@@ -1,45 +1,49 @@
 import RPi.GPIO as GPIO
 import time
 
-# Use BCM pin numbering
+# Pin Definitions
+TRIG_PIN = 23  # You can change these to your wiring
+ECHO_PIN = 24
+
+# Setup
 GPIO.setmode(GPIO.BCM)
+GPIO.setup(TRIG_PIN, GPIO.OUT)
+GPIO.setup(ECHO_PIN, GPIO.IN)
 
-# Define GPIO pins for TRIG and ECHO
-TRIG = 23
-ECHO = 24
+def get_distance():
+    # Ensure trigger is low
+    GPIO.output(TRIG_PIN, False)
+    time.sleep(0.05)
 
-print("Distance Measurement In Progress")
+    # Send 10µs pulse
+    GPIO.output(TRIG_PIN, True)
+    time.sleep(0.00001)  # 10 microseconds
+    GPIO.output(TRIG_PIN, False)
 
-# Set up the GPIO pins
-GPIO.setup(TRIG, GPIO.OUT)
-GPIO.setup(ECHO, GPIO.IN)
+    # Wait for echo to start
+    while GPIO.input(ECHO_PIN) == 0:
+        pulse_start = time.time()
 
-# Ensure TRIG is low initially
-GPIO.output(TRIG, False)
-print("Waiting For Sensor To Settle")
-time.sleep(2)
+    # Wait for echo to end
+    while GPIO.input(ECHO_PIN) == 1:
+        pulse_end = time.time()
 
-# Send a 10µs pulse to trigger the sensor
-GPIO.output(TRIG, True)
-time.sleep(0.00001)
-GPIO.output(TRIG, False)
+    # Duration of echo pulse
+    pulse_duration = pulse_end - pulse_start
 
-# Wait for the echo start
-while GPIO.input(ECHO) == 0:
-    pulse_start = time.time()
+    # Distance in cm
+    distance = pulse_duration * 17150  # speed of sound: 34300 cm/s ÷ 2
 
-# Wait for the echo end
-while GPIO.input(ECHO) == 1:
-    pulse_end = time.time()
+    return round(distance, 2)
 
-# Calculate pulse duration
-pulse_duration = pulse_end - pulse_start
+try:
+    while True:
+        dist = get_distance()
+        print(f"Distance: {dist} cm")
+        time.sleep(0.5)
 
-# Calculate distance (speed of sound is ~34300 cm/s)
-distance = pulse_duration * 17150
-distance = round(distance, 2)
+except KeyboardInterrupt:
+    print("Stopped by user")
 
-print("Distance:", distance, "cm")
-
-# Clean up GPIO settings
-GPIO.cleanup()
+finally:
+    GPIO.cleanup()
