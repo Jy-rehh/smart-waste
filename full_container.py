@@ -2,8 +2,8 @@ import RPi.GPIO as GPIO
 import time
 
 # --- Pin Definitions ---
-TRIG_PIN = 0   # Physical pin 27
-ECHO_PIN = 25  # Physical pin 22
+TRIG_PIN = 10  # Physical pin 19
+ECHO_PIN = 9   # Physical pin 21
 
 # --- Setup ---
 GPIO.setmode(GPIO.BCM)
@@ -14,9 +14,9 @@ def get_distance():
     GPIO.output(TRIG_PIN, False)
     time.sleep(0.05)
 
-    # Trigger the pulse
+    # Trigger pulse
     GPIO.output(TRIG_PIN, True)
-    time.sleep(0.00001)
+    time.sleep(0.00001)  # 10µs pulse
     GPIO.output(TRIG_PIN, False)
 
     # Wait for echo to start
@@ -35,13 +35,13 @@ def get_distance():
             print("Timeout waiting for echo to end")
             return None
 
-    # Calculate duration and distance
     pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150
+    distance = pulse_duration * 17150  # Speed of sound / 2
+
     return round(distance, 2)
 
 try:
-    print("Measuring distance using physical pins 27 (TRIG) and 22 (ECHO)...")
+    print("Ultrasonic sensor ready. Press Ctrl+C to stop.")
     while True:
         dist = get_distance()
         if dist is not None:
