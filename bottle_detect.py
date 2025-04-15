@@ -71,19 +71,17 @@ try:
                         non_plastic_detected = True
 
             if plastic_detected:
-                display_message("Plastic Bottle\nAccepting")
-                print("[✅] Plastic bottle detected")
+                display_message("Plastic Bottle Accepting")
                 set_servo_position(1)
                 sleep(1.5)
-                set_servo_position(0.5)
+                set_servo_position(0.5)  # Neutral/resting position
                 display_message("Insert bottle")
 
             elif non_plastic_detected:
-                display_message("Not a Plastic\nBottle Rejecting")
-                print("[❌] Non-plastic object detected")
+                display_message("Not a Plastic Bottle Rejecting")
                 set_servo_position(0)
                 sleep(1.5)
-                set_servo_position(0.5)
+                set_servo_position(0.5)  # Neutral/resting position
                 display_message("Insert bottle")
 
             else:
