@@ -1,49 +1,57 @@
 import RPi.GPIO as GPIO
 import time
 
-# Set up GPIO for the second ultrasonic sensor
+# --- Pin Definitions ---
+TRIG_PIN = 0   # Physical pin 27
+ECHO_PIN = 25  # Physical pin 22
+
+# --- Setup ---
 GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
+GPIO.setup(TRIG_PIN, GPIO.OUT)
+GPIO.setup(ECHO_PIN, GPIO.IN)
 
-TRIG2 = 27  # GPIO Pin 27
-ECHO2 = 22  # GPIO Pin 22
+def get_distance():
+    GPIO.output(TRIG_PIN, False)
+    time.sleep(0.05)
 
-GPIO.setup(TRIG2, GPIO.OUT)
-GPIO.setup(ECHO2, GPIO.IN)
-
-def get_distance(TRIG, ECHO):
-    # Send a pulse to the TRIG pin
-    GPIO.output(TRIG, GPIO.LOW)
-    time.sleep(0.5)
-    GPIO.output(TRIG, GPIO.HIGH)
+    # Trigger the pulse
+    GPIO.output(TRIG_PIN, True)
     time.sleep(0.00001)
-    GPIO.output(TRIG, GPIO.LOW)
+    GPIO.output(TRIG_PIN, False)
 
-    # Measure the pulse duration from the ECHO pin
-    while GPIO.input(ECHO) == GPIO.LOW:
+    # Wait for echo to start
+    timeout = time.time() + 0.04
+    while GPIO.input(ECHO_PIN) == 0:
         pulse_start = time.time()
+        if time.time() > timeout:
+            print("Timeout waiting for echo to start")
+            return None
 
-    while GPIO.input(ECHO) == GPIO.HIGH:
+    # Wait for echo to end
+    timeout = time.time() + 0.04
+    while GPIO.input(ECHO_PIN) == 1:
         pulse_end = time.time()
+        if time.time() > timeout:
+            print("Timeout waiting for echo to end")
+            return None
 
-    # Calculate the distance in cm
+    # Calculate duration and distance
     pulse_duration = pulse_end - pulse_start
     distance = pulse_duration * 17150
-    distance = round(distance, 2)
-
-    return distance
+    return round(distance, 2)
 
 try:
+    print("Measuring distance using physical pins 27 (TRIG) and 22 (ECHO)...")
     while True:
-        distance2 = get_distance(TRIG2, ECHO2)
-        print(f"Sensor 2 Distance: {distance2} cm")
-
-        # Logic for container full detection
-        if distance2 < 10:  # If the distance is less than 10 cm, container is full
-            print("Container 2 is full!")
-
-        time.sleep(1)
+        dist = get_distance()
+        if dist is not None:
+            print(f"Distance: {dist} cm")
+        else:
+            print("Sensor error or out of range.")
+        time.sleep(0.5)
 
 except KeyboardInterrupt:
-    print("Program stopped.")
+    print("\nMeasurement stopped by user.")
+
+finally:
     GPIO.cleanup()
