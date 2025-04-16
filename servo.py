@@ -24,8 +24,8 @@
 # GPIO.cleanup() # Clean up all the ports we've used.
 
 # servo.py
-import gpio_setup
 import RPi.GPIO as GPIO
+from time import sleep
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
