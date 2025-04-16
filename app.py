@@ -1,23 +1,13 @@
 import threading
 import subprocess
-from flask import Flask, render_template
-
-app = Flask(__name__)
 
 # Function to run the bottle detection in a separate process using xvfb-run
 def run_bottle_detection():
-    # Run the bottle detection asynchronously using subprocess.Popen (non-blocking)
     subprocess.Popen(["xvfb-run", "python3", "bottle_detect.py"])
 
-# Start the bottle detection in a separate thread
-detection_thread = threading.Thread(target=run_bottle_detection, daemon=True)
-detection_thread.start()
+# Start the detection thread
+thread = threading.Thread(target=run_bottle_detection, daemon=True)
+thread.start()
 
-# Simple Flask web server
-@app.route('/')
-def index():
-    return render_template("index.html")  # Assuming you have an index.html file in your templates folder
-
-if __name__ == '__main__':
-    # Run Flask app on 192.168.1.18 (accessible on local network)
-    app.run(host="0.0.0.0", port=80)
+# Keep the script alive
+thread.join()
