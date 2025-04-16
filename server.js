@@ -12,6 +12,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'templates', 'index.html'));
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.listen(80, '0.0.0.0', () => {
+    console.log('Server is running on http://192.168.1.18:80');
 });
