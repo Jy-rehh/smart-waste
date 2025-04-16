@@ -1,13 +1,13 @@
 import threading
 import subprocess
-import time
 from flask import Flask, render_template
 
 app = Flask(__name__)
 
 # Function to run the bottle detection in a separate process using xvfb-run
 def run_bottle_detection():
-    subprocess.run(["xvfb-run", "python3", "bottle_detect.py"])
+    # Run the bottle detection asynchronously using subprocess.Popen (non-blocking)
+    subprocess.Popen(["xvfb-run", "python3", "bottle_detect.py"])
 
 # Start the bottle detection in a separate thread
 detection_thread = threading.Thread(target=run_bottle_detection, daemon=True)
