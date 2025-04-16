@@ -1,3 +1,5 @@
+# bottle_detect.py
+
 import threading
 import time
 import cv2
@@ -7,17 +9,22 @@ from time import sleep
 from servo import move_servo, stop_servo
 from lcd import display_message
 
+import bottle_identify  # ✅ This is the ultrasonic module
+
+# Start ultrasonic sensor in background
+bottle_identify.start_ultrasonic_thread()
+
 model = YOLO('yolov8n.pt')
 esp32_cam_url = "http://192.168.1.10:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
-    print("❌ Failed to connect to ESP32-CAM. Check IP or Wi-Fi.")
+    print("❌ Failed to connect to ESP32-CAM.")
     exit()
 
 frame = None
+last_servo_position = None
 
-# Start video capture thread
 def capture_frames():
     global frame
     while True:
@@ -25,19 +32,10 @@ def capture_frames():
         if ret:
             frame = new_frame
 
-thread = threading.Thread(target=capture_frames, daemon=True)
-thread.start()
+threading.Thread(target=capture_frames, daemon=True).start()
 
-# Initial LCD message
 display_message("Insert bottle")
-
-# ========================
-# 1. Only detect every 5s
-# 2. Prevent servo jitter by only moving if needed
-# ========================
-
 last_detection_time = time.time()
-last_servo_position = None  # Track last position to avoid jitter
 
 def set_servo_position(pos):
     global last_servo_position
@@ -61,10 +59,8 @@ try:
                     confidence = box.conf[0].item()
                     if confidence < 0.5:
                         continue
-
                     class_id = int(box.cls[0])
                     class_name = model.names[class_id]
-
                     if "bottle" in class_name.lower():
                         plastic_detected = True
                     else:
@@ -74,30 +70,33 @@ try:
                 display_message("Plastic Bottle Accepting")
                 set_servo_position(1)
                 sleep(1.5)
-                set_servo_position(0.5)  # Neutral/resting position
+                set_servo_position(0.5)
                 display_message("Insert bottle")
-
             elif non_plastic_detected:
                 display_message("Not a Plastic Bottle Rejecting")
                 set_servo_position(0)
                 sleep(1.5)
-                set_servo_position(0.5)  # Neutral/resting position
+                set_servo_position(0.5)
                 display_message("Insert bottle")
-
             else:
                 display_message("Insert bottle")
 
             last_detection_time = current_time
 
-        # Show the current frame for debugging
+        # 🚨 Optional: Check bin fullness from ultrasonic
+        dist = bottle_identify.get_distance()
+        if dist is not None and dist < 10:
+            print(f"⚠️ Bin full! Distance: {dist} cm")
+
         cv2.imshow("Detection", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
 except KeyboardInterrupt:
-    print("🛑 Exiting gracefully...")
+    print("🛑 Interrupted by user.")
 
 finally:
     cap.release()
     cv2.destroyAllWindows()
     stop_servo()
+    GPIO.cleanup()

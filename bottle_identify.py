@@ -1,57 +1,53 @@
-import RPi.GPIO as GPIO
+# bottle_identify.py
+
+import threading
 import time
+import RPi.GPIO as GPIO
 
-# --- Pin Definitions ---
-TRIG_PIN = 11  # Physical pin 23
-ECHO_PIN = 8   # Physical pin 24
+TRIG_PIN = 11
+ECHO_PIN = 8
 
-# --- Setup ---
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(TRIG_PIN, GPIO.OUT)
 GPIO.setup(ECHO_PIN, GPIO.IN)
 
-def get_distance():
-    GPIO.output(TRIG_PIN, False)
-    time.sleep(0.05)
+distance = None  # Shared global
 
-    # Trigger pulse
-    GPIO.output(TRIG_PIN, True)
-    time.sleep(0.00001)  # 10µs pulse
-    GPIO.output(TRIG_PIN, False)
-
-    # Wait for echo to start
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 0:
-        pulse_start = time.time()
-        if time.time() > timeout:
-            print("Timeout waiting for echo to start")
-            return None
-
-    # Wait for echo to end
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 1:
-        pulse_end = time.time()
-        if time.time() > timeout:
-            print("Timeout waiting for echo to end")
-            return None
-
-    pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150  # Speed of sound / 2
-
-    return round(distance, 2)
-
-try:
-    print("Ultrasonic sensor ready. Press Ctrl+C to stop.")
+def ultrasonic_loop():
+    global distance
     while True:
-        dist = get_distance()
-        if dist is not None:
-            print(f"Distance: {dist} cm")
-        else:
-            print("Sensor error or out of range.")
-        time.sleep(0.5)
+        GPIO.output(TRIG_PIN, False)
+        time.sleep(0.05)
 
-except KeyboardInterrupt:
-    print("\nMeasurement stopped by user.")
+        GPIO.output(TRIG_PIN, True)
+        time.sleep(0.00001)
+        GPIO.output(TRIG_PIN, False)
 
-finally:
-    GPIO.cleanup()
+        timeout = time.time() + 0.04
+        while GPIO.input(ECHO_PIN) == 0:
+            pulse_start = time.time()
+            if time.time() > timeout:
+                distance = None
+                break
+
+        timeout = time.time() + 0.04
+        while GPIO.input(ECHO_PIN) == 1:
+            pulse_end = time.time()
+            if time.time() > timeout:
+                distance = None
+                break
+
+        try:
+            pulse_duration = pulse_end - pulse_start
+            distance = round(pulse_duration * 17150, 2)
+        except:
+            distance = None
+
+        time.sleep(1)
+
+def start_ultrasonic_thread():
+    thread = threading.Thread(target=ultrasonic_loop, daemon=True)
+    thread.start()
+
+def get_distance():
+    return distance
