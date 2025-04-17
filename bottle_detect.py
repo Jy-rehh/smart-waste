@@ -22,7 +22,7 @@ frame = None
 # === Ultrasonic sensor setup ===
 TRIG_PIN = 11  # GPIO11 (physical pin 23)
 ECHO_PIN = 8   # GPIO8  (physical pin 24)
-GPIO.setmode(GPIO.BCM)
+GPIO.setmode(GPIO.BOARD)
 GPIO.setup(TRIG_PIN, GPIO.OUT)
 GPIO.setup(ECHO_PIN, GPIO.IN)
 
