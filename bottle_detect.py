@@ -3,12 +3,10 @@ import time
 import cv2
 from ultralytics import YOLO
 from time import sleep
-import RPi.GPIO as GPIO
 
 from servo import move_servo, stop_servo
 from lcd import display_message
 
-# === YOLO model and ESP32-CAM setup ===
 model = YOLO('yolov8n.pt')
 esp32_cam_url = "http://192.168.1.10:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
@@ -19,38 +17,7 @@ if not cap.isOpened():
 
 frame = None
 
-# === Ultrasonic sensor setup ===
-TRIG_PIN = 11  # GPIO11 (physical pin 23)
-ECHO_PIN = 8   # GPIO8  (physical pin 24)
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(TRIG_PIN, GPIO.OUT)
-GPIO.setup(ECHO_PIN, GPIO.IN)
-
-def get_distance():
-    GPIO.output(TRIG_PIN, False)
-    time.sleep(0.05)
-
-    GPIO.output(TRIG_PIN, True)
-    time.sleep(0.00001)
-    GPIO.output(TRIG_PIN, False)
-
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 0:
-        pulse_start = time.time()
-        if time.time() > timeout:
-            return None
-
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 1:
-        pulse_end = time.time()
-        if time.time() > timeout:
-            return None
-
-    pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150
-    return round(distance, 2)
-
-# === Frame capture thread ===
+# Start video capture thread
 def capture_frames():
     global frame
     while True:
@@ -61,11 +28,16 @@ def capture_frames():
 thread = threading.Thread(target=capture_frames, daemon=True)
 thread.start()
 
-# === Initial UI state ===
+# Initial LCD message
 display_message("Insert bottle")
 
+# ========================
+# 1. Only detect every 5s
+# 2. Prevent servo jitter by only moving if needed
+# ========================
+
 last_detection_time = time.time()
-last_servo_position = None
+last_servo_position = None  # Track last position to avoid jitter
 
 def set_servo_position(pos):
     global last_servo_position
@@ -99,22 +71,17 @@ try:
                         non_plastic_detected = True
 
             if plastic_detected:
-                distance = get_distance()
-                if distance is not None and distance < 5:  # 5cm threshold
-                    display_message("Bin Full. Cannot Accept.")
-                    set_servo_position(0)  # Reject position
-                else:
-                    display_message("Plastic Bottle Accepting")
-                    set_servo_position(1)  # Accept
-                    sleep(1.5)
-                    set_servo_position(0.5)  # Neutral
+                display_message("Plastic Bottle Accepting")
+                set_servo_position(1)
+                sleep(1.5)
+                set_servo_position(0.5)  # Neutral/resting position
                 display_message("Insert bottle")
 
             elif non_plastic_detected:
                 display_message("Not a Plastic Bottle Rejecting")
-                set_servo_position(0)  # Reject
+                set_servo_position(0)
                 sleep(1.5)
-                set_servo_position(0.5)
+                set_servo_position(0.5)  # Neutral/resting position
                 display_message("Insert bottle")
 
             else:
@@ -122,7 +89,7 @@ try:
 
             last_detection_time = current_time
 
-        # Show frame for debugging
+        # Show the current frame for debugging
         cv2.imshow("Detection", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
@@ -134,4 +101,3 @@ finally:
     cap.release()
     cv2.destroyAllWindows()
     stop_servo()
-    GPIO.cleanup()
