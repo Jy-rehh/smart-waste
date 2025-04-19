@@ -2,9 +2,9 @@ from routeros_api import RouterOsApiPool
 
 def connect_to_mikrotik():
     api_pool = RouterOsApiPool(
-        host='192.168.50.1',  # replace with your MikroTik's IP
-        username='apiuser',   # replace with your MikroTik API user
-        password='yourpassword',  # replace with that user's password
+        host='192.168.50.1',
+        username='apiuser',
+        password='yourpassword',
         port=8728,
         use_ssl=False
     )
