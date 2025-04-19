@@ -29,3 +29,12 @@ def create_hotspot_user(username, password='userpass', time_minutes=15):
 
     print(f"User {username} created with {time_minutes} minutes of access.")
     api_pool.disconnect()
+
+
+def disconnect_hotspot_user(username: str):
+    api_pool = connect_to_mikrotik()
+    api = api_pool.get_api()
+    users = api.get_resource('/ip/hotspot/user')
+    users.remove(name=username)
+    api_pool.disconnect()
+    print(f"[MikroTik] Disconnected {username}")
