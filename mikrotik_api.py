@@ -4,7 +4,7 @@ def connect_to_mikrotik():
     api_pool = RouterOsApiPool(
         host='192.168.8.104',
         username='apiuser',
-        password='yourpassword',
+        password='apiuser1234',
         port=8728,
         use_ssl=False
     )
