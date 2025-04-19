@@ -2,11 +2,12 @@ from routeros_api import RouterOsApiPool
 
 def connect_to_mikrotik():
     api_pool = RouterOsApiPool(
-        host='192.168.8.104',
-        username='apiuser',
-        password='apiuser1234',
-        port=8728,
-        use_ssl=False
+    host='192.168.8.104',
+    username='apiuser',
+    password='apiuser1234',
+    port=8728,
+    use_ssl=False,
+    plaintext_login=True   # <-- Add this line!
     )
     return api_pool
 
