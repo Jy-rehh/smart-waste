@@ -7,7 +7,7 @@ from firebase_admin import credentials, firestore
 from mikrotik_api import create_hotspot_user
 
 # ——— Initialize Firebase ———
-cred = credentials.Certificate('serviceAccountKey.json')
+cred = credentials.Certificate('firebase-key.json')
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
