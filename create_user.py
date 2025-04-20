@@ -1,58 +1,81 @@
+# create_user.py
+
 import sys
 from datetime import datetime, timedelta
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, db
 from mikrotik_api import create_hotspot_user
-import random
-import string
 
 # ——— Initialize Firebase ———
 cred = credentials.Certificate('firebase-key.json')
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://smart-waste-smart-access-a425c-default-rtdb.firebaseio.com/'  # Replace with your URL
+})
 
-# Function to generate a random secure password
-def generate_secure_password(length=12):
-    chars = string.ascii_letters + string.digits + string.punctuation
-    return ''.join(random.choice(chars) for _ in range(length))
+firestore_db = firestore.client()  # Firestore client
+realtime_db = db.reference('users')  # Realtime Database reference for users
+
+def create_user_in_firestore(username, minutes):
+    expiry = datetime.now() + timedelta(minutes=minutes)
+    doc_ref = firestore_db.collection('Users Collection').document(username)
+    doc_ref.set({
+        'UserID': username,
+        'WiFiTimeAvailable': minutes,
+        'time_created': firestore.SERVER_TIMESTAMP,
+        'time_expiry': expiry,
+        'status': 'active',
+        'username': username,
+        'password': username + "_pass"
+    })
+    print(f"[Firestore] {username} added with {minutes} minutes")
+
+def create_user_in_realtime_db(username, minutes):
+    now = datetime.now()
+    start_time = now.isoformat()  # Convert start time to ISO format
+    end_time = (now + timedelta(minutes=minutes)).isoformat()  # Calculate end time based on Wi-Fi minutes
+
+    user_data = {
+        'user_id': username,
+        'status': 'active',
+        'start_time': start_time,
+        'end_time': end_time,
+        'wifi_minutes_used': 0,  # Initially, no Wi-Fi time used
+        'device_mac': 'unknown'  # Device MAC can be updated later
+    }
+
+    # Check if user already exists in Realtime Database
+    existing_user = realtime_db.child(username).get()
+    if existing_user:
+        print(f"[Warning] User '{username}' already exists in Realtime Database. Skipping.")
+        return
+
+    ref = realtime_db.child(username)
+    ref.set(user_data)
+    print(f"[Realtime DB] {username} created with Wi-Fi time: {minutes} minutes.")
 
 def main(username: str, minutes: int):
-    # Generate a secure password
-    password = generate_secure_password()  # Use a random password generator for better security
-
-    # Check if user already exists in Firestore
-    doc_ref = db.collection('Users Collection').document(username)
+    # Check if user exists in Firestore
+    doc_ref = firestore_db.collection('Users Collection').document(username)
     if doc_ref.get().exists:
         print(f"[Warning] User '{username}' already exists in Firestore. Skipping creation.")
         return
 
-    try:
-        # 1) Spin up user on MikroTik
-        create_hotspot_user(username, password=password, time_minutes=minutes)
-
-        # 2) Log to Firestore inside "Users Collection"
-        expiry = datetime.now() + timedelta(minutes=minutes)
-
-        doc_ref.set({
-            'Email': '',
-            'Name': '',
-            'LoyaltyPoints': 0,
-            'RewardPoints': 0,
-            'TotalBottlesDeposited': 0,
-            'UserID': username,
-            'WiFiTimeAvailable': minutes,
-            'time_created': firestore.SERVER_TIMESTAMP,
-            'time_expiry': expiry,
-            'status': 'active',
-            'username': username,
-            'password': password
-        })
-
-        print(f"[Firebase] {username} added to Users Collection. Expires at {expiry}")
-
-    except Exception as e:
-        print(f"[Error] Failed to create user '{username}': {str(e)}")
+    # Check if user exists in Realtime Database
+    existing_user = realtime_db.child(username).get()
+    if existing_user:
+        print(f"[Warning] User '{username}' already exists in Realtime Database. Skipping creation.")
         return
+
+    # 1) Create user in MikroTik
+    create_hotspot_user(username, password=username + "_pass", time_minutes=minutes)
+
+    # 2) Create user in Firestore
+    create_user_in_firestore(username, minutes)
+
+    # 3) Create user in Realtime Database
+    create_user_in_realtime_db(username, minutes)
+
+    print(f"[All] {username} created successfully with {minutes} minutes.")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
