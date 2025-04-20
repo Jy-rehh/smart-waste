@@ -2,7 +2,6 @@ import sys
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials, firestore, db
-# from mikrotik_api import create_hotspot_user  # Temporarily disable MikroTik
 
 # ——— Initialize Firebase ———
 cred = credentials.Certificate('firebase-key.json')
@@ -62,6 +61,7 @@ def create_user_in_firestore(username, minutes):
     doc_ref.set({
         'UserID': username,
         'WiFiTimeAvailable': minutes,
+        'time_created': firestore.SERVER_TIMESTAMP,
         'time_expiry': expiry,
         'status': 'active',
         'username': username,
@@ -77,18 +77,13 @@ def create_user_in_realtime_db(username, minutes):
     user_data = {
         'user_id': username,
         'status': 'active',
-        'username': username,
-        'wifi_minutes_used': 0,
         'start_time': start_time,
         'end_time': end_time,
+        'wifi_minutes_used': 0,
+        'device_mac': 'unknown'
     }
 
-    # Check if user already exists
-    existing_user = realtime_db.child(username).get()
-    if existing_user:
-        print(f"[Warning] User '{username}' already exists in Realtime DB. Skipping.")
-        return
-
+    # Add user to the 'users' node in Realtime DB
     realtime_db.child(username).set(user_data)
     print(f"[Realtime DB] {username} created with Wi-Fi time: {minutes} minutes, from {start_time} to {end_time}.")  # Debug print
 
