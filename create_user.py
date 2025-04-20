@@ -10,7 +10,7 @@ firebase_admin.initialize_app(cred, {
 })
 
 firestore_db = firestore.client()  # Firestore client
-realtime_db = db.reference('users')  # Realtime DB reference at /users
+realtime_db = db.reference('/')  # Point to the root of the database
 
 def update_user_in_firestore(username, minutes):
     # Get the existing document
@@ -87,16 +87,18 @@ def create_user_in_realtime_db(username, minutes):
     # Store user data under /users/{username}
     user_ref = realtime_db.child('users').child(username)
     
-    # Check if the user already exists in Realtime DB
-    existing_user = user_ref.get()
-    if existing_user:
-        print(f"[Warning] User '{username}' already exists in Realtime DB. Skipping.")
-        return
+    try:
+        # Check if the user already exists in Realtime DB
+        existing_user = user_ref.get()
+        if existing_user:
+            print(f"[Warning] User '{username}' already exists in Realtime DB. Skipping.")
+            return
 
-    # Write the new user data to the Realtime DB
-    user_ref.set(user_data)
-    print(f"[Realtime DB] {username} created with Wi-Fi time: {minutes} minutes, from {start_time} to {end_time}.")
-
+        # Write the new user data to the Realtime DB
+        user_ref.set(user_data)
+        print(f"[Realtime DB] {username} created with Wi-Fi time: {minutes} minutes, from {start_time} to {end_time}.")
+    except Exception as e:
+        print(f"[Error] Failed to write to Realtime DB: {e}")
 
 def main(username: str, minutes: int):
     print(f"[Step 1] Checking if user '{username}' exists...")
@@ -116,7 +118,7 @@ def main(username: str, minutes: int):
         return
 
     # Check Realtime DB
-    existing_user = realtime_db.child(username).get()
+    existing_user = realtime_db.child('users').child(username).get()
     if existing_user:
         print(f"[Info] User '{username}' exists in Realtime DB. Updating Wi-Fi time...")
         update_user_in_realtime_db(username, minutes)
@@ -130,7 +132,6 @@ def main(username: str, minutes: int):
     create_user_in_realtime_db(username, minutes)
 
     print(f"[All Done] {username} created/updated successfully with {minutes} minutes.")
-
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
