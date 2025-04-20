@@ -25,7 +25,7 @@ def create_user_in_firestore(username, minutes):
         'username': username,
         'password': username + "_pass"
     })
-    print(f"[Firestore] {username} added with {minutes} minutes")
+    print(f"[Firestore] {username} added with {minutes} minutes at {expiry}")  # Debug print
 
 def create_user_in_realtime_db(username, minutes):
     now = datetime.now()
@@ -48,7 +48,8 @@ def create_user_in_realtime_db(username, minutes):
         return
 
     realtime_db.child(username).set(user_data)
-    print(f"[Realtime DB] {username} created with Wi-Fi time: {minutes} minutes.")
+    print(f"[Realtime DB] {username} created with Wi-Fi time: {minutes} minutes, from {start_time} to {end_time}.")  # Debug print
+
 
 def main(username: str, minutes: int):
     print(f"[Step 1] Checking if user '{username}' exists...")
