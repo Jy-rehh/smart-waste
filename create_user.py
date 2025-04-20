@@ -52,9 +52,17 @@ def create_user_in_realtime_db(username, minutes):
 
 def main(username: str, minutes: int):
     print(f"[Step 1] Checking if user '{username}' exists...")
+
     doc_ref = firestore_db.collection('Users Collection').document(username)
-    if doc_ref.get().exists:
-        print(f"[Warning] User '{username}' already exists in Firestore. Skipping.")
+    print("→ Trying to fetch document from Firestore...")
+    try:
+        snapshot = doc_ref.get()
+        print("→ Document fetched.")
+        if snapshot.exists:
+            print(f"[Warning] User '{username}' already exists in Firestore. Skipping.")
+            return
+    except Exception as e:
+        print(f"[Error] Firestore fetch failed: {e}")
         return
 
     existing_user = realtime_db.child(username).get()
