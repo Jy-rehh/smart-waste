@@ -1,19 +1,17 @@
-# create_user.py
-
 import sys
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials, firestore, db
-from mikrotik_api import create_hotspot_user
+# from mikrotik_api import create_hotspot_user  # Temporarily disable MikroTik
 
 # ——— Initialize Firebase ———
 cred = credentials.Certificate('firebase-key.json')
 firebase_admin.initialize_app(cred, {
-    'databaseURL': 'https://smart-waste-smart-access-a425c-default-rtdb.firebaseio.com/'  # Replace with your URL
+    'databaseURL': 'https://smart-waste-smart-access-a425c-default-rtdb.firebaseio.com/'
 })
 
 firestore_db = firestore.client()  # Firestore client
-realtime_db = db.reference('users')  # Realtime Database reference for users
+realtime_db = db.reference('users')  # Realtime DB reference at /users
 
 def create_user_in_firestore(username, minutes):
     expiry = datetime.now() + timedelta(minutes=minutes)
@@ -31,51 +29,49 @@ def create_user_in_firestore(username, minutes):
 
 def create_user_in_realtime_db(username, minutes):
     now = datetime.now()
-    start_time = now.isoformat()  # Convert start time to ISO format
-    end_time = (now + timedelta(minutes=minutes)).isoformat()  # Calculate end time based on Wi-Fi minutes
+    start_time = now.isoformat()
+    end_time = (now + timedelta(minutes=minutes)).isoformat()
 
     user_data = {
         'user_id': username,
         'status': 'active',
         'start_time': start_time,
         'end_time': end_time,
-        'wifi_minutes_used': 0,  # Initially, no Wi-Fi time used
-        'device_mac': 'unknown'  # Device MAC can be updated later
+        'wifi_minutes_used': 0,
+        'device_mac': 'unknown'
     }
 
-    # Check if user already exists in Realtime Database
+    # Check if user already exists
     existing_user = realtime_db.child(username).get()
     if existing_user:
-        print(f"[Warning] User '{username}' already exists in Realtime Database. Skipping.")
+        print(f"[Warning] User '{username}' already exists in Realtime DB. Skipping.")
         return
 
-    ref = realtime_db.child(username)
-    ref.set(user_data)
+    realtime_db.child(username).set(user_data)
     print(f"[Realtime DB] {username} created with Wi-Fi time: {minutes} minutes.")
 
 def main(username: str, minutes: int):
-    # Check if user exists in Firestore
+    print(f"[Step 1] Checking if user '{username}' exists...")
     doc_ref = firestore_db.collection('Users Collection').document(username)
     if doc_ref.get().exists:
-        print(f"[Warning] User '{username}' already exists in Firestore. Skipping creation.")
+        print(f"[Warning] User '{username}' already exists in Firestore. Skipping.")
         return
 
-    # Check if user exists in Realtime Database
     existing_user = realtime_db.child(username).get()
     if existing_user:
-        print(f"[Warning] User '{username}' already exists in Realtime Database. Skipping creation.")
+        print(f"[Warning] User '{username}' already exists in Realtime DB. Skipping.")
         return
 
-    # 1) Create user in MikroTik
-    create_hotspot_user(username, password=username + "_pass", time_minutes=minutes)
+    # Step 2: Skip MikroTik for now
+    # create_hotspot_user(username, password=username + "_pass", time_minutes=minutes)
 
-    # 2) Create user in Firestore
+    print(f"[Step 3] Creating user in Firestore...")
     create_user_in_firestore(username, minutes)
 
-    # 3) Create user in Realtime Database
+    print(f"[Step 4] Creating user in Realtime DB...")
     create_user_in_realtime_db(username, minutes)
 
-    print(f"[All] {username} created successfully with {minutes} minutes.")
+    print(f"[All Done] {username} created successfully with {minutes} minutes.")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
