@@ -62,7 +62,6 @@ def create_user_in_firestore(username, minutes):
     doc_ref.set({
         'UserID': username,
         'WiFiTimeAvailable': minutes,
-        'time_created': firestore.SERVER_TIMESTAMP,
         'time_expiry': expiry,
         'status': 'active',
         'username': username,
@@ -78,10 +77,10 @@ def create_user_in_realtime_db(username, minutes):
     user_data = {
         'user_id': username,
         'status': 'active',
+        'username': username,
+        'wifi_minutes_used': 0,
         'start_time': start_time,
         'end_time': end_time,
-        'wifi_minutes_used': 0,
-        'device_mac': 'unknown'
     }
 
     # Check if user already exists
