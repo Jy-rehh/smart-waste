@@ -34,7 +34,7 @@ def update_user_in_firestore(username, minutes):
 
 def update_user_in_realtime_db(username, minutes):
     # Get the current data in Realtime DB
-    user_ref = realtime_db.child(username)
+    user_ref = realtime_db.child('users').child(username)  # Reference to /users/{username}
     existing_user_data = user_ref.get()
 
     if existing_user_data:
@@ -74,18 +74,28 @@ def create_user_in_realtime_db(username, minutes):
     start_time = now.isoformat()
     end_time = (now + timedelta(minutes=minutes)).isoformat()
 
+    # User data to store in Realtime DB under the /users/{username} path
     user_data = {
         'user_id': username,
         'status': 'active',
         'start_time': start_time,
         'end_time': end_time,
-        'wifi_minutes_used': 0,
-        'device_mac': 'unknown'
+        'wifi_minutes_used': 0,  # Initially no minutes used
+        'device_mac': 'unknown'  # You can update this later if you want
     }
 
-    # Add user to the 'users' node in Realtime DB
-    realtime_db.child(username).set(user_data)
-    print(f"[Realtime DB] {username} created with Wi-Fi time: {minutes} minutes, from {start_time} to {end_time}.")  # Debug print
+    # Store user data under /users/{username}
+    user_ref = realtime_db.child('users').child(username)
+    
+    # Check if the user already exists in Realtime DB
+    existing_user = user_ref.get()
+    if existing_user:
+        print(f"[Warning] User '{username}' already exists in Realtime DB. Skipping.")
+        return
+
+    # Write the new user data to the Realtime DB
+    user_ref.set(user_data)
+    print(f"[Realtime DB] {username} created with Wi-Fi time: {minutes} minutes, from {start_time} to {end_time}.")
 
 
 def main(username: str, minutes: int):
