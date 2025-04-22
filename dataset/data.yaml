@@ -1,0 +1,13 @@
+train: C:/smart-waste/dataset/train/images
+val: C:/smart-waste/dataset/valid/images
+test: dataset/test/images
+
+nc: 3
+names: ['background', 'large', 'small']
+
+roboflow:
+  workspace: smartwaste-0lzbb
+  project: plastic-bottles-ukqt7
+  version: 3
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/smartwaste-0lzbb/plastic-bottles-ukqt7/dataset/3

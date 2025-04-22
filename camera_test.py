@@ -1,70 +1,66 @@
-from ultralytics import YOLO
-import cvzone
-import cv2
+import threading
 import time
+import cv2
+from ultralytics import YOLO
 
-# Load the YOLO model
-model = YOLO('yolov10n.pt')
-print("Model loaded with classes:", model.names)
+# ✅ Load your custom trained model (replace path with your actual path)
+model = YOLO('detect/train10/weights/best.pt')
 
-# ESP32-CAM MJPEG stream URL
-esp32_cam_url = "http://10.0.0.244:81/stream"
+# ✅ ESP32-CAM MJPEG stream
+esp32_cam_url = "http://192.168.8.103:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
-# Check if the stream opens
 if not cap.isOpened():
-    print("Failed to connect to ESP32-CAM. Check the IP and Wi-Fi connection.")
+    print("❌ Failed to connect to ESP32-CAM. Check IP or Wi-Fi.")
     exit()
 
-# Optional: improve performance by reducing frame resolution
-cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+frame = None
 
-# Known plastic-related class names (add or update as needed)
-plastic_keywords = ['bottle', 'plastic', 'water bottle']
+# Capture video frames in a separate thread
+def capture_frames():
+    global frame
+    while True:
+        ret, new_frame = cap.read()
+        if ret:
+            frame = new_frame
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("⚠️ Frame grab failed.")
-        continue
+thread = threading.Thread(target=capture_frames, daemon=True)
+thread.start()
 
-    start_time = time.time()
+last_detection_time = time.time()
 
-    # YOLO inference
-    results = model(frame, verbose=False)[0]
+try:
+    while True:
+        if frame is None:
+            continue
 
-    detected_objects = []
+        current_time = time.time()
+        if current_time - last_detection_time >= 1:
+            results = model(frame)[0]
 
-    for box in results.boxes:
-        x1, y1, x2, y2 = box.xyxy[0].int().tolist()
-        conf = int(box.conf[0] * 100)
-        class_id = int(box.cls[0])
-        label = model.names[class_id]
+            for box in results.boxes:
+                x1, y1, x2, y2 = box.xyxy[0].int().tolist()
+                confidence = float(box.conf[0])
+                class_id = int(box.cls[0])
+                label = model.names[class_id]
 
-        detected_objects.append(label)
+                # Draw bounding boxes
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, f"{label} {confidence:.2f}", (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-        # Draw bounding box and label
-        color = (0, 255, 0) if any(k in label.lower() for k in plastic_keywords) else (0, 0, 255)
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-        cvzone.putTextRect(frame, f"{label} {conf}%", (x1, y1 - 10), scale=1, thickness=1)
+                print(f"🟢 Detected: {label} ({confidence:.2f})")
 
-    # Display detected object list with check marks
-    for obj in detected_objects:
-        if any(keyword in obj.lower() for keyword in plastic_keywords):
-            print(f"✅ Detected: {obj}")
-        else:
-            print(f"❌ Detected: {obj}")
+            last_detection_time = current_time
 
-    # Show image
-    cv2.imshow("ESP32-CAM Object Detection", frame)
+        # Show frame with detection
+        cv2.imshow("YOLOv8 ESP32-CAM Detection", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
-    # Optional: print frame rate
-    # print("FPS:", round(1 / (time.time() - start_time), 2))
+except KeyboardInterrupt:
+    print("🛑 Detection stopped manually.")
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+finally:
+    cap.release()
+    cv2.destroyAllWindows()

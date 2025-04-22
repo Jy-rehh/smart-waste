@@ -7,8 +7,9 @@ from time import sleep
 from servo import move_servo, stop_servo
 from lcd import display_message
 
-model = YOLO('yolov8n.pt')
-esp32_cam_url = "http://192.168.1.10:81/stream"
+#model = YOLO('yolov8n.pt')
+model = YOLO('detect/train10/weights/best.pt')
+esp32_cam_url = "http://192.168.8.103:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
@@ -53,43 +54,51 @@ try:
         current_time = time.time()
         if current_time - last_detection_time >= 5:
             results = model(frame)
-            plastic_detected = False
-            non_plastic_detected = False
+            
+            accept = False
+            reject = False
+            only_background = True  # assume background until proven otherwise
 
             for info in results:
                 for box in info.boxes:
                     confidence = box.conf[0].item()
                     if confidence < 0.5:
+                        reject = True  # below threshold
                         continue
 
                     class_id = int(box.cls[0])
-                    class_name = model.names[class_id]
+                    class_name = model.names[class_id].lower()
 
-                    if "bottle" in class_name.lower():
-                        plastic_detected = True
+                    if class_name == "background":
+                        continue  # background is passive, don't trigger anything
+
+                    only_background = False
+
+                    if class_name == "small" or class_name == "large":
+                        accept = True
                     else:
-                        non_plastic_detected = True
+                        reject = True
 
-            if plastic_detected:
-                display_message("Plastic Bottle Accepting")
-                set_servo_position(1)
+            if accept:
+                display_message("Accepting Bottle")
+                set_servo_position(1)  # accept area
                 sleep(1.5)
-                set_servo_position(0.5)  # Neutral/resting position
+                set_servo_position(0.5)  # neutral
                 display_message("Insert bottle")
 
-            elif non_plastic_detected:
-                display_message("Not a Plastic Bottle Rejecting")
-                set_servo_position(0)
+            elif reject and not only_background:
+                display_message("Rejected Bottle")
+                set_servo_position(0)  # reject area
                 sleep(1.5)
-                set_servo_position(0.5)  # Neutral/resting position
+                set_servo_position(0.5)  # neutral
                 display_message("Insert bottle")
 
-            else:
-                display_message("Insert bottle")
+            elif only_background:
+                display_message("Only Background - Idle")
+                set_servo_position(0.5)  # neutral
 
             last_detection_time = current_time
 
-        # Show the current frame for debugging
         cv2.imshow("Detection", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
