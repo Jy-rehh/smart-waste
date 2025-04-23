@@ -90,10 +90,10 @@ try:
             last_detection_time = current_time
 
         # Optional: GUI output
-        if cv2.getWindowProperty("Detection", 0) >= 0:  # avoid crash if window closed
-            cv2.imshow("Detection", frame)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
+       # if cv2.getWindowProperty("Detection", 0) >= 0:  # avoid crash if window closed
+       #     cv2.imshow("Detection", frame)
+       #     if cv2.waitKey(1) & 0xFF == ord("q"):
+       #         break
 
 except KeyboardInterrupt:
     print("🛑 Exiting gracefully...")
