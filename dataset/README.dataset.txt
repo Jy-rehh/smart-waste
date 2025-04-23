@@ -1,4 +1,4 @@
-# Plastic Bottles > 2025-04-22 11:45am
+# Plastic Bottles > plastic-bottles
 https://universe.roboflow.com/smartwaste-0lzbb/plastic-bottles-ukqt7
 
 Provided by a Roboflow user
