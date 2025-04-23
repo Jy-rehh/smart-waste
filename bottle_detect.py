@@ -7,8 +7,9 @@ from time import sleep
 from servo import move_servo, stop_servo
 from lcd import display_message
 
-#model = YOLO('yolov8n.pt')
+# Load the model (no background class)
 model = YOLO('detect/train10/weights/best.pt')
+
 esp32_cam_url = "http://192.168.8.105:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
@@ -18,7 +19,7 @@ if not cap.isOpened():
 
 frame = None
 
-# Start video capture thread
+# Thread to capture video frames
 def capture_frames():
     global frame
     while True:
@@ -29,16 +30,10 @@ def capture_frames():
 thread = threading.Thread(target=capture_frames, daemon=True)
 thread.start()
 
-# Initial LCD message
 display_message("Insert bottle")
 
-# ========================
-# 1. Only detect every 5s
-# 2. Prevent servo jitter by only moving if needed
-# ========================
-
 last_detection_time = time.time()
-last_servo_position = None  # Track last position to avoid jitter
+last_servo_position = None  # Track last position
 
 def set_servo_position(pos):
     global last_servo_position
@@ -58,14 +53,15 @@ try:
             accept = False
             reject = False
 
-            # If no detections at all, stay neutral
-            if not results.boxes:
-                move_servo(2)  # Neutral
+            # If no detections, stay neutral
+            if results.boxes is None or len(results.boxes) == 0:
+                set_servo_position(0.5)  # Neutral
+                display_message("Insert bottle")
             else:
                 for box in results.boxes:
                     confidence = box.conf[0].item()
                     if confidence < 0.7:
-                        reject = True  # below threshold
+                        reject = True
                         continue
 
                     class_id = int(box.cls[0])
@@ -76,38 +72,28 @@ try:
                     else:
                         reject = True
 
-                # Priority: Accept > Reject > Neutral
+                # Decision based on detection
                 if accept:
-                    move_servo(1)  # Accept (left)
+                    display_message("Accepting Bottle")
+                    set_servo_position(1)  # Accept
+                    sleep(1.5)
+                    set_servo_position(0.5)  # Neutral
+                    display_message("Insert bottle")
+
                 elif reject:
-                    move_servo(0)  # Reject (right)
-                else:
-                    move_servo(2)  # Neutral (center)
-
-
-            if accept:
-                display_message("Accepting Bottle")
-                set_servo_position(1)  # accept area
-                sleep(1.5)
-                set_servo_position(0.5)  # neutral
-                display_message("Insert bottle")
-
-            elif reject and not only_background:
-                display_message("Rejected Bottle")
-                set_servo_position(0)  # reject area
-                sleep(1.5)
-                set_servo_position(0.5)  # neutral
-                display_message("Insert bottle")
-
-            elif only_background:
-                display_message("Only Background - Idle")
-                set_servo_position(0.5)  # neutral
+                    display_message("Rejected Bottle")
+                    set_servo_position(0)  # Reject
+                    sleep(1.5)
+                    set_servo_position(0.5)  # Neutral
+                    display_message("Insert bottle")
 
             last_detection_time = current_time
 
-        cv2.imshow("Detection", frame)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        # Optional: GUI output
+        if cv2.getWindowProperty("Detection", 0) >= 0:  # avoid crash if window closed
+            cv2.imshow("Detection", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
 
 except KeyboardInterrupt:
     print("🛑 Exiting gracefully...")
