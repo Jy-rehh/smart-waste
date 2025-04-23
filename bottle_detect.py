@@ -53,31 +53,37 @@ try:
 
         current_time = time.time()
         if current_time - last_detection_time >= 5:
-            results = model(frame)
-            
+            results = model(frame)[0]
+
             accept = False
             reject = False
-            only_background = True  # assume background until proven otherwise
 
-            for info in results:
-                for box in info.boxes:
+            # If no detections at all, stay neutral
+            if not results.boxes:
+                move_servo(2)  # Neutral
+            else:
+                for box in results.boxes:
                     confidence = box.conf[0].item()
-                    if confidence < 0.5:
+                    if confidence < 0.7:
                         reject = True  # below threshold
                         continue
 
                     class_id = int(box.cls[0])
                     class_name = model.names[class_id].lower()
 
-                    if class_name == "background":
-                        continue  # background is passive, don't trigger anything
-
-                    only_background = False
-
-                    if class_name == "small" or class_name == "large":
+                    if class_name in ["small_bottle", "large_bottle"]:
                         accept = True
                     else:
                         reject = True
+
+                # Priority: Accept > Reject > Neutral
+                if accept:
+                    move_servo(1)  # Accept (left)
+                elif reject:
+                    move_servo(0)  # Reject (right)
+                else:
+                    move_servo(2)  # Neutral (center)
+
 
             if accept:
                 display_message("Accepting Bottle")
