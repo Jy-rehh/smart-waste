@@ -12,7 +12,7 @@ time.sleep(2)  # Wait for Arduino to be ready
 model = YOLO('yolov8n.pt')
 
 # ESP32-CAM stream URL
-esp32_cam_url = "http://192.168.1.11:81/stream"
+esp32_cam_url = "http://192.168.8.105:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
