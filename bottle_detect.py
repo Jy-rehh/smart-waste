@@ -8,7 +8,7 @@ from servo import move_servo, stop_servo
 from lcd import display_message
 
 # Load the model (no background class)
-model = YOLO('detect/train10/weights/best.pt')
+model = YOLO('detect/train11/weights/best.pt')
 
 esp32_cam_url = "http://192.168.8.105:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
