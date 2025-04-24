@@ -7,7 +7,7 @@ from ultralytics import YOLO
 model = YOLO('detect/train11/weights/best.pt')
 
 # ✅ ESP32-CAM MJPEG stream
-esp32_cam_url = "http://192.168.8.105:81/stream"
+esp32_cam_url = "http://192.168.8.104:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():

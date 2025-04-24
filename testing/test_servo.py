@@ -1,37 +1,24 @@
+# We imports the GPIO module
 import RPi.GPIO as GPIO
+# We import the command sleep from time
 from time import sleep
 
+# Stops all warnings from appearing
 GPIO.setwarnings(False)
+
+# We name all the pins on BOARD mode
 GPIO.setmode(GPIO.BOARD)
+# Set an output for the PWM Signal
+GPIO.setup(16, GPIO.OUT)
 
-SERVO_PIN = 16
-GPIO.setup(SERVO_PIN, GPIO.OUT)
-
-pwm = GPIO.PWM(SERVO_PIN, 50)  # 50Hz for typical servos
-pwm.start(0)  # Start with 0 duty cycle
-
-def set_angle(angle):
-    # Converts angle (0 to 180) to duty cycle (2.5 to 12.5)
-    duty = 2.5 + (angle / 18)
-    pwm.ChangeDutyCycle(duty)
-    sleep(0.5)
-
-try:
-    print("Moving servo to LEFT (-90°)")
-    set_angle(0)       # Leftmost
-    sleep(1)
-
-    print("Moving servo to CENTER (0°)")
-    set_angle(90)      # Center
-    sleep(1)
-
-    print("Moving servo to RIGHT (+90°)")
-    set_angle(180)     # Rightmost
-    sleep(1)
-
-finally:
-    print("Stopping PWM and cleaning up GPIO")
-    pwm.ChangeDutyCycle(0)
-    sleep(0.5)
-    pwm.stop()
-    GPIO.cleanup()
+# Set up the PWM on pin #16 at 50Hz
+pwm = GPIO.PWM(16, 50)
+pwm.start(0) # Start the servo with 0 duty cycle ( at 0 deg position )
+pwm.ChangeDutyCycle(5) # Tells the servo to turn to the left ( -90 deg position )
+sleep(0.5) # Tells the servo to Delay for 5sec
+pwm.ChangeDutyCycle(7.5) # Tells the servo to turn to the neutral position ( at 0 deg position )
+sleep(0.5) # Tells the servo to Delay for 5sec
+pwm.ChangeDutyCycle(10) # Tells the servo to turn to the right ( +90 deg position )
+sleep(0.5) # Tells the servo to Delay for 5sec
+pwm.stop(0) # Stop the servo with 0 duty cycle ( at 0 deg position )
+GPIO.cleanup() # Clean up all the ports we've used.
