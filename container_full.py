@@ -2,14 +2,10 @@
 
 import RPi.GPIO as GPIO
 import time
-import threading
 
-# --- Pin Definitions ---
-TRIG_PIN = 11  # GPIO pin 11 (BCM)
-ECHO_PIN = 8   # GPIO pin 8 (BCM)
+TRIG_PIN = 11
+ECHO_PIN = 8
 
-# --- Setup GPIO ---
-GPIO.setmode(GPIO.BCM)
 GPIO.setup(TRIG_PIN, GPIO.OUT)
 GPIO.setup(ECHO_PIN, GPIO.IN)
 

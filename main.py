@@ -5,6 +5,18 @@ import time
 import cv2
 from ultralytics import YOLO
 from time import sleep
+import RPi.GPIO as GPIO
+
+GPIO.setmode(GPIO.BCM)  # Set mode once here
+
+from container_full import monitor_container, container_full
+from bottle_detect import start_detection
+
+# Start your app logic (just an example)
+monitor_thread = threading.Thread(target=monitor_container, daemon=True)
+monitor_thread.start()
+
+start_detection()
 
 from servo import move_servo, stop_servo
 from lcd import display_message
