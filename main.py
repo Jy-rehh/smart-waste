@@ -75,12 +75,33 @@ try:
                             break
 
             # Decision logic
+            neutral_classes = ["bottle", "toilet", "surfboard"]
+
             if bottle_detected:
                 display_message("Accepting Bottle")
                 set_servo_position(1)  # Accept
+
             elif general_detected:
-                display_message("Rejected Bottle")
-                set_servo_position(0)  # Reject
+                go_neutral = False
+                for box in general_results.boxes:
+                    confidence = box.conf[0].item()
+                    if confidence < 0.6:
+                        continue  # Skip low-confidence detections
+
+                    class_id = int(box.cls[0])
+                    class_name = general_model.names[class_id].lower()
+
+                    if class_name in neutral_classes:
+                        go_neutral = True
+                        break
+
+                if go_neutral:
+                    set_servo_position(0.5)
+                    display_message("Insert bottle")
+                else:
+                    display_message("Rejected Bottle")
+                    set_servo_position(0)  # Reject
+
             else:
                 # Nothing in view, stay neutral
                 set_servo_position(0.5)
