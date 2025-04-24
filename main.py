@@ -1,30 +1,28 @@
 import threading
-import cv2
-import serial
 import time
+import cv2
 from ultralytics import YOLO
+from time import sleep
 
-# Serial connection to Arduino (using Raspberry Pi's serial port)
-arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)  # Replace with your Raspberry Pi's serial port
-time.sleep(2)  # Wait for Arduino to be ready
+from servo import move_servo, stop_servo
+from lcd import display_message
 
-# Load YOLO model
-model = YOLO('yolov8n.pt')
+# Load your custom bottle-detection model
+bottle_model = YOLO('detect/train11/weights/best.pt')
 
-# ESP32-CAM stream URL
-esp32_cam_url = "http://192.168.8.105:81/stream"
+# Load pre-trained YOLOv8n model (general-purpose, COCO dataset)
+general_model = YOLO('yolov8n.pt')
+
+esp32_cam_url = "http://192.168.8.104:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
     print("❌ Failed to connect to ESP32-CAM. Check IP or Wi-Fi.")
     exit()
 
-# Shared frame variable
 frame = None
-last_sent_time = 0
-detection_cooldown = 5  # Seconds between sending detections
 
-# Function to keep capturing frames
+# Thread to capture video frames
 def capture_frames():
     global frame
     while True:
@@ -32,64 +30,72 @@ def capture_frames():
         if ret:
             frame = new_frame
 
-# Start frame capture thread
 thread = threading.Thread(target=capture_frames, daemon=True)
 thread.start()
 
-while True:
-    if frame is None:
-        continue  # Wait until frames are available
+display_message("Insert bottle")
 
-    # Run YOLO detection on the frame
-    results = model(frame)
+last_detection_time = time.time()
+last_servo_position = None
 
-    # Detection flags
-    plastic_detected = False
-    non_plastic_detected = False
-    detected_label = ""
+def set_servo_position(pos):
+    global last_servo_position
+    if last_servo_position != pos:
+        move_servo(pos)
+        last_servo_position = pos
 
-    for info in results:
-        for box in info.boxes:
-            confidence = box.conf[0].item()
-            if confidence < 0.5:
-                continue  # Skip low-confidence detections
+try:
+    while True:
+        if frame is None:
+            continue
 
-            # Get coordinates and class name
-            x1, y1, x2, y2 = box.xyxy[0].numpy().astype(int)
-            class_id = int(box.cls[0])
-            class_name = model.names[class_id]
+        current_time = time.time()
+        if current_time - last_detection_time >= 5:
+            # Run both models
+            bottle_results = bottle_model(frame)[0]
+            general_results = general_model(frame)[0]
 
-            # Draw box and label on frame
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
-            cv2.putText(frame, f'{class_name} {int(confidence * 100)}%',
-                        (x1 + 8, y1 - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                        (255, 255, 255), 2)
+            # Flags
+            bottle_detected = False
+            general_detected = False
 
-            # Label detection
-            if "bottle" in class_name.lower():
-                plastic_detected = True
+            # Check general model (e.g., to see if anything is there)
+            if general_results.boxes is not None and len(general_results.boxes) > 0:
+                general_detected = True
+
+            # Check bottle model for accepted bottle types
+            if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
+                for box in bottle_results.boxes:
+                    confidence = box.conf[0].item()
+                    if confidence >= 0.7:
+                        class_id = int(box.cls[0])
+                        class_name = bottle_model.names[class_id].lower()
+                        if class_name in ["small_bottle", "large_bottle"]:
+                            bottle_detected = True
+                            break
+
+            # Decision logic
+            if bottle_detected:
+                display_message("Accepting Bottle")
+                set_servo_position(1)  # Accept
+            elif general_detected:
+                display_message("Rejected Bottle")
+                set_servo_position(0)  # Reject
             else:
-                non_plastic_detected = True
+                # Nothing in view, stay neutral
+                set_servo_position(0.5)
+                display_message("Insert bottle")
+                continue
 
-    # Decide label based on detection
-    if plastic_detected:
-        detected_label = "PLASTIC"
-    elif non_plastic_detected:
-        detected_label = "NON_PLASTIC"
+            sleep(1.5)
+            set_servo_position(0.5)
+            display_message("Insert bottle")
+            last_detection_time = current_time
 
-    # Send label to Arduino if cooldown passed
-    current_time = time.time()
-    if detected_label and (current_time - last_sent_time) >= detection_cooldown:
-        arduino.write((detected_label + "\n").encode())
-        print(f"✅ {detected_label} detected and sent to Arduino.")
-        last_sent_time = current_time
+except KeyboardInterrupt:
+    print("🛑 Exiting gracefully...")
 
-    # Show frame
-    cv2.imshow('ESP32-CAM Object Detection', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-# Cleanup
-cap.release()
-cv2.destroyAllWindows()
-arduino.close()
+finally:
+    cap.release()
+    cv2.destroyAllWindows()
+    stop_servo()
