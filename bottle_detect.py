@@ -50,8 +50,7 @@ try:
         if current_time - last_detection_time >= 5:
             results = model(frame)[0]
 
-            accept = False
-            reject = False
+            valid_detection = True
 
             # If no detections, stay neutral
             if results.boxes is None or len(results.boxes) == 0:
@@ -60,32 +59,29 @@ try:
             else:
                 for box in results.boxes:
                     confidence = box.conf[0].item()
-                    if confidence < 0.7:
-                        reject = True
-                        continue
+                if confidence < 0.7:
+                    reject = True
+                    continue
 
-                    class_id = int(box.cls[0])
-                    class_name = model.names[class_id].lower()
+                class_id = int(box.cls[0])
+                class_name = model.names[class_id].lower()
 
-                    if class_name in ["small_bottle", "large_bottle"]:
-                        accept = True
-                    else:
-                        reject = True
+                if class_name not in ["small_bottle", "large_bottle"]:
+                    valid_detection = False
+                    break
+
 
                 # Decision based on detection
-                if accept:
+                if valid_detection:
                     display_message("Accepting Bottle")
-                    set_servo_position(1)  # Accept
-                    sleep(1.5)
-                    set_servo_position(0.5)  # Neutral
-                    display_message("Insert bottle")
-
-                elif reject:
+                    set_servo_position(1)
+                else:
                     display_message("Rejected Bottle")
-                    set_servo_position(0)  # Reject
-                    sleep(1.5)
-                    set_servo_position(0.5)  # Neutral
-                    display_message("Insert bottle")
+                    set_servo_position(0)
+
+                sleep(1.5)
+                set_servo_position(0.5)
+                display_message("Insert bottle")
 
             last_detection_time = current_time
 
