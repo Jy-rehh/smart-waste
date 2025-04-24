@@ -3,7 +3,8 @@ import RPi.GPIO as GPIO
 from time import sleep
 
 GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BOARD)
+# GPIO.setmode(GPIO.BOARD)
+GPIO.setmode(GPIO.BCM)
 GPIO.setup(16, GPIO.OUT)
 
 pwm = GPIO.PWM(16, 50)
