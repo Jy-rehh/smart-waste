@@ -7,8 +7,11 @@ from time import sleep
 from servo import move_servo, stop_servo
 from lcd import display_message
 
-# Load the model (no background class)
-model = YOLO('detect/train11/weights/best.pt')
+# Load your custom bottle-detection model
+bottle_model = YOLO('detect/train11/weights/best.pt')
+
+# Load pre-trained YOLOv8n model (general-purpose, COCO dataset)
+general_model = YOLO('yolov8n.pt')
 
 esp32_cam_url = "http://192.168.8.104:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
@@ -33,7 +36,7 @@ thread.start()
 display_message("Insert bottle")
 
 last_detection_time = time.time()
-last_servo_position = None  # Track last position
+last_servo_position = None
 
 def set_servo_position(pos):
     global last_servo_position
@@ -48,48 +51,67 @@ try:
 
         current_time = time.time()
         if current_time - last_detection_time >= 5:
-            results = model(frame)[0]
+            # Run both models
+            bottle_results = bottle_model(frame)[0]
+            general_results = general_model(frame)[0]
 
-            valid_detection = True
+            # Flags
+            bottle_detected = False
+            general_detected = False
 
-            # If no detections, stay neutral
-            if results.boxes is None or len(results.boxes) == 0:
-                set_servo_position(0.5)  # Neutral
-                display_message("Insert bottle")
-            else:
-                for box in results.boxes:
+            # Check general model (e.g., to see if anything is there)
+            if general_results.boxes is not None and len(general_results.boxes) > 0:
+                general_detected = True
+
+            # Check bottle model for accepted bottle types
+            if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
+                for box in bottle_results.boxes:
                     confidence = box.conf[0].item()
-                if confidence < 0.7:
-                    reject = True
-                    continue
+                    if confidence >= 0.7:
+                        class_id = int(box.cls[0])
+                        class_name = bottle_model.names[class_id].lower()
+                        if class_name in ["small_bottle", "large_bottle"]:
+                            bottle_detected = True
+                            break
 
-                class_id = int(box.cls[0])
-                class_name = model.names[class_id].lower()
+            # Decision logic
+            neutral_classes = ["bottle", "toilet", "surfboard"]
 
-                if class_name not in ["small_bottle", "large_bottle"]:
-                    valid_detection = False
-                    break
+            if bottle_detected:
+                display_message("Accepting Bottle")
+                set_servo_position(1)  # Accept
 
+            elif general_detected:
+                go_neutral = False
+                for box in general_results.boxes:
+                    confidence = box.conf[0].item()
+                    if confidence < 0.6:
+                        continue  # Skip low-confidence detections
 
-                # Decision based on detection
-                if valid_detection:
-                    display_message("Accepting Bottle")
-                    set_servo_position(1)
+                    class_id = int(box.cls[0])
+                    class_name = general_model.names[class_id].lower()
+
+                    if class_name in neutral_classes:
+                        go_neutral = True
+                        break
+
+                if go_neutral:
+                    set_servo_position(0.5)
+                    display_message("Insert bottle")
                 else:
                     display_message("Rejected Bottle")
-                    set_servo_position(0)
+                    set_servo_position(0)  # Reject
 
-                sleep(1.5)
+            else:
+                # Nothing in view, stay neutral
                 set_servo_position(0.5)
                 display_message("Insert bottle")
+                continue
 
+            sleep(1.5)
+            set_servo_position(0.5)
+            display_message("Insert bottle")
             last_detection_time = current_time
-
-        # Optional: GUI output
-       # if cv2.getWindowProperty("Detection", 0) >= 0:  # avoid crash if window closed
-       #     cv2.imshow("Detection", frame)
-       #     if cv2.waitKey(1) & 0xFF == ord("q"):
-       #         break
 
 except KeyboardInterrupt:
     print("🛑 Exiting gracefully...")

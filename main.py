@@ -1,3 +1,5 @@
+# bottle_detect.py
+
 import threading
 import time
 import cv2
@@ -6,13 +8,13 @@ from time import sleep
 
 from servo import move_servo, stop_servo
 from lcd import display_message
+from container_full import monitor_container, container_full
 
-# Load your custom bottle-detection model
+# Load models
 bottle_model = YOLO('detect/train11/weights/best.pt')
-
-# Load pre-trained YOLOv8n model (general-purpose, COCO dataset)
 general_model = YOLO('yolov8n.pt')
 
+# Camera setup
 esp32_cam_url = "http://192.168.8.104:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
@@ -22,7 +24,7 @@ if not cap.isOpened():
 
 frame = None
 
-# Thread to capture video frames
+# Thread to capture camera frames
 def capture_frames():
     global frame
     while True:
@@ -30,11 +32,13 @@ def capture_frames():
         if ret:
             frame = new_frame
 
-thread = threading.Thread(target=capture_frames, daemon=True)
-thread.start()
+# Start camera thread
+threading.Thread(target=capture_frames, daemon=True).start()
+
+# Start ultrasonic thread
+threading.Thread(target=monitor_container, daemon=True).start()
 
 display_message("Insert bottle")
-
 last_detection_time = time.time()
 last_servo_position = None
 
@@ -51,19 +55,15 @@ try:
 
         current_time = time.time()
         if current_time - last_detection_time >= 5:
-            # Run both models
             bottle_results = bottle_model(frame)[0]
             general_results = general_model(frame)[0]
 
-            # Flags
             bottle_detected = False
             general_detected = False
 
-            # Check general model (e.g., to see if anything is there)
             if general_results.boxes is not None and len(general_results.boxes) > 0:
                 general_detected = True
 
-            # Check bottle model for accepted bottle types
             if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
                 for box in bottle_results.boxes:
                     confidence = box.conf[0].item()
@@ -74,23 +74,24 @@ try:
                             bottle_detected = True
                             break
 
-            # Decision logic
             neutral_classes = ["bottle", "toilet", "surfboard"]
 
             if bottle_detected:
-                display_message("Accepting Bottle")
-                set_servo_position(1)  # Accept
+                if container_full:
+                    display_message("Bin Full. Try Later.")
+                    set_servo_position(0)  # Reject
+                else:
+                    display_message("Accepting Bottle")
+                    set_servo_position(1)  # Accept
 
             elif general_detected:
                 go_neutral = False
                 for box in general_results.boxes:
                     confidence = box.conf[0].item()
                     if confidence < 0.6:
-                        continue  # Skip low-confidence detections
-
+                        continue
                     class_id = int(box.cls[0])
                     class_name = general_model.names[class_id].lower()
-
                     if class_name in neutral_classes:
                         go_neutral = True
                         break
@@ -103,10 +104,8 @@ try:
                     set_servo_position(0)  # Reject
 
             else:
-                # Nothing in view, stay neutral
                 set_servo_position(0.5)
                 display_message("Insert bottle")
-                continue
 
             sleep(1.5)
             set_servo_position(0.5)
