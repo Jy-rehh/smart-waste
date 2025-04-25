@@ -1,32 +1,18 @@
-# bottle_detect.py
-
 import threading
 import time
 import cv2
 from ultralytics import YOLO
 from time import sleep
-import RPi.GPIO as GPIO
-
-GPIO.setmode(GPIO.BCM)  # Set mode once here
-
-from container_full import monitor_container, container_full
-from bottle_detect import start_detection
-
-# Start your app logic (just an example)
-monitor_thread = threading.Thread(target=monitor_container, daemon=True)
-monitor_thread.start()
-
-start_detection()
 
 from servo import move_servo, stop_servo
 from lcd import display_message
 from container_full import monitor_container, container_full
 
-# Load models
+# Load YOLO models
 bottle_model = YOLO('detect/train11/weights/best.pt')
 general_model = YOLO('yolov8n.pt')
 
-# Camera setup
+# ESP32-CAM Stream
 esp32_cam_url = "http://192.168.8.104:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
@@ -36,7 +22,7 @@ if not cap.isOpened():
 
 frame = None
 
-# Thread to capture camera frames
+# Thread to capture video frames
 def capture_frames():
     global frame
     while True:
@@ -44,13 +30,16 @@ def capture_frames():
         if ret:
             frame = new_frame
 
-# Start camera thread
-threading.Thread(target=capture_frames, daemon=True).start()
+# Start video capture thread
+frame_thread = threading.Thread(target=capture_frames, daemon=True)
+frame_thread.start()
 
-# Start ultrasonic thread
-threading.Thread(target=monitor_container, daemon=True).start()
+# Start ultrasonic container monitor thread
+ultrasonic_thread = threading.Thread(target=monitor_container, daemon=True)
+ultrasonic_thread.start()
 
 display_message("Insert bottle")
+
 last_detection_time = time.time()
 last_servo_position = None
 
@@ -65,17 +54,27 @@ try:
         if frame is None:
             continue
 
+        if container_full:
+            display_message("Container Full")
+            set_servo_position(0.5)  # Neutral
+            sleep(1.5)
+            continue
+
         current_time = time.time()
         if current_time - last_detection_time >= 5:
+            # Run both models
             bottle_results = bottle_model(frame)[0]
             general_results = general_model(frame)[0]
 
+            # Flags
             bottle_detected = False
             general_detected = False
 
+            # General detection
             if general_results.boxes is not None and len(general_results.boxes) > 0:
                 general_detected = True
 
+            # Bottle model detection
             if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
                 for box in bottle_results.boxes:
                     confidence = box.conf[0].item()
@@ -86,15 +85,12 @@ try:
                             bottle_detected = True
                             break
 
+            # Decision logic
             neutral_classes = ["bottle", "toilet", "surfboard"]
 
             if bottle_detected:
-                if container_full:
-                    display_message("Bin Full. Try Later.")
-                    set_servo_position(0)  # Reject
-                else:
-                    display_message("Accepting Bottle")
-                    set_servo_position(1)  # Accept
+                display_message("Accepting Bottle")
+                set_servo_position(1)
 
             elif general_detected:
                 go_neutral = False
@@ -102,8 +98,10 @@ try:
                     confidence = box.conf[0].item()
                     if confidence < 0.6:
                         continue
+
                     class_id = int(box.cls[0])
                     class_name = general_model.names[class_id].lower()
+
                     if class_name in neutral_classes:
                         go_neutral = True
                         break
@@ -113,11 +111,12 @@ try:
                     display_message("Insert bottle")
                 else:
                     display_message("Rejected Bottle")
-                    set_servo_position(0)  # Reject
+                    set_servo_position(0)
 
             else:
                 set_servo_position(0.5)
                 display_message("Insert bottle")
+                continue
 
             sleep(1.5)
             set_servo_position(0.5)

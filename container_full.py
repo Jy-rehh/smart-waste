@@ -1,16 +1,14 @@
-# container_full.py
-
 import RPi.GPIO as GPIO
 import time
 
 TRIG_PIN = 11
 ECHO_PIN = 8
 
+GPIO.setmode(GPIO.BOARD)
 GPIO.setup(TRIG_PIN, GPIO.OUT)
 GPIO.setup(ECHO_PIN, GPIO.IN)
 
-# --- Shared flag for fullness ---
-container_full = False
+container_full = False  # Shared flag
 
 def get_distance():
     GPIO.output(TRIG_PIN, False)
