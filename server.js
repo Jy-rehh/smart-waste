@@ -38,23 +38,26 @@ app.get('/start-detection', (req, res) => {
     // Example of running the Python script using subprocess
     const { spawn } = require('child_process');
 
-    const pythonScriptPath = '/smart-waste/main.py';
+    // Define the path to your virtual environment's Python executable
+    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
 
-    // Start the Python process
-    const pythonProcess = spawn('python3', [pythonScriptPath]);
+    // Path to your main.py script
+    const pythonScript = '/home/pi/smart-waste/main.py';  // Adjust if needed
 
-    // Handle the output of the Python process
-    pythonProcess.stdout.on('data', (data) => {
-      console.log(`stdout: ${data}`);
+    const process = spawn(pythonExecutable, [pythonScript]);
+
+    process.stdout.on('data', (data) => {
+        console.log(`stdout: ${data}`);
     });
 
-    pythonProcess.stderr.on('data', (data) => {
-      console.error(`stderr: ${data}`);
+    process.stderr.on('data', (data) => {
+        console.error(`stderr: ${data}`);
     });
 
-    pythonProcess.on('close', (code) => {
-      console.log(`Python process exited with code ${code}`);
+    process.on('close', (code) => {
+        console.log(`Python process exited with code ${code}`);
     });
+
 
     isDetectionRunning = true;
     res.json({ success: true, message: 'Detection started.' });
