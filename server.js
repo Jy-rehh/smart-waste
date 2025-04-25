@@ -37,7 +37,7 @@ app.get('/start-detection', (req, res) => {
     // Start bottle detection in the backend (e.g., using subprocess or another method)
     // Example of running the Python script using subprocess
     const { spawn } = require('child_process');
-    const bottleDetection = spawn('python3', ['main.py']); // Adjust this line with your actual script
+    const bottleDetection = spawn('python3', ['-m', 'venv', 'bin/python', 'main.py']); // Adjust this line with your actual script
 
     bottleDetection.stdout.on('data', (data) => {
       console.log(`stdout: ${data}`);
