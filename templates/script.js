@@ -88,12 +88,17 @@ window.addEventListener("click", (e) => {
 });
 
 // System activation
+let stopProcessTimeout = null;
+
 function startBottleDetection() {
     fetch("/start-detection", { method: "GET" })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 console.log("Detection started.");
+                
+                // Set a timeout to stop the process after 1m 30s (90 seconds)
+                stopProcessTimeout = setTimeout(stopBottleDetection, 90 * 1000);
             }
         })
         .catch(error => console.error("Error starting detection:", error));
@@ -110,5 +115,20 @@ function stopBottleDetection() {
         .catch(error => console.error("Error stopping detection:", error));
 }
 
-// 🔗 Link the Insert Bottles button to start detection
+// Event listener for the "Insert Bottles" button
 document.getElementById("openModal").addEventListener("click", startBottleDetection);
+
+// Event listener for the "Cancel" button
+document.querySelector(".action-cancel").addEventListener("click", () => {
+    console.log("Cancel button clicked.");
+    clearTimeout(stopProcessTimeout);  // Clear the auto-stop timer
+    stopBottleDetection();
+});
+
+// Event listener for the "Done" button
+document.querySelector(".action-done").addEventListener("click", () => {
+    console.log("Done button clicked.");
+    clearTimeout(stopProcessTimeout);  // Clear the auto-stop timer
+    stopBottleDetection();
+});
+
