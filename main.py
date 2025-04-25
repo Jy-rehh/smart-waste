@@ -112,6 +112,7 @@ try:
 
                     class_id = int(box.cls[0])
                     class_name = general_model.names[class_id].lower()
+                    print(f"Detected class from general model: {class_name} with confidence: {confidence}")
 
                     if class_name in neutral_classes:
                         go_neutral = True
