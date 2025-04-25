@@ -13,7 +13,7 @@ bottle_model = YOLO("bottle.pt")
 general_model = YOLO("yolov8n.pt")
 
 # Init camera
-cap = cv2.VideoCapture("http://192.168.8.101:81/stream")
+cap = cv2.VideoCapture("")
 
 # Message display
 def display_message(message):

@@ -1,17 +1,14 @@
-# container_full.py
 import RPi.GPIO as GPIO
 import time
 
 TRIG_PIN = 11
 ECHO_PIN = 8
 
-GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(TRIG_PIN, GPIO.OUT)
 GPIO.setup(ECHO_PIN, GPIO.IN)
 
-# Shared variable
-container_full = False
+container_full = False  # Shared flag
 
 def get_distance():
     GPIO.output(TRIG_PIN, False)
@@ -39,11 +36,16 @@ def get_distance():
 
 def monitor_container():
     global container_full
-    while True:
-        distance = get_distance()
-        if distance is not None:
-            print(f"[Ultrasonic] Distance: {distance} cm")
-            container_full = distance <= 4
-        else:
-            print("[Ultrasonic] Sensor error.")
-        time.sleep(1)
+    try:
+        while True:
+            distance = get_distance()
+            if distance is not None:
+                print(f"[Ultrasonic] Distance: {distance} cm")
+                container_full = distance <= 4
+            else:
+                print("[Ultrasonic] Sensor error.")
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n[Ultrasonic] Monitoring stopped.")
+    finally:
+        GPIO.cleanup()
