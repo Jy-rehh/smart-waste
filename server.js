@@ -1,27 +1,11 @@
-// const express = require('express');
-// const path = require('path');
-
-// const app = express();
-// const port = 80;
-
-// // Serve static files (CSS, JS, images) from smart-waste folder
-// app.use(express.static(__dirname));
-
-// // Serve HTML from the templates folder
-// app.get('/', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'templates', 'index.html'));
-// });
-
-// app.listen(80, '0.0.0.0', () => {
-//     console.log('Server is running on http://192.168.50.252:80');
-// });
-
 const express = require('express');
 const path = require('path');
+const { spawn } = require('child_process');
 const app = express();
 const port = 80;
 
 let isDetectionRunning = false; // Flag to track the detection status
+let detectionProcess = null;    // Variable to store the running Python process
 
 // Serve static files (CSS, JS, images) from the smart-waste folder
 app.use(express.static(__dirname));
@@ -36,28 +20,23 @@ app.get('/start-detection', (req, res) => {
   if (!isDetectionRunning) {
     // Start bottle detection in the backend (e.g., using subprocess or another method)
     // Example of running the Python script using subprocess
-    const { spawn } = require('child_process');
-
-    // Define the path to your virtual environment's Python executable
     const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
-
-    // Path to your main.py script
     const pythonScript = '/home/pi/smart-waste/main.py';  // Adjust if needed
 
-    const process = spawn(pythonExecutable, [pythonScript]);
+    detectionProcess = spawn(pythonExecutable, [pythonScript]);
 
-    process.stdout.on('data', (data) => {
+    detectionProcess.stdout.on('data', (data) => {
         console.log(`stdout: ${data}`);
     });
 
-    process.stderr.on('data', (data) => {
+    detectionProcess.stderr.on('data', (data) => {
         console.error(`stderr: ${data}`);
     });
 
-    process.on('close', (code) => {
+    detectionProcess.on('close', (code) => {
         console.log(`Python process exited with code ${code}`);
+        isDetectionRunning = false; // Set the flag to false when the process ends
     });
-
 
     isDetectionRunning = true;
     res.json({ success: true, message: 'Detection started.' });
@@ -68,15 +47,15 @@ app.get('/start-detection', (req, res) => {
 
 // Endpoint to stop bottle detection
 app.get('/stop-detection', (req, res) => {
-  if (isDetectionRunning) {
-    // Logic to stop the detection (e.g., by killing the process or setting a flag)
-    // Example: If using Python subprocess to control detection, you can terminate the process
-    // Assuming `detectionProcess` is the reference to the process running the detection
-    
-    // Terminate or stop the process here, based on your logic
-    // For example: detectionProcess.kill();
+  if (isDetectionRunning && detectionProcess) {
+    // Stop the Python process (detection) by calling .kill() on the subprocess
+    detectionProcess.kill('SIGTERM');  // This sends a termination signal to the process
 
-    isDetectionRunning = false;
+    detectionProcess.on('close', (code) => {
+        console.log(`Python process terminated with code ${code}`);
+    });
+
+    isDetectionRunning = false; // Update the detection status
     res.json({ success: true, message: 'Detection stopped.' });
   } else {
     res.json({ success: false, message: 'Detection is not running.' });
