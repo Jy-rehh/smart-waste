@@ -38,7 +38,7 @@ app.get('/start-detection', (req, res) => {
     // Example of running the Python script using subprocess
     const { spawn } = require('child_process');
 
-    const pythonScriptPath = '/home/pi/smart-waste/main.py';
+    const pythonScriptPath = '/smart-waste/main.py';
 
     // Start the Python process
     const pythonProcess = spawn('python3', [pythonScriptPath]);
