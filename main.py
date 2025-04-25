@@ -3,6 +3,7 @@ import time
 import cv2
 from ultralytics import YOLO
 from time import sleep
+import subprocess
 
 from servo import move_servo, stop_servo
 from lcd import display_message
@@ -11,6 +12,10 @@ from container_full import monitor_container, container_full
 # Load YOLO models
 bottle_model = YOLO('detect/train11/weights/best.pt')
 general_model = YOLO('yolov8n.pt')
+
+# Server
+# Start the Node.js server in the background
+subprocess.Popen(["node", "server.js"], cwd="/home/pi/smart-waste")
 
 # ESP32-CAM Stream
 esp32_cam_url = "http://192.168.8.101:81/stream"
