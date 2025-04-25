@@ -15,7 +15,7 @@ general_model = YOLO('yolov8n.pt')
 
 # Server
 # Start the Node.js server in the background
-subprocess.Popen(["node", "server.js"], cwd="../smart-waste")
+subprocess.Popen(["sudo", "node", "server.js"], cwd="../smart-waste")
 
 # ESP32-CAM Stream
 esp32_cam_url = "http://192.168.8.101:81/stream"
