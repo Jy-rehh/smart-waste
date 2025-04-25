@@ -4,6 +4,7 @@ import cv2
 from ultralytics import YOLO
 from time import sleep
 import subprocess
+import RPi.GPIO as GPIO
 
 from servo import move_servo, stop_servo
 from lcd import display_message
@@ -43,6 +44,9 @@ frame_thread.start()
 ultrasonic_thread = threading.Thread(target=monitor_container, daemon=True)
 ultrasonic_thread.start()
 
+# Shared flag for container full status
+container_full_event = threading.Event()
+
 display_message("Insert bottle")
 
 last_detection_time = time.time()
@@ -54,12 +58,14 @@ def set_servo_position(pos):
         move_servo(pos)
         last_servo_position = pos
 
+# Monitor container full status in main loop
 try:
     while True:
         if frame is None:
             continue
 
-        if container_full:
+        # Check if container is full
+        if container_full_event.is_set():  # Check if container_full_event is set
             display_message("Container Full")
             set_servo_position(0.5)  # Neutral
             sleep(1.5)
@@ -115,7 +121,7 @@ try:
                     set_servo_position(0.5)
                     display_message("Insert bottle")
                 else:
-                    display_message("Rejected Bottle")
+                    display_message("Object Rejected")
                     set_servo_position(0)
 
             else:
