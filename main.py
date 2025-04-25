@@ -1,54 +1,80 @@
-# main.py
 import threading
 import time
-from servo import set_servo_position
+import cv2
+from ultralytics import YOLO
+from time import sleep
+
+from servo import move_servo, stop_servo
+from lcd import display_message
 from container_full import monitor_container, container_full
 
-# Dummy imports – replace with actual YOLO logic
-from ultralytics import YOLO
-import cv2
+# Load YOLO models
+bottle_model = YOLO('detect/train11/weights/best.pt')
+general_model = YOLO('yolov8n.pt')
 
-# Load models
-bottle_model = YOLO("bottle.pt")
-general_model = YOLO("yolov8n.pt")
+# ESP32-CAM Stream
+esp32_cam_url = "http://192.168.8.104:81/stream"
+cap = cv2.VideoCapture(esp32_cam_url)
 
-# Init camera
-cap = cv2.VideoCapture("")
+if not cap.isOpened():
+    print("❌ Failed to connect to ESP32-CAM. Check IP or Wi-Fi.")
+    exit()
 
-# Message display
-def display_message(message):
-    print("[DISPLAY]", message)
+frame = None
 
-# Start ultrasonic thread
+# Thread to capture video frames
+def capture_frames():
+    global frame
+    while True:
+        ret, new_frame = cap.read()
+        if ret:
+            frame = new_frame
+
+# Start video capture thread
+frame_thread = threading.Thread(target=capture_frames, daemon=True)
+frame_thread.start()
+
+# Start ultrasonic container monitor thread
 ultrasonic_thread = threading.Thread(target=monitor_container, daemon=True)
 ultrasonic_thread.start()
 
-# Frame handling
-last_detection_time = 0
+display_message("Insert bottle")
+
+last_detection_time = time.time()
+last_servo_position = None
+
+def set_servo_position(pos):
+    global last_servo_position
+    if last_servo_position != pos:
+        move_servo(pos)
+        last_servo_position = pos
 
 try:
     while True:
-        ret, frame = cap.read()
-        if not ret:
+        if frame is None:
             continue
 
         if container_full:
-            set_servo_position(0.5)
             display_message("Container Full")
-            time.sleep(1.5)
+            set_servo_position(0.5)  # Neutral
+            sleep(1.5)
             continue
 
         current_time = time.time()
         if current_time - last_detection_time >= 5:
+            # Run both models
             bottle_results = bottle_model(frame)[0]
             general_results = general_model(frame)[0]
 
+            # Flags
             bottle_detected = False
             general_detected = False
 
+            # General detection
             if general_results.boxes is not None and len(general_results.boxes) > 0:
                 general_detected = True
 
+            # Bottle model detection
             if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
                 for box in bottle_results.boxes:
                     confidence = box.conf[0].item()
@@ -59,6 +85,7 @@ try:
                             bottle_detected = True
                             break
 
+            # Decision logic
             neutral_classes = ["bottle", "toilet", "surfboard"]
 
             if bottle_detected:
@@ -71,29 +98,35 @@ try:
                     confidence = box.conf[0].item()
                     if confidence < 0.6:
                         continue
+
                     class_id = int(box.cls[0])
                     class_name = general_model.names[class_id].lower()
+
                     if class_name in neutral_classes:
                         go_neutral = True
                         break
 
                 if go_neutral:
-                    display_message("Insert bottle")
                     set_servo_position(0.5)
+                    display_message("Insert bottle")
                 else:
-                    display_message("Reject Object")
+                    display_message("Rejected Bottle")
                     set_servo_position(0)
-            else:
-                display_message("Insert bottle")
-                set_servo_position(0.5)
 
-            last_detection_time = current_time
-            time.sleep(1.5)
+            else:
+                set_servo_position(0.5)
+                display_message("Insert bottle")
+                continue
+
+            sleep(1.5)
             set_servo_position(0.5)
             display_message("Insert bottle")
+            last_detection_time = current_time
 
 except KeyboardInterrupt:
-    print("Shutting down.")
+    print("🛑 Exiting gracefully...")
+
 finally:
     cap.release()
-    set_servo_position(0.5)
+    cv2.destroyAllWindows()
+    stop_servo()
