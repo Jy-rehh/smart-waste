@@ -86,3 +86,29 @@ window.addEventListener("click", (e) => {
         ratesModal.style.display = "none";
     }
 });
+
+// System activation
+function startBottleDetection() {
+    fetch("/start-detection", { method: "GET" })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log("Detection started.");
+            }
+        })
+        .catch(error => console.error("Error starting detection:", error));
+}
+
+function stopBottleDetection() {
+    fetch("/stop-detection", { method: "GET" })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log("Detection stopped.");
+            }
+        })
+        .catch(error => console.error("Error stopping detection:", error));
+}
+
+// 🔗 Link the Insert Bottles button to start detection
+document.getElementById("openModal").addEventListener("click", startBottleDetection);
