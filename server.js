@@ -37,18 +37,23 @@ app.get('/start-detection', (req, res) => {
     // Start bottle detection in the backend (e.g., using subprocess or another method)
     // Example of running the Python script using subprocess
     const { spawn } = require('child_process');
-    const bottleDetection = spawn('python3', ['-m', 'venv', 'bin/python', 'main.py']); // Adjust this line with your actual script
 
-    bottleDetection.stdout.on('data', (data) => {
+    const pythonScriptPath = '/smart-waste/main.py';
+
+    // Start the Python process
+    const pythonProcess = spawn('python3', [pythonScriptPath]);
+
+    // Handle the output of the Python process
+    pythonProcess.stdout.on('data', (data) => {
       console.log(`stdout: ${data}`);
     });
 
-    bottleDetection.stderr.on('data', (data) => {
+    pythonProcess.stderr.on('data', (data) => {
       console.error(`stderr: ${data}`);
     });
 
-    bottleDetection.on('close', (code) => {
-      console.log(`child process exited with code ${code}`);
+    pythonProcess.on('close', (code) => {
+      console.log(`Python process exited with code ${code}`);
     });
 
     isDetectionRunning = true;
