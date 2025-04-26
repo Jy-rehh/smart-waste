@@ -1,30 +1,36 @@
 import { auth, db } from "../config/firebase-config.js";
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
 document.getElementById("login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+    const usernameInput = document.getElementById("username").value.trim();
+    const passwordInput = document.getElementById("password").value.trim();
 
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Search by field "Username" (with capital U)
+        const usersRef = collection(db, "Users Collection");
+        const q = query(usersRef, where("Username", "==", usernameInput));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            alert("Username not found.");
+            return;
+        }
+
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        const userEmail = userData.Email; // capital E for Email field
+
+        // Now sign in with email and password
+        const userCredential = await signInWithEmailAndPassword(auth, userEmail, passwordInput);
         const user = userCredential.user;
         console.log("Login successful:", user.uid);
 
-        // Fetch user details from Firestore
-        const userRef = doc(db, "Users Collection", user.uid);
-        const userSnap = await getDoc(userRef);
+        alert("Login successful! Redirecting...");
+        window.location.href = "dashboard.html";
 
-        if (userSnap.exists()) {
-            console.log("User data:", userSnap.data());
-            alert("Login successful! Redirecting...");
-            window.location.href = "dashboard.html";
-        } else {
-            console.error("No such user found in Firestore!");
-            alert("User not found in database.");
-        }
     } catch (error) {
         console.error("Login failed:", error.message);
         alert("Login failed: " + error.message);
