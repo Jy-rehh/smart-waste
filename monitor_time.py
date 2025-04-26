@@ -4,54 +4,63 @@ from firebase_admin import credentials, firestore
 from librouteros import connect
 
 # Initialize Firebase Admin SDK
-# This sets up the connection to Firebase using your service account credentials
 cred = credentials.Certificate('firebase-key.json')
 firebase_admin.initialize_app(cred)
 
 # Firestore client
-# This allows interaction with the Firestore database to fetch user data
 db = firestore.client()
-users_ref = db.collection('Users Collection')  # Access the 'users' collection in Firestore
+users_ref = db.collection('users')
 
 # Function to connect to MikroTik
-# This function establishes a connection to the MikroTik router
 def connect_mikrotik():
     print("Connecting to MikroTik router...")
     return connect(username='your_username', password='your_password', host='mikrotik_ip')
 
 # Function to disconnect user from MikroTik HotSpot
-# This function removes a user from the MikroTik hotspot when their time expires
 def disconnect_user(user_id):
     print(f"Attempting to disconnect user {user_id}...")
-    api = connect_mikrotik()  # Connect to MikroTik router
-    api('/ip/hotspot/user/remove', {'numbers': user_id})  # Remove user from hotspot
-    print(f"User {user_id} disconnected from Wi-Fi.")  # Print confirmation
+    try:
+        api = connect_mikrotik()  # Connect to MikroTik router
+        api('/ip/hotspot/user/remove', {'numbers': user_id})  # Remove user from hotspot
+        print(f"User {user_id} disconnected from Wi-Fi.")
+    except Exception as e:
+        print(f"Failed to disconnect user {user_id}: {e}")
 
 # Function to check users' time remaining and disconnect if time expired
-# This function continuously checks users' remaining time and disconnects them when time is up
 def monitor_users():
     print("Starting user monitoring...")
+    
     while True:
-        # Fetch all users from Firestore
         print("Fetching users from Firestore...")
-        for user_doc in users_ref.stream():
-            user_id = user_doc.id  # Get user ID
-            time_remaining = user_doc.to_dict().get('time_remaining', 0)  # Get remaining time from Firestore
-            
-            # Check if time has expired
-            if time_remaining <= 0:
-                # If time is expired, disconnect user
-                print(f"User {user_id}'s time expired. Disconnecting...")
-                disconnect_user(user_id)  # Disconnect user from Wi-Fi
-            else:
-                # If time is still available, decrease time by 1 minute
-                users_ref.document(user_id).update({'time_remaining': time_remaining - 1})
-                print(f"User {user_id} has {time_remaining - 1} minutes remaining.")  # Print remaining time
+        users = list(users_ref.stream())  # Fetch all users once
         
-        # Wait for 1 minute before checking again
-        print("Waiting for 1 minute before checking again...")
+        if not users:
+            print("No users found in Firestore.")
+            break
+
+        active_users = 0  # Counter for users who still have time left
+
+        for user_doc in users:
+            user_id = user_doc.id
+            data = user_doc.to_dict()
+            time_remaining = data.get('time_remaining', 0)
+
+            if time_remaining <= 0:
+                print(f"User {user_id}'s time expired. Disconnecting...")
+                disconnect_user(user_id)
+            else:
+                new_time = time_remaining - 1
+                users_ref.document(user_id).update({'time_remaining': new_time})
+                print(f"User {user_id} has {new_time} minutes remaining.")
+                active_users += 1  # There are still active users
+
+        if active_users == 0:
+            print("All users have expired their time. Stopping monitoring.")
+            break  # Exit the loop if no users have time left
+
+        print("Waiting for 1 minute before next check...")
         time.sleep(60)
 
 if __name__ == "__main__":
     print("Script is running...")
-    monitor_users()  # Start monitoring users' time and disconnecting when necessary
+    monitor_users()
