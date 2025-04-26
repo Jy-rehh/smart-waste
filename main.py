@@ -69,10 +69,21 @@ def add_wifi_time(mac_address, minutes_to_add):
         doc_ref = db.collection('Users Collection').document(mac_address)
         user_doc = doc_ref.get()
         if user_doc.exists:
-            current_time = user_doc.to_dict().get('WiFiTimeAvailable', 0)
+            current_data = user_doc.to_dict()
+            current_time = current_data.get('WiFiTimeAvailable', 0)
+            total_bottles = current_data.get('TotalBottlesDeposited', 0)
+
+            # Update WiFi time and bottle count
             new_time = current_time + (minutes_to_add * 60)  # Convert mins to seconds
-            doc_ref.update({'WiFiTimeAvailable': new_time})
-            print(f"[+] Updated {mac_address}: +{minutes_to_add} mins ({new_time} seconds total)")
+            new_bottle_count = total_bottles + 1  # Increment the bottle count by 1
+
+            # Update both fields in Firestore
+            doc_ref.update({
+                'WiFiTimeAvailable': new_time,
+                'TotalBottlesDeposited': new_bottle_count
+            })
+
+            print(f"[+] Updated {mac_address}: +{minutes_to_add} mins ({new_time} seconds total), Total Bottles: {new_bottle_count}")
         else:
             print(f"[!] MAC {mac_address} not found in Firestore.")
     except Exception as e:
