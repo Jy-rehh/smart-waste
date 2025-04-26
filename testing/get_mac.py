@@ -1,60 +1,99 @@
+import time
 import firebase_admin
 from firebase_admin import credentials, firestore
 from librouteros import connect
-from datetime import datetime
-import time
 
-# ——— Initialize Firebase Admin with Firestore ———
+# Initialize Firebase Admin SDK
 cred = credentials.Certificate('firebase-key.json')
 firebase_admin.initialize_app(cred)
+
+# Firestore client
 db = firestore.client()
+users_ref = db.collection('Users Collection')
 
-# ——— Connect to MikroTik Router ———
-try:
-    api = connect(username='admin', password='', host='192.168.50.1')
-    print("[*] Connected to MikroTik Router.")
-except Exception as e:
-    print(f"[!] Connection failed: {e}")
-    exit()
+# Connect to MikroTik
+def connect_mikrotik():
+    print("Connecting to MikroTik router...")
+    return connect(username='your_username', password='your_password', host='192.168.50.1', port=8728)
 
-# ——— Track already added MAC addresses ———
-known_macs = set()
-
-# ——— Continuous Monitoring Loop ———
-while True:
+# Disable user on MikroTik Hotspot
+def disable_user(username):
+    print(f"Disabling user {username}...")
     try:
-        mac_addresses = []
-
-        # Try fetching active users first
-        active_users = list(api.path('ip', 'hotspot', 'active'))
-        if active_users:
-            print("[*] Found active hotspot users.")
-            mac_addresses = [user['mac-address'] for user in active_users]
-        else:
-            print("[*] No active users. Trying hotspot hosts...")
-            hosts = list(api.path('ip', 'hotspot', 'host'))
-            mac_addresses = [user['mac-address'] for user in hosts]
-
-        if not mac_addresses:
-            print("[!] No MAC addresses found.")
-        else:
-            for mac in mac_addresses:
-                if mac not in known_macs:
-                    doc_ref = db.collection('Users Collection').document(mac)  # Use MAC as document ID
-                    doc_ref.set({
-                        'UserID': mac,
-                        'macAddress': mac,
-                        'WiFiTimeAvailable': 0,
-                        'TotalBottlesDeposited': 0,
-                        'SessionStartTime': datetime.now().isoformat(),
-                        'SessionEndTime': None
-                    })
-                    known_macs.add(mac)
-                    print(f"[+] Added MAC: {mac} to Firestore under UID: {mac}")
-                else:
-                    print(f"[-] MAC {mac} already exists in Firestore.")
-
+        api = connect_mikrotik()
+        hotspot_users = api.path('ip', 'hotspot', 'user')
+        
+        # Find the user
+        for user in hotspot_users.get():
+            if user['name'] == username:
+                hotspot_users.set(id=user['.id'], disabled='true')
+                print(f"User {username} disabled.")
+                return
+        print(f"User {username} not found!")
     except Exception as e:
-        print(f"[!] Error while retrieving users: {e}")
+        print(f"Failed to disable user {username}: {e}")
 
-    time.sleep(5)  # Wait 5 seconds before checking again
+# Enable user on MikroTik Hotspot
+def enable_user(username):
+    print(f"Enabling user {username}...")
+    try:
+        api = connect_mikrotik()
+        hotspot_users = api.path('ip', 'hotspot', 'user')
+        
+        # Find the user
+        for user in hotspot_users.get():
+            if user['name'] == username:
+                hotspot_users.set(id=user['.id'], disabled='false')
+                print(f"User {username} enabled.")
+                return
+        print(f"User {username} not found!")
+    except Exception as e:
+        print(f"Failed to enable user {username}: {e}")
+
+# Monitor users' time_remaining
+def monitor_users():
+    print("Starting user monitoring...")
+
+    while True:
+        print("Fetching users from Firestore...")
+        users = list(users_ref.stream())
+
+        if not users:
+            print("No users found in Firestore.")
+            break
+
+        active_users = 0
+
+        for user_doc in users:
+            user_id = user_doc.id
+            data = user_doc.to_dict()
+            username = data.get('username')  # <-- use username
+            time_remaining = data.get('time_remaining', 0)
+
+            if username is None:
+                print(f"User {user_id} missing username field. Skipping...")
+                continue
+
+            if time_remaining <= 0:
+                print(f"User {username}'s time expired. Disabling...")
+                disable_user(username)
+            else:
+                print(f"User {username} has {time_remaining} minutes left. Ensuring enabled...")
+                enable_user(username)
+                
+                # Decrease time
+                new_time = time_remaining - 1
+                users_ref.document(user_id).update({'time_remaining': new_time})
+                print(f"User {username} now has {new_time} minutes remaining.")
+                active_users += 1
+
+        if active_users == 0:
+            print("All users have expired time. Stopping monitoring.")
+            break
+
+        print("Waiting 1 minute before next check...")
+        time.sleep(60)
+
+if __name__ == "__main__":
+    print("Script is running...")
+    monitor_users()
