@@ -41,6 +41,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
     document.getElementById("cancel-btn").addEventListener("click", async () =>{
-        window.location.href = "login.html";
+         window.location.href = "login.html";
     });
 });
