@@ -11,10 +11,10 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 users_ref = db.collection('Users Collection')
 
-# Function to connect to MikroTik
+
 def connect_mikrotik():
     print("Connecting to MikroTik router...")
-    return connect(username='your_username', password='your_password', host='mikrotik_ip')
+    return connect(username='admin', password='myStrongPassword123', host='192.168.88.1')
 
 # Function to get currently active users from MikroTik
 def get_active_users(api):
