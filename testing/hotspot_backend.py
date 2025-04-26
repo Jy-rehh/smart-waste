@@ -64,7 +64,7 @@ def grant_access():
 # Route for showing login page (you probably have this already)
 @app.route("/")
 def home():
-    return render_template("login.html")  # Your custom login page
+    return render_template("/templates/login.html")  # Your custom login page
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
