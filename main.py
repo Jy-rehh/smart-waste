@@ -69,21 +69,10 @@ def add_wifi_time(mac_address, minutes_to_add):
         doc_ref = db.collection('Users Collection').document(mac_address)
         user_doc = doc_ref.get()
         if user_doc.exists:
-            current_data = user_doc.to_dict()
-            current_time = current_data.get('WiFiTimeAvailable', 0)
-            total_bottles = current_data.get('TotalBottlesDeposited', 0)
-
-            # Update WiFi time and bottle count
+            current_time = user_doc.to_dict().get('WiFiTimeAvailable', 0)
             new_time = current_time + (minutes_to_add * 60)  # Convert mins to seconds
-            new_bottle_count = total_bottles + 1  # Increment the bottle count by 1
-
-            # Update both fields in Firestore
-            doc_ref.update({
-                'WiFiTimeAvailable': new_time,
-                'TotalBottlesDeposited': new_bottle_count
-            })
-
-            print(f"[+] Updated {mac_address}: +{minutes_to_add} mins ({new_time} seconds total), Total Bottles: {new_bottle_count}")
+            doc_ref.update({'WiFiTimeAvailable': new_time})
+            print(f"[+] Updated {mac_address}: +{minutes_to_add} mins ({new_time} seconds total)")
         else:
             print(f"[!] MAC {mac_address} not found in Firestore.")
     except Exception as e:
@@ -91,6 +80,21 @@ def add_wifi_time(mac_address, minutes_to_add):
 
 # 🔵 Hardcoded MAC address for now (later you can make it dynamic)
 current_mac_address = "A2:DE:BF:8C:50:87"  # Replace with dynamic if needed
+
+# 🔵 ADD: Update Total Bottles Deposited
+def add_bottle_to_user(mac_address):
+    try:
+        doc_ref = db.collection('Users Collection').document(mac_address)
+        user_doc = doc_ref.get()
+        if user_doc.exists:
+            current_bottles = user_doc.to_dict().get('TotalBottlesDeposited', 0)
+            new_bottle_count = current_bottles + 1
+            doc_ref.update({'TotalBottlesDeposited': new_bottle_count})
+            print(f"[+] Updated {mac_address}: +1 bottle (Total: {new_bottle_count})")
+        else:
+            print(f"[!] MAC {mac_address} not found in Firestore.")
+    except Exception as e:
+        print(f"[!] Error updating bottle count: {e}")
 
 # Monitor container full status in main loop
 try:
@@ -139,11 +143,14 @@ try:
                 display_message("Accepting Bottle")
                 set_servo_position(1)
 
-                # 🔵 ADD: Update Firebase WiFi time
+                # 🔵 ADD: Update Firebase WiFi time and bottle count
                 if detected_bottle_type == "small_bottle":
-                    add_wifi_time(current_mac_address, 5)  # 5 minutes
+                    add_wifi_time(current_mac_address, 5)  # Adds 5 minutes for small bottles
                 elif detected_bottle_type == "large_bottle":
-                    add_wifi_time(current_mac_address, 10)  # 10 minutes
+                    add_wifi_time(current_mac_address, 10)  # Adds 10 minutes for large bottles
+
+                # 🔵 ADD: Increment bottle count in Firestore
+                add_bottle_to_user(current_mac_address)
 
             elif general_detected:
                 go_neutral = False
