@@ -9,7 +9,7 @@ firebase_admin.initialize_app(cred)
 
 # Firestore client
 db = firestore.client()
-users_ref = db.collection('users')
+users_ref = db.collection('Users Collection')
 
 # Function to connect to MikroTik
 def connect_mikrotik():
