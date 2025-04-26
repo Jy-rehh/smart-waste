@@ -6,7 +6,7 @@ from firebase_admin import credentials, firestore, db
 from mikrotik_api import disconnect_hotspot_user  # You'll add this to disconnect users
 
 # Initialize Firebase
-cred = credentials.Certificate('serviceAccountKey.json')
+cred = credentials.Certificate('firebase-key.json')
 firebase_admin.initialize_app(cred)
 firestore_db = firestore.client()
 realtime_db = db.reference('users')  # Reference to Realtime DB
