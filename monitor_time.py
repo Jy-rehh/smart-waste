@@ -11,7 +11,7 @@ firebase_admin.initialize_app(cred)
 # Firestore client
 # This allows interaction with the Firestore database to fetch user data
 db = firestore.client()
-users_ref = db.collection('users')  # Access the 'users' collection in Firestore
+users_ref = db.collection('Users Collection')  # Access the 'users' collection in Firestore
 
 # Function to connect to MikroTik
 # This function establishes a connection to the MikroTik router
