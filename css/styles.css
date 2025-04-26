@@ -480,6 +480,7 @@ body::before {
     font-size: 16px;
 }
 
+
 /* Input Fields */
 .container-login input {
     padding: 12px;
@@ -512,6 +513,27 @@ body::before {
     font-size: 14px;
     opacity: 0.9;
 }
+
+/*forgot password button*/
+
+.forgot-password {
+    text-align: right;
+    margin-top: 4%;
+    margin-bottom: 5%;
+    font-size: 0.9em;
+    margin-right: 4%; 
+}
+
+.forgot-password a {
+    color: #000000; /* Change this to your preferred color */
+  
+}
+
+.forgot-password a:hover {
+    color: #1565c0;
+    
+}
+
 
 /* Mobile Friendly Adjustments */
 @media (max-width: 768px) {
@@ -702,10 +724,13 @@ body::before {
 .create-account-container button {
     width: 50%;
     padding: 10px;
-    background-color: #ccc;
+    background-color: #5ccc00;
     border: none;
     border-radius: 5px;
-    /* cursor: not-allowed; */
+    display: block;
+    margin: 20px auto; 
+    font-size: 16px;
+    color: #f1f1f1;
 }
 
 /* Dashboard Container Styling */
