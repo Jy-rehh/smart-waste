@@ -22,10 +22,22 @@ def disconnect_user(user_id):
     print(f"Attempting to disconnect user {user_id}...")
     try:
         api = connect_mikrotik()  # Connect to MikroTik router
-        api('/ip/hotspot/user/remove', {'numbers': user_id})  # Remove user from hotspot
+        # Remove user from hotspot
+        api('/ip/hotspot/user/remove', {'numbers': user_id})
         print(f"User {user_id} disconnected from Wi-Fi.")
     except Exception as e:
         print(f"Failed to disconnect user {user_id}: {e}")
+
+# Function to re-enable user for internet access
+def reconnect_user(user_id):
+    print(f"Attempting to reconnect user {user_id}...")
+    try:
+        api = connect_mikrotik()  # Connect to MikroTik router
+        # Add the user back to the hotspot to allow internet access
+        api('/ip/hotspot/user/add', {'name': user_id, 'profile': 'default'})  # Ensure 'profile' matches your configuration
+        print(f"User {user_id} reconnected to Wi-Fi.")
+    except Exception as e:
+        print(f"Failed to reconnect user {user_id}: {e}")
 
 # Function to check users' time remaining and disconnect if time expired
 def monitor_users():
@@ -54,6 +66,9 @@ def monitor_users():
                 users_ref.document(user_id).update({'time_remaining': new_time})
                 print(f"User {user_id} has {new_time} minutes remaining.")
                 active_users += 1  # There are still active users
+                
+                # Reconnect user if they have time remaining
+                reconnect_user(user_id)
 
         if active_users == 0:
             print("All users have expired their time. Stopping monitoring.")
