@@ -1,0 +1,185 @@
+/* General Reset */
+body, html {
+    height: 100%;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Background Image */
+.background {
+    background: url('../Designs/index.png') no-repeat center center/cover;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    margin-bottom: 10px; /* Made a little smaller */
+    margin-top: 10px; /* Push a little downward */
+}
+
+.header h1 {
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 50px; /* Slightly smaller */
+    font-weight: bold;
+    line-height: 1.2;
+    margin: 0;
+    color: rgb(35, 182, 69);
+    text-shadow: 5px 5px 5px rgba(0, 0, 0, 0.28);
+}
+
+.green-text {
+    background: linear-gradient(to right, #28a745, rgba(14, 1, 1, 0.62));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+    background: #fff;
+    border-radius: 12px;
+    padding: 25px;
+    width: 90%;
+    max-width: 400px;
+    margin-top: 5px; /* Move higher */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+/* User Info */
+.user-info {
+    background: #ffffff;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.user-info h2 {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.user-info span {
+    font-size: 0.7em;
+}
+
+/* Buttons inside user-info */
+.user-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.pause-btn {
+    background: #2196F3;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.insert-btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Points Section */
+.points-section {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.points-box {
+    background: #f9f9f9;
+    width: 48%;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Options Section */
+.options {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.option-btn {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    padding: 10px;
+    width: 30%;
+    margin: 5px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+/* Logout Button */
+.logout-btn {
+    background: #2196F3;
+    color: white;
+    font-weight: bold;
+    border: none;
+    padding: 10px;
+    width: 100%;
+    margin-top: 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/*responsive design*/
+@media (max-width: 600px) {
+    .dashboard-container {
+        padding: 15px;
+        width: 95%;
+        margin-top: 10px;
+    }
+
+    .header h1 {
+        font-size: 40px; 
+    }
+
+    .points-section {
+        flex-direction: column;
+    }
+
+    .points-box {
+        width: 100%;
+    }
+
+    .options {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .option-btn {
+        width: 90%;
+    }
+
+    .user-buttons {
+        flex-direction: column;
+    }
+
+    .pause-btn, .insert-btn {
+        width: 100%;
+    }
+}
