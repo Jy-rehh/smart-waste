@@ -14,7 +14,8 @@ users_ref = db.collection('Users Collection')
 
 def connect_mikrotik():
     print("Connecting to MikroTik router...")
-    return connect(username='admin', password='myStrongPassword123', host='192.168.88.1')
+    return connect(username='admin', password='yourpassword', host='192.168.88.1', port=8728)
+
 
 # Function to get currently active users from MikroTik
 def get_active_users(api):
