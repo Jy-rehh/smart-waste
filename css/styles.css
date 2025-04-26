@@ -721,16 +721,37 @@ body::before {
 }
 
 /* Button */
-.create-account-container button {
-    width: 50%;
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.button-group button {
+    width: 120px;
     padding: 10px;
-    background-color: #5ccc00;
-    border: none;
-    border-radius: 5px;
-    display: block;
-    margin: 20px auto; 
     font-size: 16px;
-    color: #f1f1f1;
+    border: none;
+    border-radius: 15px;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+#create-account-btn {
+    background-color: #5ccc00;
+}
+
+#cancel-btn {
+    background-color: #bcbbbb;
+}
+
+#create-account-btn:hover {
+    background-color: #4a9b0b; 
+}
+
+#cancel-btn:hover {
+    background-color: #aba5a5; /* a darker gray */
 }
 
 /* Dashboard Container Styling */
