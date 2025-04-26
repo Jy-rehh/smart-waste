@@ -79,7 +79,7 @@ def add_wifi_time(mac_address, minutes_to_add):
         print(f"[!] Error updating WiFi time: {e}")
 
 # 🔵 Hardcoded MAC address for now (later you can make it dynamic)
-current_mac_address = "AA:BB:CC:DD:EE:FF"  # Replace with dynamic if needed
+current_mac_address = "A2:DE:BF:8C:50:87"  # Replace with dynamic if needed
 
 # Monitor container full status in main loop
 try:
