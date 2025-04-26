@@ -1,67 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Account</title>
-    <link rel="stylesheet" href="../css/dashboard.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Waste Access - Dashboard</title>
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div class="background">
-        <div class="header">
-        <h1><span class="green-text">Smart Waste </span> <br> <span class="green-text">Smart Access</span></h1>
-        </div>
-
-        <div class="dashboard-container">
-            <div class="user-info">
-                <p class="username">Username</p>
-                <p class="remaining-time">Remaining Time</p>
-                <h2>2 <span>hr.</span> 37 <span>min.</span> 16 <span>sec</span></h2>
-                <div class="user-buttons">
-                    <button class="pause-btn">Pause</button>
-                    <button class="insert-btn" onclick="window.location.href='../templates/insertbottle.html'">Insert Bottle</button>
-                </div>
-            </div>
-
-            <div class="points-section">
-                <div class="points-box">
-                    <p>Reward Points</p>
-                    <h3>🪙 0.00</h3>
-                </div>
-                <div class="points-box">
-                    <p>Loyalty Points</p>
-                    <h3>💡 0.00</h3>
-                </div>
-            </div>
-
-            <div class="options">
-                <button class="option-btn">📶 WiFi Products</button>
-                <button class="option-btn">🎟️ Voucher</button>
-                <button class="option-btn">❤️ Donations</button>
-            </div>
-
-            <button class="logout-btn">Log out</button>
-            <script src="../controllers/logout.js" type="module"></script>
+  <div class="background">
+    <div class="header">
+      <h1><span class="green-text">Smart Waste </span><br><span class="green-text">Smart Access</span></h1>
     </div>
-    <script type="module">
-        import { auth } from "../config/firebase-config.js";
-        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
-        
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                // Redirect to login page if user is not authenticated
-                window.location.href = "/templates/login.html";
-            }
-        });
-        
-        // Disable the back button to prevent returning to the dashboard after logout
-        window.history.pushState(null, "", window.location.href);
-        window.onpopstate = function () {
-            window.history.pushState(null, "", window.location.href);
-        };
-    </script>
+
+    <div class="dashboard-container">
+      <div class="user-info">
+        <p class="username">Username</p>
+        <p class="remaining-time">Remaining Time</p>
+        <h2>2 <span>hr.</span> 37 <span>min.</span> 16 <span>sec</span></h2>
+        <div class="user-buttons">
+          <a href="#insertModal" class="insert-btn">Insert Bottle</a>
+          <button class="pause-btn">Pause</button>
+        </div>
+      </div>
+
+      <div class="points-section">
+        <div class="points-box">
+          <p>Reward Points</p>
+          <h3>🪙 0.00</h3>
+        </div>
+        <div class="points-box">
+          <p>Loyalty Points</p>
+          <h3>💡 0.00</h3>
+        </div>
+      </div>
+
+      <div class="options">
+        <button class="option-btn">📶 WiFi Products</button>
+        <button class="option-btn">🎟️ Voucher</button>
+        <button class="option-btn">❤️ Donations</button>
+      </div>
+
+      <button class="logout-btn">Log out</button>
+      <script src="../controllers/logout.js" type="module"></script>
+    </div>
+
+    <!-- -------- Modal Here -------- -->
+    <div id="insertModal" class="modal">
+      <div class="modal-content insert-container">
+        <a href="#" class="close">&times;</a>
+        <h2>Please Insert Bottles</h2>
+        <div class="image-container">
+          <img src="../Designs/image 4.png" alt="Insert Bottle">
+        </div>
+        <p class="status">Waiting for <span class="my-b">60 sec</span></p>
+        <div class="progress-container">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="info">
+          <p>Time: <span>0 min</span></p>
+          <p>Bottle Value: <span>0.00</span></p>
+        </div>
+        <div class="action-buttons">
+          <button id="cancelButton" class="action-btn action-cancel">Cancel</button>
+          <button id="doneButton" class="action-btn action-done">Done</button>
+        </div>
+      </div>
+    </div>
+    <!-- -------- End Modal -------- -->
+
+  </div>
+
+  <script type="module">
+    import { auth } from "../config/firebase-config.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
     
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+                // Redirect to login page if user is not authenticated
+        window.location.href = "/templates/login.html";
+      }
+    });
+    
+        // Disable the back button to prevent returning to the dashboard after logout
+    window.history.pushState(null, "", window.location.href);
+    window.onpopstate = function () {
+      window.history.pushState(null, "", window.location.href);
+    };
+  </script>
+
 </body>
 </html>

@@ -84,16 +84,20 @@ body, html {
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
+    font-family: 'Poppins', sans-serif; 
+    font-size: 16px; 
+    text-decoration: none; 
 }
 
 .insert-btn {
-    background: #4CAF50;
+    background: #4CAF50; 
     color: white;
-    border: none;
+    border: none; 
     padding: 8px 20px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
+    text-decoration: none; 
 }
 
 /* Points Section */
@@ -182,4 +186,174 @@ body, html {
     .pause-btn, .insert-btn {
         width: 100%;
     }
+}
+
+/*insert bottle*/
+/* Modal Background */
+.modal {
+    display: none; /* Hide modal initially */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Black overlay */
+    justify-content: center;
+    align-items: center;
+}
+
+/* Modal Content */
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    width: 400px;
+    position: relative;
+}
+
+/* Close Button */
+.close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Heading */
+.insert-container h2 {
+    color: #3366cc;
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+/* Image Styling */
+.image-container img {
+    width: 80px;
+}
+
+/* Status Styling */
+.status {
+    font-size: 14px;
+    font-weight: bold;
+    margin: 10px 0;
+    margin-left: 10px;
+}
+
+/* Status Time */
+.my-b {
+    color: #007f00;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+/* Info Box */
+.info {
+    background: #f1f1f1;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 17px;
+    margin: 10px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Align items to the left */
+    text-align: left;
+    width: 95%;
+    font-weight: bold;
+}
+
+.info p {
+    margin: 5px 0;
+    position: relative;
+    padding-bottom: 5px;
+    width: 100%;
+}
+.info span {
+    margin-left:10px;
+    color:green;
+}
+
+.info p:not(:last-child)::after {
+    content: "";
+    display: block;
+    width: 100%; /* Full width divider */
+    height: 1px;
+    background: #ccc; /* Divider color */
+    margin-top: 5px;
+}
+
+
+/* Buttons */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.action-btn {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.2);
+    text-transform: uppercase;
+}
+
+.action-cancel {
+    background: linear-gradient(to right, #ff4d4d, #ff1a1a);
+    color: white;
+}
+
+.action-done {
+    background: linear-gradient(to right, #28a745, #34d058);
+    color: white;
+}
+
+/* Hover Effects */
+.action-btn:hover {
+    transform: scale(1.10);
+    opacity: 0.9;
+}
+
+/* Click Effect */
+.action-btn:active {
+    transform: scale(1);
+}
+
+/* Loading Spinner */
+.progress-container {
+    width: 100%;
+    height: 25px;
+    border-radius: 5px;
+    background-color: #ddd;
+    overflow: hidden;
+    margin-top: 10px; /* Space below the waiting text */
+}
+
+.progress-bar {
+    width: 100%;
+    height: 100%;
+    background-color: #4caf50; /* Green color */
+    transition: width 1s linear;
+}
+
+/* Fade-out Animation */
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+
+/* Make modal visible when targeted */
+.modal:target {
+    display: flex;
 }
