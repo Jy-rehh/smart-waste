@@ -40,4 +40,7 @@ document.addEventListener("DOMContentLoaded", function () {
             alert("Error: " + error.message);
         }
     });
+    document.getElementById("cancel-btn").addEventListener("click", async () =>{
+        window.location.href = "login.html";
+    });
 });
