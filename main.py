@@ -19,7 +19,7 @@ general_model = YOLO('yolov8n.pt')
 #subprocess.Popen(["sudo", "node", "server.js"], cwd="../smart-waste")
  
 # ESP32-CAM Stream
-esp32_cam_url = "http://192.168.8.101:81/stream"
+esp32_cam_url = "http://192.168.8.100:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
  
 if not cap.isOpened():

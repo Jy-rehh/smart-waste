@@ -12,8 +12,8 @@ onAuthStateChanged(auth, async (user) => {
                 const userData = userDocSnap.data();
                 const usernameElement = document.querySelector(".username");
 
-                if (userData.Name) {
-                    usernameElement.textContent = userData.Name;
+                if (userData.Username) {
+                    usernameElement.textContent = userData.Username;
                 } else {
                     usernameElement.textContent = "No Name Found";
                 }

@@ -14,7 +14,7 @@ users_ref = db.collection('Users Collection')
 # Connect to MikroTik router
 def connect_mikrotik():
     print("Connecting to MikroTik router...")
-    return connect(username='your_mikrotik_username', password='your_mikrotik_password', host='192.168.50.1', port=8728)
+    return connect(username='admin', password='', host='192.168.50.1', port=8728)
 
 # Disable user in MikroTik
 def disable_user(username):
