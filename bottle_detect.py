@@ -57,42 +57,44 @@ frame_thread.start()
 ultrasonic_thread = threading.Thread(target=monitor_container, daemon=True)
 ultrasonic_thread.start()
 
-def bypass_internet(mac_address):
+def add_or_update_binding(mac_address, binding_type):
     try:
-        # 1. Fetch all hotspot ip-bindings
+        # Use the 'print' command to get the list of bindings
         bindings = api('/ip/hotspot/ip-binding/print')
 
-        binding = None
-
-        # 2. Find if the MAC already exists
-        for b in bindings:
-            if b.get('mac-address', '').lower() == mac_address.lower():
-                binding = b
+        # Find if the MAC address already exists
+        existing_binding = None
+        for binding in bindings:
+            if binding.get('mac-address', '').lower() == mac_address.lower():
+                existing_binding = binding
                 break
 
-        if binding:
-            print(f"[*] Found existing binding for {mac_address} with type '{binding.get('type')}'")
-
-            # 3. If exists, update it to 'bypassed'
+        if existing_binding:
+            # Update the existing entry
             api('/ip/hotspot/ip-binding/set', {
-                '.id': binding['.id'],
-                'type': 'bypassed',
+                '.id': existing_binding['.id'],
+                'type': binding_type,
                 'comment': 'Auto-updated to bypass'
             })
-
-            print(f"[*] Successfully updated {mac_address} to 'bypassed'!")
+            print(f"[*] Updated {mac_address} to '{binding_type}'.")
 
         else:
-            # 4. If no binding found, add it
-            print(f"[!] No binding found for {mac_address}, adding as 'bypassed'...")
-
+            # Add a new binding if none exists
             api('/ip/hotspot/ip-binding/add', {
                 'mac-address': mac_address,
-                'type': 'bypassed',
+                'type': binding_type,
                 'comment': 'Auto-added as bypass'
             })
+            print(f"[*] Added new MAC {mac_address} with type '{binding_type}'.")
 
-            print(f"[*] Successfully added {mac_address} as 'bypassed'!")
+    except Exception as e:
+        print(f"[!] Error during add/update binding: {e}")
+
+# Modified bypass_internet function
+def bypass_internet(mac_address):
+    try:
+        # Add or update the binding with 'bypassed' type
+        add_or_update_binding(mac_address, 'bypassed')
 
     except Exception as e:
         print(f"[!] Error during bypass: {e}")
