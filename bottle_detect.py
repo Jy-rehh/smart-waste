@@ -128,7 +128,7 @@ def revert_to_regular(mac_address):
     except Exception as e:
         print(f"[!] Error during revert: {e}")
 
-# Function to update user data in Firebase and add time based on bottle type
+# Function to update user data in Firebase
 def update_user_data(mac_address, bottle_type):
     try:
         # Get the document for the user
@@ -138,14 +138,14 @@ def update_user_data(mac_address, bottle_type):
         if doc.exists:
             # User exists, update time and bottles deposited
             user_data = doc.to_dict()
-            
-            # Add time based on bottle type
+
+            # Adjust WiFi time based on bottle size
             if bottle_type == "small_bottle":
                 new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for small bottle
             elif bottle_type == "large_bottle":
                 new_time = user_data['WiFiTimeAvailable'] + 10  # Add 10 minutes for large bottle
             else:
-                new_time = user_data['WiFiTimeAvailable']  # No change if the bottle is not recognized
+                new_time = user_data['WiFiTimeAvailable']  # No change for non-bottle objects
 
             new_bottles = user_data['TotalBottlesDeposited'] + 1  # Increment bottle count
 
@@ -163,7 +163,7 @@ def update_user_data(mac_address, bottle_type):
     except Exception as e:
         print(f"[!] Error while updating user data: {e}")
 
-# Function to monitor and check if user's Wi-Fi time has expired
+# Function to check if the user’s time has expired
 def check_time_expiry(mac_address):
     try:
         # Get the document for the user
@@ -184,33 +184,21 @@ def check_time_expiry(mac_address):
     except Exception as e:
         print(f"[!] Error while checking time expiry: {e}")
 
-# Function to handle bottle detection and bypass internet
-def handle_bottle_detection(bottle_detected, mac_address, bottle_type):
-    if bottle_detected:
-        display_message("Accepting Bottle")
-        set_servo_position(1)
+# Function to set servo position
+def set_servo_position(pos):
+    move_servo(pos)
 
-        # Update Firebase based on bottle type (small or large)
-        update_user_data(mac_address, bottle_type)
-
-        # Bypass the internet for the user (grant them internet)
-        bypass_internet(mac_address)
-
-        # Pause for a short while before moving the servo back to neutral
-        sleep(2)  # Wait for the bottle to be processed
-
-        # Move the servo back to neutral (0.5) position after a short delay
-        set_servo_position(0.5)  # Neutral position
-
-        # Optionally, update the display to indicate the next action
-        display_message("Insert bottle")
-    else:
-        display_message("Insert bottle")
-
-# Main loop for bottle detection and checking expiration
+# Monitor container full status in main loop
 try:
     while True:
         if frame is None:
+            continue
+
+        # Check if container is full
+        if container_full_event.is_set():  # Check if container_full_event is set
+            display_message("Container Full")
+            set_servo_position(0.5)  # Neutral
+            sleep(1.5)
             continue
 
         current_time = time.time()
@@ -219,10 +207,15 @@ try:
         bottle_results = bottle_model(frame)[0]
         general_results = general_model(frame)[0]
 
+        # Flags for detection
         bottle_detected = False
-        bottle_type = None
+        general_detected = False
 
-        # Bottle detection logic
+        # General detection
+        if general_results.boxes is not None and len(general_results.boxes) > 0:
+            general_detected = True
+
+        # Bottle detection
         if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
             for box in bottle_results.boxes:
                 confidence = box.conf[0].item()
@@ -231,16 +224,63 @@ try:
                     class_name = bottle_model.names[class_id].lower()
                     if class_name in ["small_bottle", "large_bottle"]:
                         bottle_detected = True
-                        bottle_type = class_name  # Set the type of bottle detected
+                        bottle_type = class_name  # Store bottle type (small or large)
                         break
 
-        # Handle bottle detection
-        handle_bottle_detection(bottle_detected, "A2:DE:BF:8C:50:87", bottle_type)  # Replace with actual MAC address
+        # Decision logic for bottle detection
+        neutral_classes = ["bottle", "toilet", "surfboard"]
 
-        # Check if the user's time has expired
-        check_time_expiry("A2:DE:BF:8C:50:87")  # Replace with actual MAC address
+        if bottle_detected:
+            display_message(f"Accepting {bottle_type}")
+            set_servo_position(1)
+
+            # Example MAC address (replace with actual logic to get the MAC address)
+            mac_address = "A2:DE:BF:8C:50:87"  # Replace this with actual logic to get MAC address from MikroTik
+            update_user_data(mac_address, bottle_type)  # Add time based on bottle type and increment bottle count
+
+            # Bypass the internet for the user (grant them internet)
+            bypass_internet(mac_address)
+
+            # Pause for a short while before moving the servo back to neutral
+            sleep(2)  # Wait for the bottle to be processed
+
+            # Move the servo back to neutral (0.5) position after a short delay
+            set_servo_position(0.5)  # Neutral position
+
+            # Optionally, update the display to indicate the next action
+            display_message("Insert bottle")
+            continue  # Exit after handling the detected bottle
+
+        elif general_detected:
+            go_neutral = False
+            for box in general_results.boxes:
+                confidence = box.conf[0].item()
+                if confidence < 0.6:
+                    continue
+
+                class_id = int(box.cls[0])
+                class_name = general_model.names[class_id].lower()
+                print(f"Detected class from general model: {class_name} with confidence: {confidence}")
+
+                if class_name in neutral_classes:
+                    go_neutral = True
+                    break
+
+            if go_neutral:
+                set_servo_position(0.5)
+                display_message("Insert bottle")
+            else:
+                display_message("Object Rejected")
+                set_servo_position(0)
+
+        else:
+            set_servo_position(0.5)
+            display_message("Insert bottle")
+            continue
 
         sleep(1.5)
+        set_servo_position(0.5)
+        display_message("Insert bottle")
 
 except KeyboardInterrupt:
     print("🛑 Exiting gracefully...")
