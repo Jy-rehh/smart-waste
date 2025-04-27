@@ -75,7 +75,8 @@ def bypass_internet(mac_address):
             # Bypass the MAC address (remove blocking)
             api.path('ip', 'hotspot', 'ip-binding', set={
                 '.id': binding['.id'],
-                'type': 'bypassed'  # This bypasses the MAC address, giving it internet access
+                'type': 'bypassed',  # This bypasses the MAC address, giving it internet access
+                'comment': 'Connected'
             })
 
             print(f"[*] Successfully bypassed {mac_address}, user has internet!")
