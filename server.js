@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { spawn } = require('child_process');
-const RouterOS = require('node-routeros');  // Import the node-routeros module
+const RouterOS = require('node-routeros').RouterOS;  // Correct import for RouterOS
 const app = express();
 const port = 80;
 
