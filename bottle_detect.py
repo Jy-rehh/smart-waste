@@ -59,8 +59,7 @@ ultrasonic_thread.start()
 
 def bypass_internet(mac_address):
     try:
-        # FETCH all hotspot ip-binding entries using 'print'
-        bindings = api('/ip/hotspot/ip-binding/print')
+        bindings = api.path('ip', 'hotspot', 'ip-binding').get()
 
         binding = None
 
@@ -70,16 +69,18 @@ def bypass_internet(mac_address):
                 break
 
         if binding:
-            print(f"[*] Binding details: {binding}")  # DEBUG: show binding fields
+            print(f"[*] Binding details: {binding}")  # DEBUG
 
             if binding.get('type', 'regular') == 'regular':
                 print(f"[*] Found {mac_address} with type 'regular', updating to 'bypassed'...")
 
-                api('/ip/hotspot/ip-binding/set', {
-                    '.id': binding['.id'],
-                    'type': 'bypassed',
-                    'comment': 'Connected (Bypass)'
-                })
+                api.path('ip', 'hotspot', 'ip-binding').set(
+                    **{
+                        '.id': binding['.id'],
+                        'type': 'bypassed',
+                        'comment': 'Connected (Bypass)'
+                    }
+                )
 
                 print(f"[*] Successfully updated {mac_address} to 'bypassed'!")
             else:
@@ -88,11 +89,13 @@ def bypass_internet(mac_address):
         else:
             print(f"[!] No binding found for {mac_address}, adding new 'bypassed' binding...")
 
-            api('/ip/hotspot/ip-binding/add', {
-                'mac-address': mac_address,
-                'type': 'bypassed',
-                'comment': 'Connected (New Bypass)'
-            })
+            api.path('ip', 'hotspot', 'ip-binding').add(
+                **{
+                    'mac-address': mac_address,
+                    'type': 'bypassed',
+                    'comment': 'Connected (New Bypass)'
+                }
+            )
 
             print(f"[*] Successfully added {mac_address} as 'bypassed'!")
 
