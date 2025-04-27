@@ -59,7 +59,8 @@ ultrasonic_thread.start()
 
 def bypass_internet(mac_address):
     try:
-        bindings = api.path('ip', 'hotspot', 'ip-binding').get()
+        # FETCH all hotspot ip-binding entries using 'print'
+        bindings = api('/ip/hotspot/ip-binding/print')
 
         binding = None
 
@@ -69,33 +70,29 @@ def bypass_internet(mac_address):
                 break
 
         if binding:
-            print(f"[*] Binding details: {binding}")  # DEBUG
-
-            if binding.get('type', 'regular') == 'regular':
+            # Check if the binding type is 'regular', update to 'bypassed'
+            if binding.get('type') == 'regular':
                 print(f"[*] Found {mac_address} with type 'regular', updating to 'bypassed'...")
 
-                api.path('ip', 'hotspot', 'ip-binding').set(
-                    **{
-                        '.id': binding['.id'],
-                        'type': 'bypassed',
-                        'comment': 'Connected (Bypass)'
-                    }
-                )
+                api('/ip/hotspot/ip-binding/set', {
+                    '.id': binding['.id'],
+                    'type': 'bypassed',
+                    'comment': 'Connected (Bypass)'
+                })
 
                 print(f"[*] Successfully updated {mac_address} to 'bypassed'!")
             else:
-                print(f"[*] MAC {mac_address} is already '{binding.get('type', 'regular')}', no update needed.")
+                print(f"[*] MAC {mac_address} is already '{binding.get('type')}', no update needed.")
 
         else:
+            # If no binding found, add a new one
             print(f"[!] No binding found for {mac_address}, adding new 'bypassed' binding...")
 
-            api.path('ip', 'hotspot', 'ip-binding').add(
-                **{
-                    'mac-address': mac_address,
-                    'type': 'bypassed',
-                    'comment': 'Connected (New Bypass)'
-                }
-            )
+            api('/ip/hotspot/ip-binding/add', {
+                'mac-address': mac_address,
+                'type': 'bypassed',
+                'comment': 'Connected (New Bypass)'
+            })
 
             print(f"[*] Successfully added {mac_address} as 'bypassed'!")
 
