@@ -129,7 +129,7 @@ def revert_to_regular(mac_address):
         print(f"[!] Error during revert: {e}")
 
 # Function to update user data in Firebase
-def update_user_data(mac_address):
+def update_user_data(mac_address, bottle_type):
     try:
         # Get the document for the user
         doc_ref = db.collection('Users Collection').document(mac_address)
@@ -138,7 +138,13 @@ def update_user_data(mac_address):
         if doc.exists:
             # User exists, update time and bottles deposited
             user_data = doc.to_dict()
-            new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for bottle
+            if bottle_type == 'small_bottle':
+                new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for small bottle
+            elif bottle_type == 'large_bottle':
+                new_time = user_data['WiFiTimeAvailable'] + 10  # Add 10 minutes for large bottle
+            else:
+                new_time = user_data['WiFiTimeAvailable']
+
             new_bottles = user_data['TotalBottlesDeposited'] + 1  # Increment bottle count
 
             # Update Firestore document
@@ -216,6 +222,7 @@ try:
                     class_name = bottle_model.names[class_id].lower()
                     if class_name in ["small_bottle", "large_bottle"]:
                         bottle_detected = True
+                        bottle_type = class_name
                         break
 
         # Decision logic for bottle detection
@@ -227,7 +234,7 @@ try:
 
             # Example MAC address (replace with actual logic to get the MAC address)
             mac_address = "A2:DE:BF:8C:50:87"  # Replace this with actual logic to get MAC address from MikroTik
-            update_user_data(mac_address)  # Add 5 minutes and increment bottle count
+            update_user_data(mac_address, bottle_type)  # Add time based on bottle type and increment bottle count
 
             # Bypass the internet for the user (grant them internet)
             bypass_internet(mac_address)
