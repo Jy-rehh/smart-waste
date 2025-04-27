@@ -60,8 +60,8 @@ ultrasonic_thread.start()
 # Function to bypass the MAC address in MikroTik router
 def bypass_internet(mac_address):
     try:
-        # Fetch all bindings from MikroTik (using the correct method)
-        bindings = api.path('ip', 'hotspot', 'ip-binding').call()  # Use call() to retrieve bindings
+        # Fetch all bindings from MikroTik
+        bindings = api.path('ip', 'hotspot', 'ip-binding').get()  # Using get() correctly to retrieve the bindings
         binding = None
 
         # Search for the specific MAC address in the bindings
@@ -71,29 +71,28 @@ def bypass_internet(mac_address):
                 break
 
         if binding:
-            # If the binding exists, update it to bypass the MAC address
-            print(f"[*] Found binding for {mac_address}, updating to bypass...")
+            # If the binding exists, update it to regular (this would revert the bypass)
+            print(f"[*] Found binding for {mac_address}, updating to regular access...")
 
-            # Update the binding to bypass type (internet access granted)
             api.path('ip', 'hotspot', 'ip-binding').set(
                 **{
-                    '.id': binding['.id'],
-                    'type': 'bypassed',  # Bypasses the MAC address to grant internet access
-                    'comment': 'Connected'
+                    '.id': binding['.id'],  # Get the ID of the existing binding
+                    'type': 'regular',  # Update to regular to remove the bypass
+                    'comment': 'Reverted to regular access'
                 }
             )
 
-            print(f"[*] Successfully bypassed {mac_address}, user has internet!")
+            print(f"[*] Successfully reverted {mac_address} to regular access.")
         else:
-            # If no binding exists, add a new one
+            # If no binding exists, add a new one with type 'bypassed'
             print(f"[!] No binding found for {mac_address}, adding new binding...")
 
-            # Add the new binding for the MAC address
+            # Add the new binding for the MAC address with type 'bypassed'
             api.path('ip', 'hotspot', 'ip-binding').add(
                 **{
                     'mac-address': mac_address,  # Add the MAC address
                     'type': 'bypassed',  # Set the binding type to bypassed for internet access
-                    'comment': 'Connected'  # Add a comment to specify it's connected
+                    'comment': 'Connected'
                 }
             )
 
@@ -101,7 +100,6 @@ def bypass_internet(mac_address):
 
     except Exception as e:
         print(f"[!] Error during bypass: {e}")
-
 
 # Function to revert to regular access when time runs out
 def revert_to_regular(mac_address):
