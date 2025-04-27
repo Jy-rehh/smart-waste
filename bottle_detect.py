@@ -60,38 +60,40 @@ ultrasonic_thread.start()
 # Function to bypass the MAC address in MikroTik router
 def bypass_internet(mac_address):
     try:
-        # Find the binding entry for the MAC address
-        bindings = api.path('ip', 'hotspot', 'ip-binding')
+        # Fetch all bindings from MikroTik
+        bindings = api.path('ip', 'hotspot', 'ip-binding').get()  # Get all existing bindings
         binding = None
 
+        # Search for the specific MAC address
         for b in bindings:
             if b.get('mac-address', '').lower() == mac_address.lower():
                 binding = b
                 break
 
         if binding:
-            # If the binding exists, update it
+            # If the binding exists, update it to bypass the MAC address
             print(f"[*] Found binding for {mac_address}, updating to bypass...")
 
-            api.path('ip', 'hotspot', 'ip-binding').set(
+            # Update the binding to bypass type (internet access granted)
+            api.path('ip', 'hotspot', 'ip-binding').update(
                 **{
                     '.id': binding['.id'],
-                    'type': 'bypassed',  # This bypasses the MAC address, giving it internet access
+                    'type': 'bypassed',  # Bypasses the MAC address to grant internet access
                     'comment': 'Connected'
                 }
             )
 
             print(f"[*] Successfully bypassed {mac_address}, user has internet!")
         else:
-            # If no binding exists, add a new binding
+            # If no binding exists, add a new one
             print(f"[!] No binding found for {mac_address}, adding new binding...")
 
-            # Add a new binding for the MAC address
+            # Add the new binding for the MAC address
             api.path('ip', 'hotspot', 'ip-binding').add(
                 **{
-                    'mac-address': mac_address,
-                    'type': 'bypassed',  # Set the binding type to bypassed
-                    'comment': 'Connected'
+                    'mac-address': mac_address,  # Add the MAC address
+                    'type': 'bypassed',  # Set the binding type to bypassed for internet access
+                    'comment': 'Connected'  # Add a comment to specify it's connected
                 }
             )
 
@@ -99,6 +101,7 @@ def bypass_internet(mac_address):
 
     except Exception as e:
         print(f"[!] Error during bypass: {e}")
+
 
 # Function to revert to regular access when time runs out
 def revert_to_regular(mac_address):
@@ -129,7 +132,7 @@ def revert_to_regular(mac_address):
         print(f"[!] Error during revert: {e}")
 
 # Function to update user data in Firebase
-def update_user_data(mac_address, bottle_type):
+def update_user_data(mac_address):
     try:
         # Get the document for the user
         doc_ref = db.collection('Users Collection').document(mac_address)
@@ -138,15 +141,7 @@ def update_user_data(mac_address, bottle_type):
         if doc.exists:
             # User exists, update time and bottles deposited
             user_data = doc.to_dict()
-
-            # Adjust WiFi time based on bottle size
-            if bottle_type == "small_bottle":
-                new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for small bottle
-            elif bottle_type == "large_bottle":
-                new_time = user_data['WiFiTimeAvailable'] + 10  # Add 10 minutes for large bottle
-            else:
-                new_time = user_data['WiFiTimeAvailable']  # No change for non-bottle objects
-
+            new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for bottle
             new_bottles = user_data['TotalBottlesDeposited'] + 1  # Increment bottle count
 
             # Update Firestore document
@@ -224,19 +219,18 @@ try:
                     class_name = bottle_model.names[class_id].lower()
                     if class_name in ["small_bottle", "large_bottle"]:
                         bottle_detected = True
-                        bottle_type = class_name  # Store bottle type (small or large)
                         break
 
         # Decision logic for bottle detection
         neutral_classes = ["bottle", "toilet", "surfboard"]
 
         if bottle_detected:
-            display_message(f"Accepting {bottle_type}")
+            display_message("Accepting Bottle")
             set_servo_position(1)
 
             # Example MAC address (replace with actual logic to get the MAC address)
             mac_address = "A2:DE:BF:8C:50:87"  # Replace this with actual logic to get MAC address from MikroTik
-            update_user_data(mac_address, bottle_type)  # Add time based on bottle type and increment bottle count
+            update_user_data(mac_address)  # Add 5 minutes and increment bottle count
 
             # Bypass the internet for the user (grant them internet)
             bypass_internet(mac_address)
