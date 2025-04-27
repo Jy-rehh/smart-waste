@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { spawn } = require('child_process');
-const RouterOS = require('node-routeros');  // Correctly import RouterOS
+const RouterOS = require('/smart-waste/node-routeros');  // Correctly import RouterOS
 const app = express();
 const port = 80;
 
