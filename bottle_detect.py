@@ -57,44 +57,45 @@ frame_thread.start()
 ultrasonic_thread = threading.Thread(target=monitor_container, daemon=True)
 ultrasonic_thread.start()
 
-def add_or_update_binding(mac_address, binding_type):
-    try:
-        # Use the 'print' command to get the list of bindings
-        bindings = api('/ip/hotspot/ip-binding/print')
-
-        # Find if the MAC address already exists
-        existing_binding = None
-        for binding in bindings:
-            if binding.get('mac-address', '').lower() == mac_address.lower():
-                existing_binding = binding
-                break
-
-        if existing_binding:
-            # Update the existing entry
-            api('/ip/hotspot/ip-binding/set', {
-                '.id': existing_binding['.id'],
-                'type': binding_type,
-                'comment': 'Auto-updated to bypass'
-            })
-            print(f"[*] Updated {mac_address} to '{binding_type}'.")
-
-        else:
-            # Add a new binding if none exists
-            api('/ip/hotspot/ip-binding/add', {
-                'mac-address': mac_address,
-                'type': binding_type,
-                'comment': 'Auto-added as bypass'
-            })
-            print(f"[*] Added new MAC {mac_address} with type '{binding_type}'.")
-
-    except Exception as e:
-        print(f"[!] Error during add/update binding: {e}")
-
-# Modified bypass_internet function
+# Function to bypass the MAC address in MikroTik router
 def bypass_internet(mac_address):
     try:
-        # Add or update the binding with 'bypassed' type
-        add_or_update_binding(mac_address, 'bypassed')
+        # Find the binding entry for the MAC address
+        bindings = api.path('ip', 'hotspot', 'ip-binding')
+        binding = None
+
+        for b in bindings:
+            if b.get('mac-address', '').lower() == mac_address.lower():
+                binding = b
+                break
+
+        if binding:
+            # If the binding exists, update it
+            print(f"[*] Found binding for {mac_address}, updating to bypass...")
+
+            api.path('ip', 'hotspot', 'ip-binding').set(
+                **{
+                    '.id': binding['.id'],
+                    'type': 'bypassed',  # This bypasses the MAC address, giving it internet access
+                    'comment': 'Connected'
+                }
+            )
+
+            print(f"[*] Successfully bypassed {mac_address}, user has internet!")
+        else:
+            # If no binding exists, add a new binding
+            print(f"[!] No binding found for {mac_address}, adding new binding...")
+
+            # Add a new binding for the MAC address
+            api.path('ip', 'hotspot', 'ip-binding').add(
+                **{
+                    'mac-address': mac_address,
+                    'type': 'bypassed',  # Set the binding type to bypassed
+                    'comment': 'Connected'
+                }
+            )
+
+            print(f"[*] Successfully added new binding for {mac_address}, user has internet!")
 
     except Exception as e:
         print(f"[!] Error during bypass: {e}")
@@ -128,27 +129,17 @@ def revert_to_regular(mac_address):
         print(f"[!] Error during revert: {e}")
 
 # Function to update user data in Firebase
-# Updated function to add/update Wi-Fi time based on bottle type
-def update_user_data(mac_address, bottle_type):
+def update_user_data(mac_address):
     try:
-        # Get the document for the user from Firestore
+        # Get the document for the user
         doc_ref = db.collection('Users Collection').document(mac_address)
         doc = doc_ref.get()
 
         if doc.exists:
+            # User exists, update time and bottles deposited
             user_data = doc.to_dict()
-
-            # Determine the time to add based on bottle type
-            if bottle_type == "small_bottle":
-                additional_time = 5  # 5 minutes for small bottle
-            elif bottle_type == "large_bottle":
-                additional_time = 10  # 10 minutes for large bottle
-            else:
-                additional_time = 0  # No time added for other types (optional)
-
-            # Update WiFiTimeAvailable and TotalBottlesDeposited
-            new_time = user_data['WiFiTimeAvailable'] + additional_time
-            new_bottles = user_data['TotalBottlesDeposited'] + 1
+            new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for bottle
+            new_bottles = user_data['TotalBottlesDeposited'] + 1  # Increment bottle count
 
             # Update Firestore document
             doc_ref.update({
@@ -157,43 +148,12 @@ def update_user_data(mac_address, bottle_type):
             })
 
             print(f"[*] Updated Firebase for {mac_address}. Time: {new_time}, Bottles: {new_bottles}")
-            return new_time  # Returning new WiFiTimeAvailable for further checks
 
         else:
             print(f"[!] No user found in Firebase for MAC: {mac_address}")
-            return 0  # No update if user doesn't exist
 
     except Exception as e:
         print(f"[!] Error while updating user data: {e}")
-        return 0
-
-# Modified function to revert to regular access when time runs out
-def revert_to_regular(mac_address):
-    try:
-        # Find the binding entry for the MAC address
-        bindings = api.path('ip', 'hotspot', 'ip-binding')
-        binding = None
-
-        for b in bindings:
-            if b.get('mac-address', '').lower() == mac_address.lower():
-                binding = b
-                break
-
-        if binding:
-            print(f"[*] Found binding for {mac_address}, reverting to regular access...")
-
-            # Revert the MAC address to regular access (remove bypass)
-            api.path('ip', 'hotspot', 'ip-binding', set={
-                '.id': binding['.id'],
-                'type': 'regular'  # This reverts the MAC address to regular, without internet access
-            })
-
-            print(f"[*] Successfully reverted {mac_address} to regular access.")
-        else:
-            print(f"[!] No binding found for MAC: {mac_address}")
-
-    except Exception as e:
-        print(f"[!] Error during revert: {e}")
 
 # Function to check if the user’s time has expired
 def check_time_expiry(mac_address):
@@ -216,7 +176,11 @@ def check_time_expiry(mac_address):
     except Exception as e:
         print(f"[!] Error while checking time expiry: {e}")
 
-# Main loop where bottle detection is handled
+# Function to set servo position
+def set_servo_position(pos):
+    move_servo(pos)
+
+# Monitor container full status in main loop
 try:
     while True:
         if frame is None:
@@ -235,8 +199,13 @@ try:
         bottle_results = bottle_model(frame)[0]
         general_results = general_model(frame)[0]
 
+        # Flags for detection
         bottle_detected = False
         general_detected = False
+
+        # General detection
+        if general_results.boxes is not None and len(general_results.boxes) > 0:
+            general_detected = True
 
         # Bottle detection
         if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
@@ -247,31 +216,53 @@ try:
                     class_name = bottle_model.names[class_id].lower()
                     if class_name in ["small_bottle", "large_bottle"]:
                         bottle_detected = True
-                        bottle_type = class_name  # Store bottle type
                         break
 
         # Decision logic for bottle detection
+        neutral_classes = ["bottle", "toilet", "surfboard"]
+
         if bottle_detected:
             display_message("Accepting Bottle")
             set_servo_position(1)
 
+            # Example MAC address (replace with actual logic to get the MAC address)
             mac_address = "A2:DE:BF:8C:50:87"  # Replace this with actual logic to get MAC address from MikroTik
-            new_time = update_user_data(mac_address, bottle_type)  # Update Wi-Fi time based on bottle type
+            update_user_data(mac_address)  # Add 5 minutes and increment bottle count
 
             # Bypass the internet for the user (grant them internet)
             bypass_internet(mac_address)
 
-            if new_time <= 0:
-                revert_to_regular(mac_address)  # Revert if time is zero
-
             # Pause for a short while before moving the servo back to neutral
-            sleep(2)
+            sleep(2)  # Wait for the bottle to be processed
 
             # Move the servo back to neutral (0.5) position after a short delay
             set_servo_position(0.5)  # Neutral position
 
+            # Optionally, update the display to indicate the next action
             display_message("Insert bottle")
             continue  # Exit after handling the detected bottle
+
+        elif general_detected:
+            go_neutral = False
+            for box in general_results.boxes:
+                confidence = box.conf[0].item()
+                if confidence < 0.6:
+                    continue
+
+                class_id = int(box.cls[0])
+                class_name = general_model.names[class_id].lower()
+                print(f"Detected class from general model: {class_name} with confidence: {confidence}")
+
+                if class_name in neutral_classes:
+                    go_neutral = True
+                    break
+
+            if go_neutral:
+                set_servo_position(0.5)
+                display_message("Insert bottle")
+            else:
+                display_message("Object Rejected")
+                set_servo_position(0)
 
         else:
             set_servo_position(0.5)
