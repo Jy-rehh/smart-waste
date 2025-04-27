@@ -1,6 +1,5 @@
-import { db } from "../config/firebase-config.js";  // Import Firestore configuration
+import { db } from "../config/firebase-config.js";  // Firestore configuration
 
-// Function to display the device's MAC and IP addresses
 async function displayUserInfo(macAddress) {
   try {
     // Fetch the user's document from Firestore by MAC address
@@ -13,18 +12,9 @@ async function displayUserInfo(macAddress) {
       const ipAddress = userData.ipAddress || 'Unknown IP';
       const mac = userData.macAddress || 'Unknown MAC';
 
-      // Create the <p> elements to display the IP and MAC addresses
-      const ipElement = document.createElement('p');
-      ipElement.className = 'ip';
+      // Update the IP and MAC display
+      const ipElement = document.querySelector('.ip');
       ipElement.textContent = `IP: ${ipAddress} | MAC: ${mac}`;
-
-      const remainingTimeElement = document.createElement('p');
-      remainingTimeElement.className = 'remaining-time';
-      remainingTimeElement.textContent = 'Remaining Time:';
-
-      // Append the elements to the body or any container you prefer
-      document.body.appendChild(ipElement);
-      document.body.appendChild(remainingTimeElement);
     } else {
       console.log("No user data found for this MAC address.");
     }
@@ -33,7 +23,6 @@ async function displayUserInfo(macAddress) {
   }
 }
 
-// Example: Call the function with the device's MAC address
-// You might get this MAC address from server-side logic or pass it in from a template engine
-const userMacAddress = "device-mac-address";  // Replace with the actual MAC address of the device
+// Example call with device's MAC address
+const userMacAddress = "device-mac-address";  // Replace with actual MAC address
 displayUserInfo(userMacAddress);
