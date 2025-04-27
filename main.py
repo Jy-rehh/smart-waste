@@ -81,7 +81,7 @@ def bypass_internet(mac_address):
 
             print(f"[*] Successfully bypassed {mac_address}, user has internet!")
         else:
-            # If no binding exists, create a new one
+            # If no binding exists, add a new binding
             print(f"[!] No binding found for {mac_address}, adding new binding...")
 
             # Add a new binding for the MAC address
