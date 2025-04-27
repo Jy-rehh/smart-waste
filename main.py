@@ -60,45 +60,26 @@ ultrasonic_thread.start()
 # Function to bypass the MAC address in MikroTik router
 def bypass_internet(mac_address):
     try:
-        # Find the binding entry for the MAC address
         bindings = api.path('ip', 'hotspot', 'ip-binding')
         binding = None
-
         for b in bindings:
             if b.get('mac-address', '').lower() == mac_address.lower():
                 binding = b
                 break
 
         if binding:
-            # If the binding exists, update it
             print(f"[*] Found binding for {mac_address}, updating to bypass...")
-
-            api.path('ip', 'hotspot', 'ip-binding').set(
-                **{
-                    '.id': binding['.id'],
-                    'type': 'bypassed',  # This bypasses the MAC address, giving it internet access
-                    'comment': 'Connected'
-                }
-            )
-
+            api.path('ip', 'hotspot', 'ip-binding', set={
+                '.id': binding['.id'],
+                'type': 'bypassed',
+                'comment': 'Connected'
+            })
             print(f"[*] Successfully bypassed {mac_address}, user has internet!")
         else:
-            # If no binding exists, add a new binding
-            print(f"[!] No binding found for {mac_address}, adding new binding...")
-
-            # Add a new binding for the MAC address
-            api.path('ip', 'hotspot', 'ip-binding').add(
-                **{
-                    'mac-address': mac_address,
-                    'type': 'bypassed',  # Set the binding type to bypassed
-                    'comment': 'Connected'
-                }
-            )
-
-            print(f"[*] Successfully added new binding for {mac_address}, user has internet!")
+            print(f"[!] No binding found for MAC: {mac_address}")
 
     except Exception as e:
-        print(f"[!] Error during bypass: {e}")
+        print(f"[!] Error during bypass for MAC {mac_address}: {e}")
 
 # Function to revert to regular access when time runs out
 def revert_to_regular(mac_address):
@@ -129,7 +110,7 @@ def revert_to_regular(mac_address):
         print(f"[!] Error during revert: {e}")
 
 # Function to update user data in Firebase
-def update_user_data(mac_address, bottle_type):
+def update_user_data(mac_address):
     try:
         # Get the document for the user
         doc_ref = db.collection('Users Collection').document(mac_address)
@@ -138,13 +119,7 @@ def update_user_data(mac_address, bottle_type):
         if doc.exists:
             # User exists, update time and bottles deposited
             user_data = doc.to_dict()
-            if bottle_type == 'small_bottle':
-                new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for small bottle
-            elif bottle_type == 'large_bottle':
-                new_time = user_data['WiFiTimeAvailable'] + 10  # Add 10 minutes for large bottle
-            else:
-                new_time = user_data['WiFiTimeAvailable']
-
+            new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for bottle
             new_bottles = user_data['TotalBottlesDeposited'] + 1  # Increment bottle count
 
             # Update Firestore document
@@ -222,7 +197,6 @@ try:
                     class_name = bottle_model.names[class_id].lower()
                     if class_name in ["small_bottle", "large_bottle"]:
                         bottle_detected = True
-                        bottle_type = class_name
                         break
 
         # Decision logic for bottle detection
@@ -234,7 +208,7 @@ try:
 
             # Example MAC address (replace with actual logic to get the MAC address)
             mac_address = "A2:DE:BF:8C:50:87"  # Replace this with actual logic to get MAC address from MikroTik
-            update_user_data(mac_address, bottle_type)  # Add time based on bottle type and increment bottle count
+            update_user_data(mac_address)  # Add 5 minutes and increment bottle count
 
             # Bypass the internet for the user (grant them internet)
             bypass_internet(mac_address)
