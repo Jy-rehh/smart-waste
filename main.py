@@ -73,11 +73,13 @@ def bypass_internet(mac_address):
             # If the binding exists, update it
             print(f"[*] Found binding for {mac_address}, updating to bypass...")
 
-            api.path('ip', 'hotspot', 'ip-binding', set={
-                '.id': binding['.id'],
-                'type': 'bypassed',  # This bypasses the MAC address, giving it internet access
-                'comment': 'Connected'
-            })
+            api.path('ip', 'hotspot', 'ip-binding').set(
+                **{
+                    '.id': binding['.id'],
+                    'type': 'bypassed',  # This bypasses the MAC address, giving it internet access
+                    'comment': 'Connected'
+                }
+            )
 
             print(f"[*] Successfully bypassed {mac_address}, user has internet!")
         else:
@@ -85,11 +87,13 @@ def bypass_internet(mac_address):
             print(f"[!] No binding found for {mac_address}, adding new binding...")
 
             # Add a new binding for the MAC address
-            api.path('ip', 'hotspot', 'ip-binding', add={
-                'mac-address': mac_address,
-                'type': 'bypassed',  # Set the binding type to bypassed
-                'comment': 'Connected'
-            })
+            api.path('ip', 'hotspot', 'ip-binding').add(
+                **{
+                    'mac-address': mac_address,
+                    'type': 'bypassed',  # Set the binding type to bypassed
+                    'comment': 'Connected'
+                }
+            )
 
             print(f"[*] Successfully added new binding for {mac_address}, user has internet!")
 
