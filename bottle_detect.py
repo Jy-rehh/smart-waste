@@ -77,7 +77,6 @@ def bypass_internet(mac_address):
                 api('/ip/hotspot/ip-binding/set', {
                     '.id': binding['.id'],
                     'type': 'bypassed',
-                    'comment': 'Connected (Bypass)'
                 })
 
                 print(f"[*] Successfully updated {mac_address} to 'bypassed'!")
@@ -91,7 +90,6 @@ def bypass_internet(mac_address):
             api('/ip/hotspot/ip-binding/add', {
                 'mac-address': mac_address,
                 'type': 'bypassed',
-                'comment': 'Connected (New Bypass)'
             })
 
             print(f"[*] Successfully added {mac_address} as 'bypassed'!")
