@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { spawn } = require('child_process');
-const RouterOS = require('node-routeros');  // Importing the module correctly
+const RouterOS = require('node-routeros').RouterOS; // Import RouterOS properly
 const app = express();
 const port = 80;
 
@@ -63,7 +63,7 @@ app.get('/stop-detection', (req, res) => {
 });
 
 // Connect to RouterOS and check some basic data
-const conn = RouterOS({  // Initialize RouterOS connection properly
+const conn = new RouterOS({
   host: '192.168.50.1',  // Replace with your router's IP address
   user: 'admin',      // Replace with your RouterOS username
   pass: '',   // Replace with your RouterOS password
