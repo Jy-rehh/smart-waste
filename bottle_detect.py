@@ -59,8 +59,9 @@ ultrasonic_thread.start()
 
 def bypass_internet(mac_address):
     try:
-        # Fetch all bindings from MikroTik (using .path() directly)
-        bindings = api.path('ip', 'hotspot', 'ip-binding').get()  # Use .get() to fetch the bindings
+        # FETCH all hotspot ip-binding entries using 'print'
+        bindings = api('/ip/hotspot/ip-binding/print')
+
         binding = None
 
         for b in bindings:
@@ -69,36 +70,31 @@ def bypass_internet(mac_address):
                 break
 
         if binding:
-            # Check if the binding type is 'regular' and update it to 'bypassed'
+            # Check if the binding type is 'regular', update to 'bypassed'
             if binding.get('type') == 'regular':
-                print(f"[*] Found binding for {mac_address}, updating to bypass...")
+                print(f"[*] Found {mac_address} with type 'regular', updating to 'bypassed'...")
 
-                # Update the binding type to 'bypassed'
-                api.path('ip', 'hotspot', 'ip-binding').set(
-                    **{
-                        '.id': binding['.id'],
-                        'type': 'bypassed',  # Change the type to bypassed
-                        'comment': 'Connected (Bypass)'
-                    }
-                )
+                api('/ip/hotspot/ip-binding/set', {
+                    '.id': binding['.id'],
+                    'type': 'bypassed',
+                    'comment': 'Connected (Bypass)'
+                })
 
-                print(f"[*] Successfully bypassed {mac_address}, user has internet!")
+                print(f"[*] Successfully updated {mac_address} to 'bypassed'!")
             else:
-                print(f"[*] Binding for {mac_address} is already in {binding['type']} type, no update needed.")
+                print(f"[*] MAC {mac_address} is already '{binding.get('type')}', no update needed.")
+
         else:
-            # If no binding exists, add a new binding with type 'bypassed'
-            print(f"[!] No binding found for {mac_address}, adding new binding...")
+            # If no binding found, add a new one
+            print(f"[!] No binding found for {mac_address}, adding new 'bypassed' binding...")
 
-            # Add the new binding for the MAC address
-            api.path('ip', 'hotspot', 'ip-binding').add(
-                **{
-                    'mac-address': mac_address,
-                    'type': 'bypassed',  # Set the binding type to bypassed
-                    'comment': 'Connected'
-                }
-            )
+            api('/ip/hotspot/ip-binding/add', {
+                'mac-address': mac_address,
+                'type': 'bypassed',
+                'comment': 'Connected (New Bypass)'
+            })
 
-            print(f"[*] Successfully added new binding for {mac_address}, user has internet!")
+            print(f"[*] Successfully added {mac_address} as 'bypassed'!")
 
     except Exception as e:
         print(f"[!] Error during bypass: {e}")
