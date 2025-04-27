@@ -59,8 +59,8 @@ ultrasonic_thread.start()
 
 def bypass_internet(mac_address):
     try:
-        # Fetch all bindings from MikroTik
-        bindings = api.path('ip', 'hotspot', 'ip-binding').query()  # Use query() to fetch the bindings
+        # Fetch all bindings from MikroTik (using .path() directly)
+        bindings = api.path('ip', 'hotspot', 'ip-binding').get()  # Use .get() to fetch the bindings
         binding = None
 
         for b in bindings:
