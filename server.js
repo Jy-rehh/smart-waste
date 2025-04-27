@@ -13,12 +13,20 @@ firebaseAdmin.initializeApp({
 const db = firebaseAdmin.firestore();
 
 // MikroTik Router API details (replace with actual credentials)
-const { connect } = require('librouteros');
-const api = connect({
-  username: 'admin',
-  password: '',
+const RouterOS = require('node-routeros');
+
+const conn = new RouterOS({
   host: '192.168.50.1',
+  user: 'admin',
+  pass: '',
 });
+
+conn.connect().then(() => {
+  console.log('Connected to RouterOS');
+}).catch((err) => {
+  console.error('Connection error:', err);
+});
+
 
 let isDetectionRunning = false; // Flag to track the detection status
 let detectionProcess = null;    // Variable to store the running Python process
