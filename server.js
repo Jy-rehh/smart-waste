@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { spawn } = require('child_process');
-const RouterOS = require('node-routeros').RouterOS;  // Correct import for RouterOS
+const RouterOS = require('node-routeros');  // Importing the module correctly
 const app = express();
 const port = 80;
 
@@ -20,7 +20,6 @@ app.get('/', (req, res) => {
 app.get('/start-detection', (req, res) => {
   if (!isDetectionRunning) {
     // Start bottle detection in the backend (e.g., using subprocess or another method)
-    // Example of running the Python script using subprocess
     const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
     const pythonScript = '/home/pi/smart-waste/main.py';  // Adjust if needed
 
@@ -64,7 +63,7 @@ app.get('/stop-detection', (req, res) => {
 });
 
 // Connect to RouterOS and check some basic data
-const conn = new RouterOS({
+const conn = RouterOS({  // Initialize RouterOS connection properly
   host: '192.168.50.1',  // Replace with your router's IP address
   user: 'admin',      // Replace with your RouterOS username
   pass: '',   // Replace with your RouterOS password
