@@ -70,8 +70,9 @@ def bypass_internet(mac_address):
                 break
 
         if binding:
-            # Check if the binding type is 'regular', update to 'bypassed'
-            if binding.get('type') == 'regular':
+            print(f"[*] Binding details: {binding}")  # DEBUG: show binding fields
+
+            if binding.get('type', 'regular') == 'regular':
                 print(f"[*] Found {mac_address} with type 'regular', updating to 'bypassed'...")
 
                 api('/ip/hotspot/ip-binding/set', {
@@ -82,10 +83,9 @@ def bypass_internet(mac_address):
 
                 print(f"[*] Successfully updated {mac_address} to 'bypassed'!")
             else:
-                print(f"[*] MAC {mac_address} is already '{binding.get('type')}', no update needed.")
+                print(f"[*] MAC {mac_address} is already '{binding.get('type', 'regular')}', no update needed.")
 
         else:
-            # If no binding found, add a new one
             print(f"[!] No binding found for {mac_address}, adding new 'bypassed' binding...")
 
             api('/ip/hotspot/ip-binding/add', {
