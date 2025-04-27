@@ -60,26 +60,41 @@ ultrasonic_thread.start()
 # Function to bypass the MAC address in MikroTik router
 def bypass_internet(mac_address):
     try:
+        # Find the binding entry for the MAC address
         bindings = api.path('ip', 'hotspot', 'ip-binding')
         binding = None
+
         for b in bindings:
             if b.get('mac-address', '').lower() == mac_address.lower():
                 binding = b
                 break
 
         if binding:
+            # If the binding exists, update it
             print(f"[*] Found binding for {mac_address}, updating to bypass...")
+
             api.path('ip', 'hotspot', 'ip-binding', set={
                 '.id': binding['.id'],
-                'type': 'bypassed',
+                'type': 'bypassed',  # This bypasses the MAC address, giving it internet access
                 'comment': 'Connected'
             })
+
             print(f"[*] Successfully bypassed {mac_address}, user has internet!")
         else:
-            print(f"[!] No binding found for MAC: {mac_address}")
+            # If no binding exists, create a new one
+            print(f"[!] No binding found for {mac_address}, adding new binding...")
+
+            # Add a new binding for the MAC address
+            api.path('ip', 'hotspot', 'ip-binding', add={
+                'mac-address': mac_address,
+                'type': 'bypassed',  # Set the binding type to bypassed
+                'comment': 'Connected'
+            })
+
+            print(f"[*] Successfully added new binding for {mac_address}, user has internet!")
 
     except Exception as e:
-        print(f"[!] Error during bypass for MAC {mac_address}: {e}")
+        print(f"[!] Error during bypass: {e}")
 
 # Function to revert to regular access when time runs out
 def revert_to_regular(mac_address):
