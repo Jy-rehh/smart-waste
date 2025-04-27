@@ -107,7 +107,7 @@ def detect_and_update(frame):
                     print("Bottle detected! Updating time...")
                     
                     # Example MAC address (replace with actual logic to get the MAC address)
-                    mac_address = "AA:BB:CC:DD:EE:FF"  # Replace this with actual logic to get MAC address from MikroTik
+                    mac_address = "A2:DE:BF:8C:50:87"  # Replace this with actual logic to get MAC address from MikroTik
                     update_user_data(mac_address)  # Add 5 minutes and increment bottle count
                     break
 
