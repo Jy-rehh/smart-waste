@@ -201,7 +201,7 @@ try:
                             bottle_detected = True
                             break
 
-            neutral_classes = ["bottle", "toilet", "surfboard"]
+            neutral_classes = ["bottle", "toilet", "surfboard", "bottles", "refrigerator"]
 
             if bottle_detected:
                 display_message("Accepting Bottle")
