@@ -2,6 +2,7 @@ import RPi.GPIO as GPIO
 import time
 import threading
 import cv2
+from mac_ip_logger import capture_mac_ip 
 from ultralytics import YOLO
 from time import sleep
 import subprocess
@@ -292,6 +293,7 @@ try:
                 sleep(1.5)
                 set_servo_position(0.5)  # Neutral after accepting
                 
+
 
             elif general_detected:
                 go_neutral = False
