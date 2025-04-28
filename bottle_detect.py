@@ -294,7 +294,6 @@ try:
                 set_servo_position(0.5)  # Neutral after accepting
                 
 
-
             elif general_detected:
                 go_neutral = False
                 for box in general_results.boxes:
