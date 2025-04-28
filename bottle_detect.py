@@ -15,6 +15,7 @@ ROUTER_HOST = '192.168.50.1'
 ROUTER_USERNAME = 'admin'
 ROUTER_PASSWORD = ''
 TARGET_MAC = 'A2:DE:BF:8C:50:87'  # <<< Target device MAC address
+USER_ID = USER_ID
 
 # Connect to MikroTik
 try:
@@ -63,18 +64,36 @@ WiFiTimeAvailable = 0  # seconds
 TotalBottlesDeposited = 0
 
 # Thread to manage WiFi time
-def wifi_time_manager():
+def wifi_time_manager(user_id):
     global WiFiTimeAvailable
 
     current_binding = None
 
+    user_ref = db.collection('Users').document(user_id)
+
     while True:
+        # Fetch WiFiTimeAvailable from Firestore
+        try:
+            doc = user_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                WiFiTimeAvailable = data.get('WiFiTimeAvailable', 0)
+        except Exception as e:
+            print(f"[!] Failed to fetch WiFiTimeAvailable: {e}")
+
         if WiFiTimeAvailable > 0:
             if current_binding != 'bypassed':
                 add_or_update_binding(TARGET_MAC, 'bypassed')
                 current_binding = 'bypassed'
 
-            WiFiTimeAvailable -= 1  # Decrease by 1 second
+            WiFiTimeAvailable -= 1
+
+            try:
+                # Update WiFiTimeAvailable after decrement
+                user_ref.update({'WiFiTimeAvailable': WiFiTimeAvailable})
+            except Exception as e:
+                print(f"[!] Failed to update WiFiTimeAvailable: {e}")
+
             time.sleep(1)
 
         else:
@@ -82,7 +101,7 @@ def wifi_time_manager():
                 add_or_update_binding(TARGET_MAC, 'regular')
                 current_binding = 'regular'
 
-            time.sleep(5)  # Sleep a little longer if no time
+            time.sleep(5)
 
 # Start the WiFi manager thread
 threading.Thread(target=wifi_time_manager, daemon=True).start()
@@ -170,14 +189,16 @@ try:
                         class_id = int(box.cls[0])
                         class_name = bottle_model.names[class_id].lower()
 
-                        if class_name == "small_bottle":
-                            WiFiTimeAvailable += 5 * 60  # +5 minutes
-                            TotalBottlesDeposited += 1
-                            print("[+] Small bottle detected: +5 mins Wi-Fi")
-                        elif class_name == "large_bottle":
-                            WiFiTimeAvailable += 10 * 60  # +10 minutes
-                            TotalBottlesDeposited += 1
-                            print("[+] Large bottle detected: +10 mins Wi-Fi")
+                    if class_name == "small_bottle":
+                        WiFiTimeAvailable += 5 * 60
+                        TotalBottlesDeposited += 1
+                        update_user_data(user_id, TotalBottlesDeposited, WiFiTimeAvailable)
+                        print("[+] Small bottle detected: +5 mins Wi-Fi")
+                    elif class_name == "large_bottle":
+                        WiFiTimeAvailable += 10 * 60
+                        TotalBottlesDeposited += 1
+                        update_user_data(user_id, TotalBottlesDeposited, WiFiTimeAvailable)
+                        print("[+] Large bottle detected: +10 mins Wi-Fi")
                 
                 set_servo_position(1)  # Accept
 
