@@ -2,7 +2,6 @@ import RPi.GPIO as GPIO
 import time
 import threading
 import cv2
-from mac_ip_logger import capture_mac_ip 
 from ultralytics import YOLO
 from time import sleep
 import subprocess
