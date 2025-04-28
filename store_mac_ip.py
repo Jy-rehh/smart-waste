@@ -42,21 +42,26 @@ while True:
                 mac = user['mac-address']
                 ip = user.get('address', '')  # Safely get IP address, empty if not found
 
-                if mac not in known_macs:
-                    doc_ref = db.collection('Users Collection').document(mac)
+                # Check if user is already in the Firestore database
+                doc_ref = db.collection('Users Collection').document(mac)
+                doc = doc_ref.get()
+                
+                if doc.exists:
+                    print(f"[-] MAC {mac} already exists in Firestore. No changes made.")
+                else:
+                    # Add user to Firestore if not already present
                     doc_ref.set({
                         'UserID': mac,
                         'macAddress': mac,
                         'ipAddress': ip,
                         'WiFiTimeAvailable': 0,
                         'TotalBottlesDeposited': 0,
+                        'status': "active",
                         'time_remaining': 0
                     })
                     known_macs.add(mac)
                     print(f"[+] Added MAC: {mac}, IP: {ip} to Firestore.")
-                else:
-                    print(f"[-] MAC {mac} already exists in Firestore.")
-                    
+
     except Exception as e:
         print(f"[!] Error while retrieving users: {e}")
 

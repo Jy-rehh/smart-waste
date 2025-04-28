@@ -16,46 +16,58 @@ except Exception as e:
     print(f"[!] Connection failed: {e}")
     exit()
 
-# ——— Track already added MAC addresses ———
-known_macs = set()
+# ——— Track all devices you already know ———
+known_devices = {}  # mac_address: active/inactive
 
-def capture_mac_ip():
+# ——— Continuous Monitoring Loop ———
+while True:
     try:
-        mac_addresses = []
+        # Step 1: Get the list of connected devices (Wireless Registration)
+        connected_now = set()
+        registrations = list(api.path('interface', 'wireless', 'registration-table'))
 
-        # Try fetching active users first
-        active_users = list(api.path('ip', 'hotspot', 'active'))
-        if active_users:
-            print("[*] Found active hotspot users.")
-            mac_addresses = [user['mac-address'] for user in active_users]
-        else:
-            print("[*] No active users. Trying hotspot hosts...")
-            hosts = list(api.path('ip', 'hotspot', 'host'))
-            mac_addresses = [user['mac-address'] for user in hosts]
+        for device in registrations:
+            mac = device.get('mac-address', '')
+            if mac:
+                connected_now.add(mac)
 
-        if not mac_addresses:
-            print("[!] No MAC addresses found.")
-        else:
-            for user in active_users if active_users else hosts:
-                mac = user['mac-address']
-                ip = user.get('address', '')  # Safely get IP address, empty if not found
+        # Step 2: Check each known device
+        for mac in known_devices.keys():
+            if mac in connected_now and known_devices[mac] != 'active':
+                # MAC is connected now, update to active
+                doc_ref = db.collection('Users Collection').document(mac)
+                doc_ref.update({'status': 'active'})
+                known_devices[mac] = 'active'
+                print(f"[+] {mac} is now ACTIVE")
+            elif mac not in connected_now and known_devices[mac] != 'inactive':
+                # MAC is not connected, update to inactive
+                doc_ref = db.collection('Users Collection').document(mac)
+                doc_ref.update({'status': 'inactive'})
+                known_devices[mac] = 'inactive'
+                print(f"[-] {mac} is now INACTIVE")
 
-                if mac not in known_macs:
-                    doc_ref = db.collection('Users Collection').document(mac)
-                    doc_ref.set({
-                        'UserID': mac,
-                        'macAddress': mac,
-                        'ipAddress': ip,
-                        'WiFiTimeAvailable': 0,
-                        'TotalBottlesDeposited': 0,
-                        'status': "active",
-                        'time_remaining': 0
-                    })
-                    known_macs.add(mac)
-                    print(f"[+] Added MAC: {mac}, IP: {ip} to Firestore.")
-                else:
-                    print(f"[-] MAC {mac} already exists in Firestore.")
+        # Step 3: Add new devices (optional: only from DHCP leases if needed)
+        dhcp_leases = list(api.path('ip', 'dhcp-server', 'lease'))
+
+        for lease in dhcp_leases:
+            mac = lease.get('mac-address', '')
+            ip = lease.get('address', '')
+
+            if mac and mac not in known_devices:
+                doc_ref = db.collection('Users Collection').document(mac)
+                doc_ref.set({
+                    'UserID': mac,
+                    'macAddress': mac,
+                    'ipAddress': ip,
+                    'WiFiTimeAvailable': 0,
+                    'TotalBottlesDeposited': 0,
+                    'time_remaining': 0,
+                    'status': 'active' if mac in connected_now else 'inactive'
+                })
+                known_devices[mac] = 'active' if mac in connected_now else 'inactive'
+                print(f"[+] Added new device {mac} with status {known_devices[mac]}")
+
     except Exception as e:
-        print(f"[!] Error while retrieving users: {e}")
+        print(f"[!] Error while monitoring devices: {e}")
 
     time.sleep(5)  # Wait 5 seconds before checking again

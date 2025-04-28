@@ -1,37 +1,143 @@
-import threading
+import RPi.GPIO as GPIO
 import time
+import threading
 import cv2
 from ultralytics import YOLO
 from time import sleep
 import subprocess
-import RPi.GPIO as GPIO
-from librouteros import connect
-from datetime import datetime
-import firebase_admin
-from firebase_admin import credentials, firestore
+
 from servo import move_servo, stop_servo
 from lcd import display_message
-from container_full import monitor_container, container_full
+
+# ---------------- Firebase ----------------
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+cred = credentials.Certificate('firebase-key.json')  # <-- PUT YOUR JSON PATH
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+# ---------------- Wi-Fi Time Management ----------------
+from librouteros import connect
+
+ROUTER_HOST = '192.168.50.1'
+ROUTER_USERNAME = 'admin'
+ROUTER_PASSWORD = ''
+TARGET_MAC = 'A2:DE:BF:8C:50:87'  # <<< Target device MAC address
+
+# Connect to MikroTik
+try:
+    api = connect(username=ROUTER_USERNAME, password=ROUTER_PASSWORD, host=ROUTER_HOST)
+    print("[*] Connected to MikroTik Router.")
+except Exception as e:
+    print(f"[!] MikroTik connection failed: {e}")
+    exit()
+
+bindings = api.path('ip', 'hotspot', 'ip-binding')
+
+def find_binding(mac_address):
+    try:
+        for entry in bindings('print'):
+            if entry.get('mac-address', '').upper() == mac_address.upper():
+                return entry
+    except Exception as e:
+        print(f"[!] Error fetching bindings: {e}")
+    return None
+
+def add_or_update_binding(mac_address, binding_type):
+    try:
+        existing = find_binding(mac_address)
+        if existing:
+            bindings.update(
+                **{
+                    '.id': existing['.id'],
+                    'type': binding_type
+                }
+            )
+            print(f"[*] Updated MAC {mac_address} to '{binding_type}'.")
+        else:
+            bindings.add(
+                **{
+                    'mac-address': mac_address,
+                    'type': binding_type,
+                    'comment': 'Connected'
+                }
+            )
+            print(f"[*] Added new MAC {mac_address} with type '{binding_type}'.")
+    except Exception as e:
+        print(f"[!] Error adding/updating binding: {e}")
+
+# Wi-Fi session variables
+WiFiTimeAvailable = 0  # seconds
+TotalBottlesDeposited = 0
+
+def update_user_by_mac(mac_address, bottles, wifi_time):
+    try:
+        users_ref = db.collection('Users Collection')
+        query = users_ref.where('macAddress', '==', mac_address).limit(1)
+        results = query.get()
+
+        if results:
+            user_doc = results[0]
+            user_ref = users_ref.document(user_doc.id)
+            user_ref.update({
+                'TotalBottlesDeposited': bottles,
+                'WiFiTimeAvailable': wifi_time
+            })
+            print(f"[+] Updated user {mac_address} - Bottles: {bottles}, WiFi Time: {wifi_time}")
+        else:
+            print(f"[!] No user found with MAC address {mac_address}")
+    except Exception as e:
+        print(f"[!] Failed to update user by MAC: {e}")
+
+# Wi-Fi time manager thread
+def wifi_time_manager(mac_address):
+    global WiFiTimeAvailable
+    current_binding = None
+
+    while True:
+        try:
+            users_ref = db.collection('Users Collection')
+            query = users_ref.where('macAddress', '==', mac_address).limit(1)
+            results = query.get()
+
+            if results:
+                data = results[0].to_dict()
+                WiFiTimeAvailable = data.get('WiFiTimeAvailable', 0)
+            else:
+                print(f"[!] No user found with MAC {mac_address}")
+        except Exception as e:
+            print(f"[!] Failed to fetch WiFiTimeAvailable: {e}")
+
+        if WiFiTimeAvailable > 0:
+            if current_binding != 'bypassed':
+                add_or_update_binding(mac_address, 'bypassed')
+                current_binding = 'bypassed'
+
+            WiFiTimeAvailable -= 1
+
+            try:
+                user_ref = db.collection('Users Collection').document(results[0].id)
+                user_ref.update({'WiFiTimeAvailable': WiFiTimeAvailable})
+            except Exception as e:
+                print(f"[!] Failed to update WiFiTimeAvailable: {e}")
+
+            time.sleep(1)
+
+        else:
+            if current_binding != 'regular':
+                add_or_update_binding(mac_address, 'regular')
+                current_binding = 'regular'
+
+            time.sleep(5)
+
+# Start Wi-Fi manager thread
+threading.Thread(target=wifi_time_manager, args=(TARGET_MAC,), daemon=True).start()
 
 # Load YOLO models
 bottle_model = YOLO('detect/train11/weights/best.pt')
 general_model = YOLO('yolov8n.pt')
 
-# Initialize Firebase Admin with Firestore
-cred = credentials.Certificate('firebase-key.json')
-firebase_admin.initialize_app(cred)
-db = firestore.client()
-
-# Connect to MikroTik Router
-api = connect(username='admin', password='', host='192.168.50.1')
-
-# Shared flag for container full status
-container_full_event = threading.Event()
-
-# Track already added MAC addresses
-known_macs = set()
-
-# ESP32-CAM Stream
 esp32_cam_url = "http://192.168.8.100:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
@@ -41,7 +147,7 @@ if not cap.isOpened():
 
 frame = None
 
-# Thread to capture video frames
+# Capture video frames thread
 def capture_frames():
     global frame
     while True:
@@ -49,215 +155,134 @@ def capture_frames():
         if ret:
             frame = new_frame
 
-# Start video capture thread
-frame_thread = threading.Thread(target=capture_frames, daemon=True)
-frame_thread.start()
+thread = threading.Thread(target=capture_frames, daemon=True)
+thread.start()
 
-# Start ultrasonic container monitor thread
-ultrasonic_thread = threading.Thread(target=monitor_container, daemon=True)
-ultrasonic_thread.start()
+display_message("Insert bottle")
 
-# Function to bypass the MAC address in MikroTik router
-def bypass_internet(mac_address):
+# --- Ultrasonic Sensor Logic ---
+TRIG_PIN = 11
+ECHO_PIN = 8
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(TRIG_PIN, GPIO.OUT)
+GPIO.setup(ECHO_PIN, GPIO.IN)
+
+container_full = False  # Shared flag
+
+def get_distance():
+    GPIO.output(TRIG_PIN, False)
+    time.sleep(0.05)
+    GPIO.output(TRIG_PIN, True)
+    time.sleep(0.00001)
+    GPIO.output(TRIG_PIN, False)
+
+    timeout = time.time() + 0.04
+    while GPIO.input(ECHO_PIN) == 0:
+        pulse_start = time.time()
+        if time.time() > timeout:
+            return None
+
+    timeout = time.time() + 0.04
+    while GPIO.input(ECHO_PIN) == 1:
+        pulse_end = time.time()
+        if time.time() > timeout:
+            return None
+
+    pulse_duration = pulse_end - pulse_start
+    distance = pulse_duration * 17150
+    return round(distance, 2)
+
+# Monitoring container fullness
+def monitor_container():
+    global container_full
     try:
-        bindings = api.path('ip', 'hotspot', 'ip-binding')
-        binding = None
-        for b in bindings:
-            if b.get('mac-address', '').lower() == mac_address.lower():
-                binding = b
-                break
-
-        if binding:
-            print(f"[*] Found binding for {mac_address}, updating to bypass...")
-            api.path('ip', 'hotspot', 'ip-binding', set={
-                '.id': binding['.id'],
-                'type': 'bypassed',
-                'comment': 'Connected'
-            })
-            print(f"[*] Successfully bypassed {mac_address}, user has internet!")
-        else:
-            print(f"[!] No binding found for MAC: {mac_address}")
-
-    except Exception as e:
-        print(f"[!] Error during bypass for MAC {mac_address}: {e}")
-
-# Function to revert to regular access when time runs out
-def revert_to_regular(mac_address):
-    try:
-        # Find the binding entry for the MAC address
-        bindings = api.path('ip', 'hotspot', 'ip-binding')
-        binding = None
-
-        for b in bindings:
-            if b.get('mac-address', '').lower() == mac_address.lower():
-                binding = b
-                break
-
-        if binding:
-            print(f"[*] Found binding for {mac_address}, reverting to regular access...")
-
-            # Revert the MAC address to regular access (remove bypass)
-            api.path('ip', 'hotspot', 'ip-binding', set={
-                '.id': binding['.id'],
-                'type': 'regular'  # This reverts the MAC address to regular, without internet access
-            })
-
-            print(f"[*] Successfully reverted {mac_address} to regular access.")
-        else:
-            print(f"[!] No binding found for MAC: {mac_address}")
-
-    except Exception as e:
-        print(f"[!] Error during revert: {e}")
-
-# Function to update user data in Firebase
-def update_user_data(mac_address):
-    try:
-        # Get the document for the user
-        doc_ref = db.collection('Users Collection').document(mac_address)
-        doc = doc_ref.get()
-
-        if doc.exists:
-            # User exists, update time and bottles deposited
-            user_data = doc.to_dict()
-            new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for bottle
-            new_bottles = user_data['TotalBottlesDeposited'] + 1  # Increment bottle count
-
-            # Update Firestore document
-            doc_ref.update({
-                'WiFiTimeAvailable': new_time,
-                'TotalBottlesDeposited': new_bottles
-            })
-
-            print(f"[*] Updated Firebase for {mac_address}. Time: {new_time}, Bottles: {new_bottles}")
-
-        else:
-            print(f"[!] No user found in Firebase for MAC: {mac_address}")
-
-    except Exception as e:
-        print(f"[!] Error while updating user data: {e}")
-
-# Function to check if the user’s time has expired
-def check_time_expiry(mac_address):
-    try:
-        # Get the document for the user
-        doc_ref = db.collection('Users Collection').document(mac_address)
-        doc = doc_ref.get()
-
-        if doc.exists:
-            user_data = doc.to_dict()
-            if user_data['WiFiTimeAvailable'] <= 0:
-                print(f"[!] User {mac_address}'s WiFi time has expired, reverting access.")
-                revert_to_regular(mac_address)
+        while True:
+            distance = get_distance()
+            if distance is not None:
+                print(f"[Ultrasonic] Distance: {distance} cm")
+                if distance <= 4:  # Assuming <4 cm is full
+                    container_full = True
+                    display_message("Container Full")
+                    print("[Ultrasonic] Container Full - Rejecting Bottle")
+                    set_servo_position(0)  # Reject bottle
+                    sleep(1.5)
+                    set_servo_position(0.5)  # Neutral position after rejection
+                else:
+                    container_full = False
             else:
-                print(f"[*] User {mac_address}'s WiFi time remaining: {user_data['WiFiTimeAvailable']} mins")
+                print("[Ultrasonic] Sensor error.")
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n[Ultrasonic] Monitoring stopped.")
+    finally:
+        GPIO.cleanup()
 
-        else:
-            print(f"[!] No user found in Firebase for MAC: {mac_address}")
+# Start monitoring container fullness
+threading.Thread(target=monitor_container, daemon=True).start()
 
-    except Exception as e:
-        print(f"[!] Error while checking time expiry: {e}")
+# Bottle detection and servo control
+last_detection_time = time.time()
 
-# Function to set servo position
 def set_servo_position(pos):
-    move_servo(pos)
+    global last_servo_position
+    if last_servo_position != pos:
+        move_servo(pos)
+        last_servo_position = pos
 
-# Monitor container full status in main loop
+# Main loop
 try:
     while True:
         if frame is None:
             continue
 
-        # Check if container is full
-        if container_full_event.is_set():  # Check if container_full_event is set
-            display_message("Container Full")
-            set_servo_position(0.5)  # Neutral
-            sleep(1.5)
-            continue
-
         current_time = time.time()
+        if current_time - last_detection_time >= 5:  # Detect every 5 seconds
+            bottle_results = bottle_model(frame)[0]
+            general_results = general_model(frame)[0]
 
-        # Run both models every 5 seconds
-        bottle_results = bottle_model(frame)[0]
-        general_results = general_model(frame)[0]
+            bottle_detected = False
+            bottle_size = None  # 'small' or 'large'
+            general_detected = False
 
-        # Flags for detection
-        bottle_detected = False
-        general_detected = False
+            # Check bottle detection
+            if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
+                for box in bottle_results.boxes:
+                    confidence = box.conf[0].item()
+                    if confidence >= 0.7:
+                        class_id = int(box.cls[0])
+                        class_name = bottle_model.names[class_id].lower()
 
-        # General detection
-        if general_results.boxes is not None and len(general_results.boxes) > 0:
-            general_detected = True
+                        if class_name == "small_bottle":
+                            bottle_detected = True
+                            bottle_size = 'small'
+                            break
+                        elif class_name == "large_bottle":
+                            bottle_detected = True
+                            bottle_size = 'large'
+                            break
 
-        # Bottle detection
-        if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
-            for box in bottle_results.boxes:
-                confidence = box.conf[0].item()
-                if confidence >= 0.7:
-                    class_id = int(box.cls[0])
-                    class_name = bottle_model.names[class_id].lower()
-                    if class_name in ["small_bottle", "large_bottle"]:
-                        bottle_detected = True
-                        break
+            # If bottle is detected and container is not full, accept it
+            if bottle_detected and not container_full:
+                display_message("Accepting Bottle")
+                
+                if bottle_size == 'small':
+                    WiFiTimeAvailable += 5 * 60
+                    TotalBottlesDeposited += 1
+                    print("[+] Small bottle detected: +5 mins Wi-Fi")
+                elif bottle_size == 'large':
+                    WiFiTimeAvailable += 10 * 60
+                    TotalBottlesDeposited += 1
+                    print("[+] Large bottle detected: +10 mins Wi-Fi")
 
-        # Decision logic for bottle detection
-        neutral_classes = ["bottle", "toilet", "surfboard"]
+                update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
 
-        if bottle_detected:
-            display_message("Accepting Bottle")
-            set_servo_position(1)
+                set_servo_position(1)  # Accept
+                sleep(1.5)
+                set_servo_position(0.5)  # Neutral after accepting
 
-            # Example MAC address (replace with actual logic to get the MAC address)
-            mac_address = "A2:DE:BF:8C:50:87"  # Replace this with actual logic to get MAC address from MikroTik
-            update_user_data(mac_address)  # Add 5 minutes and increment bottle count
+            last_detection_time = current_time
 
-            # Bypass the internet for the user (grant them internet)
-            bypass_internet(mac_address)
-
-            # Pause for a short while before moving the servo back to neutral
-            sleep(2)  # Wait for the bottle to be processed
-
-            # Move the servo back to neutral (0.5) position after a short delay
-            set_servo_position(0.5)  # Neutral position
-
-            # Optionally, update the display to indicate the next action
-            display_message("Insert bottle")
-            continue  # Exit after handling the detected bottle
-
-        elif general_detected:
-            go_neutral = False
-            for box in general_results.boxes:
-                confidence = box.conf[0].item()
-                if confidence < 0.6:
-                    continue
-
-                class_id = int(box.cls[0])
-                class_name = general_model.names[class_id].lower()
-                print(f"Detected class from general model: {class_name} with confidence: {confidence}")
-
-                if class_name in neutral_classes:
-                    go_neutral = True
-                    break
-
-            if go_neutral:
-                set_servo_position(0.5)
-                display_message("Insert bottle")
-            else:
-                display_message("Object Rejected")
-                set_servo_position(0)
-
-        else:
-            set_servo_position(0.5)
-            display_message("Insert bottle")
-            continue
-
-        sleep(1.5)
-        set_servo_position(0.5)
-        display_message("Insert bottle")
+        time.sleep(1)
 
 except KeyboardInterrupt:
-    print("🛑 Exiting gracefully...")
-
-finally:
-    cap.release()
-    cv2.destroyAllWindows()
-    stop_servo()
+    print("\n[+] Stopped.")
