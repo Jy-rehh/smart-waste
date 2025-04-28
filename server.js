@@ -4,66 +4,65 @@ const { spawn } = require('child_process');
 const app = express();
 const port = 80;
 
-let isDetectionRunning = false; // Flag to track the detection status
-let detectionProcess = null;    // Variable to store the running Python process
+let isDetectionRunning = false;
+let detectionProcess = null;
 
-// Serve static files (CSS, JS, images) from the smart-waste folder
+// Serve static files (CSS, JS, images) from the same directory
 app.use(express.static(__dirname));
 
-// Serve HTML from the templates folder
+// Serve the main page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'templates', 'index.html'));
 });
 
-// Endpoint to start bottle detection
+// Start detection
 app.get('/start-detection', (req, res) => {
-  if (!isDetectionRunning) {
-    // Start bottle detection in the backend (e.g., using subprocess or another method)
-    // Example of running the Python script using subprocess
-    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
-    //const pythonScript = '/home/pi/smart-waste/main.py';  // Adjust if needed
-    const pythonScript = '/home/pi/smart-waste/bottle_detect.py';
-
-    detectionProcess = spawn(pythonExecutable, [pythonScript]);
-
-    detectionProcess.stdout.on('data', (data) => {
-        console.log(`stdout: ${data}`);
-    });
-
-    detectionProcess.stderr.on('data', (data) => {
-        console.error(`stderr: ${data}`);
-    });
-
-    detectionProcess.on('close', (code) => {
-        console.log(`Python process exited with code ${code}`);
-        isDetectionRunning = false; // Set the flag to false when the process ends
-    });
-
-    isDetectionRunning = true;
-    res.json({ success: true, message: 'Detection started.' });
-  } else {
-    res.json({ success: false, message: 'Detection is already running.' });
+  if (isDetectionRunning) {
+    return res.json({ success: false, message: 'Detection already running.' });
   }
+
+  const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  
+  const pythonScript = '/home/pi/smart-waste/bottle_detect.py';
+
+  detectionProcess = spawn(pythonExecutable, [pythonScript]);
+
+  detectionProcess.stdout.on('data', (data) => {
+    console.log(`stdout: ${data}`);
+  });
+
+  detectionProcess.stderr.on('data', (data) => {
+    console.error(`stderr: ${data}`);
+  });
+
+  detectionProcess.on('close', (code) => {
+    console.log(`Python process exited with code ${code}`);
+    isDetectionRunning = false;
+    detectionProcess = null;
+  });
+
+  isDetectionRunning = true;
+  res.json({ success: true, message: 'Detection started.' });
 });
 
-// Endpoint to stop bottle detection
+// Stop detection
 app.get('/stop-detection', (req, res) => {
-  if (isDetectionRunning && detectionProcess) {
-    // Stop the Python process (detection) by calling .kill() on the subprocess
-    detectionProcess.kill('SIGTERM');  // This sends a termination signal to the process
-
-    detectionProcess.on('close', (code) => {
-        console.log(`Python process terminated with code ${code}`);
-    });
-
-    isDetectionRunning = false; // Update the detection status
-    res.json({ success: true, message: 'Detection stopped.' });
-  } else {
-    res.json({ success: false, message: 'Detection is not running.' });
+  if (!isDetectionRunning || !detectionProcess) {
+    return res.json({ success: false, message: 'Detection not running.' });
   }
+
+  detectionProcess.kill('SIGTERM');
+
+  detectionProcess.on('close', (code) => {
+    console.log(`Python process terminated with code ${code}`);
+  });
+
+  isDetectionRunning = false;
+  detectionProcess = null;
+
+  res.json({ success: true, message: 'Detection stopped.' });
 });
 
-// Start the server
+// Start server
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Server is running on http://192.168.50.252:${port}`);
+  console.log(`Server is running at http://192.168.50.252:${port}`);
 });
