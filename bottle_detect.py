@@ -235,18 +235,24 @@ try:
                     if confidence >= 0.6:
                         class_id = int(box.cls[0])
                         class_name = general_model.names[class_id].lower()
-                        if class_name in ["bottle", "toilet", "surfboard"]:
-                            neutral_found = True
+
+                        # Only accept recognized bottle objects
+                        if class_name in ["small_bottle", "large_bottle"]:
+                            neutral_found = True  # Bottle detected, keep in neutral position
                             break
 
-                if neutral_found:
+                        # Reject non-bottle objects (e.g., toilet, surfboard, etc.)
+                        if class_name in ["toilet", "surfboard", "bottles", "bottle"]:  # Add more non-bottle objects as needed
+                            display_message("Rejected Bottle")
+                            set_servo_position(0)  # Reject
+                            sleep(1.5)
+                            set_servo_position(0.5)  # Go back to neutral
+                            break
+
+                if not neutral_found:
+                    # No bottle detected, display message to insert bottle
                     display_message("Insert bottle")
-                    set_servo_position(0.5)  # Neutral
-                else:
-                    display_message("Rejected Bottle")
-                    set_servo_position(0)  # Reject
-                    sleep(1.5)
-                    set_servo_position(0.5)  # Go back to neutral
+                    set_servo_position(0.5)  # Neutral position
 
             else:
                 # No detection at all
