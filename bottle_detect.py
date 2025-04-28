@@ -271,6 +271,8 @@ try:
             if general_results.boxes is not None and len(general_results.boxes) > 0:
                 general_detected = True
 
+            neutral_classes = ["bottle", "toilet", "surfboard", "bottles"]
+            
             if bottle_detected and not container_full:
                 display_message("Accepting Bottle")
                 
@@ -288,6 +290,7 @@ try:
                 set_servo_position(1)  # Accept
                 sleep(1.5)
                 set_servo_position(0.5)  # Neutral after accepting
+                
 
             elif general_detected:
                 go_neutral = False
