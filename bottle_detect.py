@@ -166,6 +166,7 @@ display_message("Insert bottle")
 
 last_detection_time = time.time()
 last_servo_position = None
+last_action = None
 
 def set_servo_position(pos):
     global last_servo_position
@@ -184,15 +185,12 @@ try:
             bottle_results = bottle_model(frame)[0]
             general_results = general_model(frame)[0]
 
-            # Flags
             bottle_detected = False
             general_detected = False
 
-            # Check general model (e.g., to see if anything is there)
             if general_results.boxes is not None and len(general_results.boxes) > 0:
                 general_detected = True
 
-            # Check bottle model for accepted bottle types
             if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
                 for box in bottle_results.boxes:
                     confidence = box.conf[0].item()
@@ -203,13 +201,10 @@ try:
                             bottle_detected = True
                             break
 
-            # Decision logic
             neutral_classes = ["bottle", "toilet", "surfboard"]
 
             if bottle_detected:
                 display_message("Accepting Bottle")
-
-                # Update WiFi time and bottles count
                 for box in bottle_results.boxes:
                     confidence = box.conf[0].item()
                     if confidence >= 0.7:
@@ -228,13 +223,14 @@ try:
                         print("[+] Large bottle detected: +10 mins Wi-Fi")
                 
                 set_servo_position(1)  # Accept
+                last_action = "accepted"
 
             elif general_detected:
                 go_neutral = False
                 for box in general_results.boxes:
                     confidence = box.conf[0].item()
                     if confidence < 0.6:
-                        continue  # Skip low-confidence detections
+                        continue
 
                     class_id = int(box.cls[0])
                     class_name = general_model.names[class_id].lower()
@@ -246,19 +242,23 @@ try:
                 if go_neutral:
                     set_servo_position(0.5)
                     display_message("Insert bottle")
+                    last_action = "neutral"
                 else:
                     display_message("Rejected Bottle")
                     set_servo_position(0)  # Reject
+                    last_action = "rejected"
 
             else:
-                # Nothing in view, stay neutral
                 set_servo_position(0.5)
                 display_message("Insert bottle")
-                continue
+                last_action = "neutral"
 
             sleep(1.5)
-            set_servo_position(0.5)
-            display_message("Insert bottle")
+
+            if last_action in ["accepted", "rejected"]:
+                set_servo_position(0.5)
+                display_message("Insert bottle")
+
             last_detection_time = current_time
 
 except KeyboardInterrupt:
