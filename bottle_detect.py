@@ -4,6 +4,7 @@ import threading
 import cv2
 from ultralytics import YOLO
 from time import sleep
+import subprocess
 
 from servo import move_servo, stop_servo
 from lcd import display_message
@@ -272,7 +273,7 @@ try:
                 general_detected = True
 
             neutral_classes = ["bottle", "toilet", "surfboard", "bottles"]
-            
+
             if bottle_detected and not container_full:
                 display_message("Accepting Bottle")
                 
