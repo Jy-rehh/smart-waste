@@ -75,7 +75,7 @@ try:
                             break
 
             # Decision logic
-            neutral_classes = ["bottle", "toilet", "surfboard"]
+            neutral_classes = ["bottle", "toilet", "surfboard", "bottles"]
 
             if bottle_detected:
                 display_message("Accepting Bottle")
