@@ -21,7 +21,8 @@ app.get('/start-detection', (req, res) => {
     // Start bottle detection in the backend (e.g., using subprocess or another method)
     // Example of running the Python script using subprocess
     const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
-    const pythonScript = '/home/pi/smart-waste/main.py';  // Adjust if needed
+    //const pythonScript = '/home/pi/smart-waste/main.py';  // Adjust if needed
+    const pythonScript = '/home/pi/smart-waste/bottle_detect.py';
 
     detectionProcess = spawn(pythonExecutable, [pythonScript]);
 
