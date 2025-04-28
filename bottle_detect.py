@@ -7,6 +7,14 @@ from time import sleep
 from servo import move_servo, stop_servo
 from lcd import display_message
 
+# ---------------- Firebase ----------------
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+cred = credentials.Certificate('firebase-key.json')  # <-- PUT YOUR JSON PATH
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
 # ---------------- Wi-Fi Time Management ----------------
 from librouteros import connect
 
@@ -15,7 +23,6 @@ ROUTER_HOST = '192.168.50.1'
 ROUTER_USERNAME = 'admin'
 ROUTER_PASSWORD = ''
 TARGET_MAC = 'A2:DE:BF:8C:50:87'  # <<< Target device MAC address
-USER_ID = USER_ID
 
 # Connect to MikroTik
 try:
@@ -63,33 +70,55 @@ def add_or_update_binding(mac_address, binding_type):
 WiFiTimeAvailable = 0  # seconds
 TotalBottlesDeposited = 0
 
+# Function to update user based on MAC address
+def update_user_by_mac(mac_address, bottles, wifi_time):
+    try:
+        users_ref = db.collection('Users Collection')
+        query = users_ref.where('MACAddress', '==', mac_address).limit(1)
+        results = query.get()
+
+        if results:
+            user_doc = results[0]
+            user_ref = users_ref.document(user_doc.id)
+            user_ref.update({
+                'TotalBottlesDeposited': bottles,
+                'WiFiTimeAvailable': wifi_time
+            })
+            print(f"[+] Updated user {mac_address} - Bottles: {bottles}, WiFi Time: {wifi_time}")
+        else:
+            print(f"[!] No user found with MAC address {mac_address}")
+    except Exception as e:
+        print(f"[!] Failed to update user by MAC: {e}")
+
 # Thread to manage WiFi time
-def wifi_time_manager(user_id):
+def wifi_time_manager(mac_address):
     global WiFiTimeAvailable
 
     current_binding = None
 
-    user_ref = db.collection('Users').document(user_id)
-
     while True:
-        # Fetch WiFiTimeAvailable from Firestore
         try:
-            doc = user_ref.get()
-            if doc.exists:
-                data = doc.to_dict()
+            users_ref = db.collection('Users Collection')
+            query = users_ref.where('MACAddress', '==', mac_address).limit(1)
+            results = query.get()
+
+            if results:
+                data = results[0].to_dict()
                 WiFiTimeAvailable = data.get('WiFiTimeAvailable', 0)
+            else:
+                print(f"[!] No user found with MAC {mac_address}")
         except Exception as e:
             print(f"[!] Failed to fetch WiFiTimeAvailable: {e}")
 
         if WiFiTimeAvailable > 0:
             if current_binding != 'bypassed':
-                add_or_update_binding(TARGET_MAC, 'bypassed')
+                add_or_update_binding(mac_address, 'bypassed')
                 current_binding = 'bypassed'
 
             WiFiTimeAvailable -= 1
 
             try:
-                # Update WiFiTimeAvailable after decrement
+                user_ref = db.collection('Users Collection').document(results[0].id)
                 user_ref.update({'WiFiTimeAvailable': WiFiTimeAvailable})
             except Exception as e:
                 print(f"[!] Failed to update WiFiTimeAvailable: {e}")
@@ -98,16 +127,14 @@ def wifi_time_manager(user_id):
 
         else:
             if current_binding != 'regular':
-                add_or_update_binding(TARGET_MAC, 'regular')
+                add_or_update_binding(mac_address, 'regular')
                 current_binding = 'regular'
 
             time.sleep(5)
 
 # Start the WiFi manager thread
-threading.Thread(target=wifi_time_manager, daemon=True).start()
+threading.Thread(target=wifi_time_manager, args=(TARGET_MAC,), daemon=True).start()
 # ------------------------------------------------------
-
-
 
 # Load your custom bottle-detection model
 bottle_model = YOLO('detect/train11/weights/best.pt')
@@ -192,12 +219,12 @@ try:
                     if class_name == "small_bottle":
                         WiFiTimeAvailable += 5 * 60
                         TotalBottlesDeposited += 1
-                        update_user_data(user_id, TotalBottlesDeposited, WiFiTimeAvailable)
+                        update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
                         print("[+] Small bottle detected: +5 mins Wi-Fi")
                     elif class_name == "large_bottle":
                         WiFiTimeAvailable += 10 * 60
                         TotalBottlesDeposited += 1
-                        update_user_data(user_id, TotalBottlesDeposited, WiFiTimeAvailable)
+                        update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
                         print("[+] Large bottle detected: +10 mins Wi-Fi")
                 
                 set_servo_position(1)  # Accept
