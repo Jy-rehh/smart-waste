@@ -290,30 +290,25 @@ try:
                 set_servo_position(0.5)  # Neutral after accepting
 
             elif general_detected:
-                neutral_found = False
+                go_neutral = False
                 for box in general_results.boxes:
                     confidence = box.conf[0].item()
-                    if confidence >= 0.6:
-                        class_id = int(box.cls[0])
-                        class_name = general_model.names[class_id].lower()
+                    if confidence < 0.6:
+                        continue  # Skip low-confidence detections
 
-                        # Only accept recognized bottle objects
-                        if class_name in ["small_bottle", "large_bottle"]:
-                            neutral_found = True  # Bottle detected, keep in neutral position
-                            break
+                    class_id = int(box.cls[0])
+                    class_name = general_model.names[class_id].lower()
 
-                        # Reject non-bottle objects (e.g., toilet, surfboard, etc.)
-                        if class_name in ["toilet", "surfboard", "bottles", "bottle"]:  # Add more non-bottle objects as needed
-                            display_message("Rejected Bottle")
-                            set_servo_position(0)  # Reject
-                            sleep(1.5)
-                            set_servo_position(0.5)  # Go back to neutral
-                            break
+                    if class_name in neutral_classes:
+                        go_neutral = True
+                        break
 
-                if not neutral_found:
-                    # No bottle detected, display message to insert bottle
+                if go_neutral:
+                    set_servo_position(0.5)
                     display_message("Insert bottle")
-                    set_servo_position(0.5)  # Neutral position
+                else:
+                    display_message("Rejected Bottle")
+                    set_servo_position(0)  # Reject
 
             else:
                 # No detection at all
