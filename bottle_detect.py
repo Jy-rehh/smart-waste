@@ -74,7 +74,7 @@ TotalBottlesDeposited = 0
 def update_user_by_mac(mac_address, bottles, wifi_time):
     try:
         users_ref = db.collection('Users Collection')
-        query = users_ref.where('MACAddress', '==', mac_address).limit(1)
+        query = users_ref.where('macAddress', '==', mac_address).limit(1)
         results = query.get()
 
         if results:
@@ -99,7 +99,7 @@ def wifi_time_manager(mac_address):
     while True:
         try:
             users_ref = db.collection('Users Collection')
-            query = users_ref.where('MACAddress', '==', mac_address).limit(1)
+            query = users_ref.where('macAddress', '==', mac_address).limit(1)
             results = query.get()
 
             if results:
