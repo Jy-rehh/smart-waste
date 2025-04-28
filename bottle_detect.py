@@ -297,17 +297,17 @@ try:
                         class_id = int(box.cls[0])
                         class_name = general_model.names[class_id].lower()
 
-                        # Only accept recognized bottle objects
+                        # Accept only recognized bottle objects
                         if class_name in ["small_bottle", "large_bottle"]:
                             neutral_found = True  # Bottle detected, keep in neutral position
                             break
 
                         # Reject non-bottle objects (e.g., toilet, surfboard, etc.)
-                        if class_name in ["toilet", "surfboard", "bottles", "bottle"]:  # Add more non-bottle objects as needed
-                            display_message("Rejected Bottle")
-                            set_servo_position(0)  # Reject
+                        if class_name not in ["small_bottle", "large_bottle"]:
+                            display_message("Rejected Object")
+                            set_servo_position(0)  # Reject the object
                             sleep(1.5)
-                            set_servo_position(0.5)  # Go back to neutral
+                            set_servo_position(0.5)  # Go back to neutral position
                             break
 
                 if not neutral_found:
