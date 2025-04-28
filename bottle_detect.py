@@ -1,5 +1,6 @@
-import threading
+import RPi.GPIO as GPIO
 import time
+import threading
 import cv2
 from ultralytics import YOLO
 from time import sleep
@@ -134,7 +135,6 @@ def wifi_time_manager(mac_address):
 
 # Start the WiFi manager thread
 threading.Thread(target=wifi_time_manager, args=(TARGET_MAC,), daemon=True).start()
-# ------------------------------------------------------
 
 # Load your custom bottle-detection model
 bottle_model = YOLO('detect/train11/weights/best.pt')
@@ -174,6 +174,68 @@ def set_servo_position(pos):
         move_servo(pos)
         last_servo_position = pos
 
+# ---------------- Ultrasonic Sensor Logic ----------------
+
+TRIG_PIN = 11
+ECHO_PIN = 8
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(TRIG_PIN, GPIO.OUT)
+GPIO.setup(ECHO_PIN, GPIO.IN)
+
+container_full = False  # Shared flag
+
+def get_distance():
+    GPIO.output(TRIG_PIN, False)
+    time.sleep(0.05)
+
+    GPIO.output(TRIG_PIN, True)
+    time.sleep(0.00001)
+    GPIO.output(TRIG_PIN, False)
+
+    timeout = time.time() + 0.04
+    while GPIO.input(ECHO_PIN) == 0:
+        pulse_start = time.time()
+        if time.time() > timeout:
+            return None
+
+    timeout = time.time() + 0.04
+    while GPIO.input(ECHO_PIN) == 1:
+        pulse_end = time.time()
+        if time.time() > timeout:
+            return None
+
+    pulse_duration = pulse_end - pulse_start
+    distance = pulse_duration * 17150
+    return round(distance, 2)
+
+# Monitoring container fullness and handling rejection
+def monitor_container():
+    global container_full
+    try:
+        while True:
+            distance = get_distance()
+            if distance is not None:
+                print(f"[Ultrasonic] Distance: {distance} cm")
+                if distance <= 4:  # Assuming distance < 4 cm indicates full
+                    container_full = True
+                    display_message("Container Full")
+                    print("[Ultrasonic] Container Full - Rejecting Bottle")
+                    set_servo_position(0)  # Reject bottle
+                    sleep(1.5)
+                    set_servo_position(0.5)  # Neutral position after rejection
+                else:
+                    container_full = False
+            else:
+                print("[Ultrasonic] Sensor error.")
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n[Ultrasonic] Monitoring stopped.")
+    finally:
+        GPIO.cleanup()
+
+# Start the container monitoring in a separate thread
+threading.Thread(target=monitor_container, daemon=True).start()
+
 try:
     while True:
         if frame is None:
@@ -181,7 +243,6 @@ try:
 
         current_time = time.time()
         if current_time - last_detection_time >= 5:
-
             bottle_results = bottle_model(frame)[0]
             general_results = general_model(frame)[0]
 
@@ -210,7 +271,7 @@ try:
             if general_results.boxes is not None and len(general_results.boxes) > 0:
                 general_detected = True
 
-            if bottle_detected:
+            if bottle_detected and not container_full:
                 display_message("Accepting Bottle")
                 
                 if bottle_size == 'small':
