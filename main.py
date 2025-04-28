@@ -6,8 +6,8 @@ from ultralytics import YOLO
 from time import sleep
 import subprocess
 
-from servo import move_servo, stop_servo
-from lcd import display_message
+from servo import move_servo, stop_servo  # Assuming you have a servo control module
+from lcd import display_message  # Assuming you have an LCD module to display messages
 
 # ---------------- Firebase ----------------
 import firebase_admin
@@ -160,7 +160,7 @@ thread.start()
 
 display_message("Insert bottle")
 
-# --- Ultrasonic Sensor Logic ---
+# --- Ultrasonic Sensor Logic --- 
 TRIG_PIN = 11
 ECHO_PIN = 8
 GPIO.setmode(GPIO.BOARD)
