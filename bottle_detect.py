@@ -181,83 +181,77 @@ try:
 
         current_time = time.time()
         if current_time - last_detection_time >= 5:
-            # Run both models
+
             bottle_results = bottle_model(frame)[0]
             general_results = general_model(frame)[0]
 
             bottle_detected = False
+            bottle_size = None  # 'small' or 'large'
             general_detected = False
 
-            if general_results.boxes is not None and len(general_results.boxes) > 0:
-                general_detected = True
-
+            # Check bottle model
             if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
                 for box in bottle_results.boxes:
                     confidence = box.conf[0].item()
                     if confidence >= 0.7:
                         class_id = int(box.cls[0])
                         class_name = bottle_model.names[class_id].lower()
-                        if class_name in ["small_bottle", "large_bottle"]:
+
+                        if class_name == "small_bottle":
                             bottle_detected = True
+                            bottle_size = 'small'
+                            break
+                        elif class_name == "large_bottle":
+                            bottle_detected = True
+                            bottle_size = 'large'
                             break
 
-            neutral_classes = ["bottle", "toilet", "surfboard", "bottles", "refrigerator"]
+            # Check general model
+            if general_results.boxes is not None and len(general_results.boxes) > 0:
+                general_detected = True
 
             if bottle_detected:
                 display_message("Accepting Bottle")
-                for box in bottle_results.boxes:
-                    confidence = box.conf[0].item()
-                    if confidence >= 0.7:
-                        class_id = int(box.cls[0])
-                        class_name = bottle_model.names[class_id].lower()
-
-                    if class_name == "small_bottle":
-                        WiFiTimeAvailable += 5 * 60
-                        TotalBottlesDeposited += 1
-                        update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
-                        print("[+] Small bottle detected: +5 mins Wi-Fi")
-                    elif class_name == "large_bottle":
-                        WiFiTimeAvailable += 10 * 60
-                        TotalBottlesDeposited += 1
-                        update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
-                        print("[+] Large bottle detected: +10 mins Wi-Fi")
                 
+                if bottle_size == 'small':
+                    WiFiTimeAvailable += 5 * 60
+                    TotalBottlesDeposited += 1
+                    print("[+] Small bottle detected: +5 mins Wi-Fi")
+                elif bottle_size == 'large':
+                    WiFiTimeAvailable += 10 * 60
+                    TotalBottlesDeposited += 1
+                    print("[+] Large bottle detected: +10 mins Wi-Fi")
+
+                update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
+
                 set_servo_position(1)  # Accept
-                last_action = "accepted"
+                sleep(1.5)
+                set_servo_position(0.5)  # Neutral after accepting
 
             elif general_detected:
-                go_neutral = False
+                neutral_found = False
                 for box in general_results.boxes:
                     confidence = box.conf[0].item()
-                    if confidence < 0.6:
-                        continue
+                    if confidence >= 0.6:
+                        class_id = int(box.cls[0])
+                        class_name = general_model.names[class_id].lower()
+                        if class_name in ["bottle", "toilet", "surfboard"]:
+                            neutral_found = True
+                            break
 
-                    class_id = int(box.cls[0])
-                    class_name = general_model.names[class_id].lower()
-
-                    if class_name in neutral_classes:
-                        go_neutral = True
-                        break
-
-                if go_neutral:
-                    set_servo_position(0.5)
+                if neutral_found:
                     display_message("Insert bottle")
-                    last_action = "neutral"
+                    set_servo_position(0.5)  # Neutral
                 else:
                     display_message("Rejected Bottle")
                     set_servo_position(0)  # Reject
-                    last_action = "rejected"
+                    sleep(1.5)
+                    set_servo_position(0.5)  # Go back to neutral
 
             else:
-                set_servo_position(0.5)
+                # No detection at all
                 display_message("Insert bottle")
-                last_action = "neutral"
-
-            sleep(1.5)
-
-            if last_action in ["accepted", "rejected"]:
                 set_servo_position(0.5)
-                display_message("Insert bottle")
 
             last_detection_time = current_time
 
