@@ -62,6 +62,9 @@ except Exception as e:
 bindings = api.path('ip', 'hotspot', 'ip-binding')
 
 # ------------------- Get TARGET_MAC from queuePosition == 1 -------------------
+TARGET_MAC = None
+last_mac = None
+
 def assign_target_mac_from_queue():
     try:
         users_ref = db.collection('Users Collection')
@@ -70,34 +73,27 @@ def assign_target_mac_from_queue():
 
         if results:
             user_doc = results[0]
-            mac_address = user_doc.get('macAddress')
+            mac_address = user_doc.get('UserID')  # ← this is your MAC
             if mac_address:
-                print(f"[✔] Found MAC Address: {mac_address}")
                 return mac_address
             else:
-                print("[!] User found but has no macAddress field.")
+                print("[!] User found but no UserID (MAC address).")
         else:
-            print("[!] No user with queuePosition == 1")
+            print("[!] No user with queuePosition == 1.")
     except Exception as e:
-        print(f"[!] Error while assigning TARGET_MAC: {e}")
+        print(f"[!] Firestore error: {e}")
     return None
 
-# ------------------- Loop to continuously check -------------------
-def monitor_queue_position():
-    global TARGET_MAC
-    last_mac = None
+# Loop forever, checking every second
+while True:
+    new_mac = assign_target_mac_from_queue()
+    if new_mac and new_mac != last_mac:
+        TARGET_MAC = new_mac
+        last_mac = new_mac
+        print(f"[✔] TARGET_MAC updated to: {TARGET_MAC}")
+    time.sleep(1)
 
-    while True:
-        current_mac = assign_target_mac_from_queue()
-        if current_mac != last_mac and current_mac is not None:
-            TARGET_MAC = current_mac
-            print(f"[→] TARGET_MAC updated to: {TARGET_MAC}")
-            last_mac = current_mac
-        time.sleep(1)
-
-# Start monitoring
-monitor_queue_position()
-#--------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------
 def find_binding(mac_address):
     try:
         for entry in bindings('print'):
