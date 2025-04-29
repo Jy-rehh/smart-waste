@@ -4,6 +4,8 @@ import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebase
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
 const urlParams = new URLSearchParams(window.location.search);
+const ip  = urlParams.get('ip');
+const mac = urlParams.get('mac');
 
 // Wait until the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", function () {

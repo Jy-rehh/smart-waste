@@ -3,6 +3,8 @@ import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/1
 import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
 const urlParams = new URLSearchParams(window.location.search);
+const ip  = urlParams.get('ip');
+const mac = urlParams.get('mac');
 
 document.getElementById("login-form").addEventListener("submit", async (event) => {
     event.preventDefault();

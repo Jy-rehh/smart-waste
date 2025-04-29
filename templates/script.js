@@ -6,6 +6,10 @@ const cancelInsertBtn = insertModal.querySelector(".action-cancel");
 const timerElement = document.querySelector(".my-b");
 const spinner = document.querySelector(".progress-container");
 
+const urlParams = new URLSearchParams(window.location.search);
+const ip  = urlParams.get('ip');
+const mac = urlParams.get('mac');
+
 let countdown; // Declare countdown globally
 
 // Open Insert Bottles Modal
