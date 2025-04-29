@@ -13,65 +13,56 @@ let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
 //==========================================================================
+// Store the MAC address when the device first interacts
+async function storeMacAddressInFirebase(userId, macAddress) {
+  const db = admin.firestore();
+  const userRef = db.collection('users').doc(userId);  // Assuming you have a 'users' collection
 
-// Function to get MAC address from MikroTik given the client IP
-async function getMacAddressFromIp(clientIp) {
-  return new Promise((resolve, reject) => {
-    const device = new MikroNode('192.168.50.1');  // MikroTik Router IP
-    device.connect('admin', '')  // MikroTik Login (Ensure password is correct)
-      .then(([login]) => {
-        const chan = login.openChannel('dhcp-lease');
-        chan.write('/ip/dhcp-server/lease/print');  // Send command to get DHCP leases
+  await userRef.set({
+    macAddress: macAddress,
+    lastLogin: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
 
-        chan.on('done', (data) => {
-          // Log DHCP leases response for debugging
-          console.log('MikroTik DHCP Leases:', data);
-
-          const leases = MikroNode.parseItems(data);  // Parse the data into items
-          const matchedLease = leases.find(lease => lease.address === clientIp);  // Find lease by IP
-
-          if (matchedLease) {
-            resolve(matchedLease['mac-address']);  // Resolve with MAC address if found
-          } else {
-            resolve(null);  // Resolve with null if IP not found
-          }
-          login.close();  // Close login after processing
-        });
-
-        chan.on('error', (err) => {
-          console.error('Channel error:', err);
-          reject(err);  // Reject promise if there's an error
-          login.close();
-        });
-      })
-      .catch(err => {
-        console.error('Connection error:', err);
-        reject(err);  // Reject promise if connection fails
-      });
-  });
+  console.log('MAC Address stored in Firebase:', macAddress);
 }
 
-// New route to display IP and MAC
+// Compare the connected device's MAC address with the one in Firebase
 app.get('/connected-info', async (req, res) => {
-  const clientIp = req.connection.remoteAddress;  // Get IP directly from the connection
+  const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  
+  // Assuming you can get the client's MAC address
+  const clientMac = await getMacAddressFromIp(clientIp);
 
   try {
-    const macAddress = await getMacAddressFromIp(clientIp);  // Get MAC address using the IP
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc('userId');  // Get the current user's document by userId
+    
+    const userDoc = await userRef.get();
+    
+    if (userDoc.exists) {
+      const storedMac = userDoc.data().macAddress;  // The MAC address stored in Firebase
 
-    if (macAddress) {
-      res.send(`
-        <h1>Connected Device Info</h1>
-        <p><strong>IP Address:</strong> ${clientIp}</p>
-        <p><strong>MAC Address:</strong> ${macAddress}</p>
-      `);
+      // Compare the MAC addresses
+      if (clientMac === storedMac) {
+        // MAC addresses match, return the device info
+        res.send(`
+          <h1>Connected Device Info</h1>
+          <p><strong>IP Address:</strong> ${clientIp}</p>
+          <p><strong>MAC Address:</strong> ${clientMac}</p>
+        `);
+      } else {
+        // No match found
+        res.send(`
+          <h1>Device Info Not Found</h1>
+          <p><strong>IP Address:</strong> ${clientIp}</p>
+          <p><strong>MAC Address:</strong> Not found or mismatch.</p>
+        `);
+      }
     } else {
-      res.send(`
-        <h1>Device Info Not Found</h1>
-        <p><strong>IP Address:</strong> ${clientIp}</p>
-        <p><strong>MAC Address:</strong> Not found in DHCP leases.</p>
-      `);
+      res.status(404).send('User not found');
     }
   } catch (error) {
+    console.error('Error fetching device info:', error);
     res.status(500).send('Error fetching device info.');
   }
 });
