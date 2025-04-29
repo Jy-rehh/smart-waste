@@ -47,6 +47,17 @@
       <tbody>
       </tbody>
     </table>
+    <p>IP Address: <span id="ip-display"></span></p>
+    <p>MAC Address: <span id="mac-display"></span></p>
+
+    <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const ip  = urlParams.get('ip');
+    const mac = urlParams.get('mac');
+
+    document.getElementById("ip-display").textContent = ip || 'Not found';
+    document.getElementById("mac-display").textContent = mac || 'Not found';
+    </script>
 
     <div class="container">
         <div class="status-card">
