@@ -74,47 +74,49 @@ TARGET_MAC = None
 
 def get_mac_with_queue_position_1():
     try:
+        print("[*] Checking Firestore...")
         users_ref = db.collection('Users Collection')
         query = users_ref.where('queuePosition', '==', 1).limit(1)
         results = query.get()
 
         if results:
             user_doc = results[0]
-            print(f"[Debug] Retrieved user data: {user_doc.to_dict()}")
-            if 'queuePosition' in user_doc.to_dict():
-                user_id = user_doc.get('UserID')
-                if user_id:
-                    return user_id
-                else:
-                    print("[!] User with queuePosition 1 has no UserID.")
+            data = user_doc.to_dict()
+            print(f"[Debug] Retrieved user data: {data}")
+
+            user_id = data.get('UserID')
+            if user_id:
+                return user_id
             else:
-                print("[!] queuePosition field is missing in the document.")
+                print("[!] User with queuePosition 1 has no UserID.")
         else:
             print("[!] No user found with queuePosition 1.")
     except Exception as e:
         print(f"[!] Firestore error: {e}")
     return None
 
-# Loop every second
+# Infinite loop that never exits unless you kill it
 while True:
-    print("[*] Running loop...")  # Add a message to confirm the loop is active
-    mac = get_mac_with_queue_position_1()  # Check for users with queuePosition == 1
+    try:
+        print("[*] Running loop...")
 
-    # If a user with queuePosition == 1 is found
-    if mac:
-        # Only update TARGET_MAC if it's different
-        if mac != TARGET_MAC:
-            TARGET_MAC = mac
-            print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
+        mac = get_mac_with_queue_position_1()
+
+        if mac:
+            if mac != TARGET_MAC:
+                TARGET_MAC = mac
+                print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
+            else:
+                print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}")
         else:
-            print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}")
-    else:
-        # If no user is found, reset TARGET_MAC to None
-        if TARGET_MAC is not None:
-            print("[*] No valid user found. Clearing TARGET_MAC.")
-            TARGET_MAC = None  # Clear TARGET_MAC if no user found
+            if TARGET_MAC is not None:
+                print("[*] No valid user found. Clearing TARGET_MAC.")
+                TARGET_MAC = None
 
-    time.sleep(1)  # Wait for 1 second before checking again
+        time.sleep(1)
+    except Exception as outer_err:
+        print(f"[!] Outer loop error: {outer_err}")
+        time.sleep(2)
 
 # kutob ari 
 #-------------------------------------------------------------------------
