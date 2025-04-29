@@ -22,7 +22,7 @@ const db = admin.firestore();
 app.get('/devices', (req, res) => {
   const devicesRef = db.collection('Users Collection');
 
-  devicesRef.where('status', '==', 'connected').get()
+  devicesRef.where('status', '==', 'active').get()
     .then(snapshot => {
       const devices = [];
       snapshot.forEach(doc => {
