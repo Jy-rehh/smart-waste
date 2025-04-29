@@ -1,6 +1,3 @@
-import { db } from '../config/firebase-config.js'; // assumes firebase-config.js is in same folder
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
-
 const urlParams = new URLSearchParams(window.location.search);
 const ip  = urlParams.get('ip');
 const mac = urlParams.get('mac');
@@ -78,32 +75,3 @@ async function getCurrentMacWithQueueOne() {
       await finishSession(mac);
     }
   });
-
-  async function loadWiFiTime(mac) {
-    try {
-        const docRef = doc(db, "users", mac);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            const timeInSeconds = docSnap.data().WiFiTimeAvailable;
-
-            if (typeof timeInSeconds === 'number') {
-                const hrs = Math.floor(timeInSeconds / 3600);
-                const mins = Math.floor((timeInSeconds % 3600) / 60);
-                const secs = timeInSeconds % 60;
-                document.getElementById('wifi-time').textContent = `${hrs} hr. ${mins} min. ${secs} sec.`;
-            } else {
-                document.getElementById('wifi-time').textContent = "No time available.";
-            }
-        } else {
-            document.getElementById('wifi-time').textContent = "User not found.";
-        }
-    } catch (err) {
-        console.error("Failed to load WiFi time:", err);
-        document.getElementById('wifi-time').textContent = "Error loading time.";
-    }
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-    if (mac) loadWiFiTime(mac);
-});
