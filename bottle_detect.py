@@ -253,20 +253,31 @@ try:
 
             # Check bottle model
             if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
-                for box in bottle_results.boxes:
-                    confidence = box.conf[0].item()
-                    if confidence >= 0.7:
-                        class_id = int(box.cls[0])
-                        class_name = bottle_model.names[class_id].lower()
+                frame_height, frame_width, _ = frame.shape  # Get frame size
 
-                        if class_name == "small_bottle":
-                            bottle_detected = True
-                            bottle_size = 'small'
-                            break
-                        elif class_name == "large_bottle":
-                            bottle_detected = True
-                            bottle_size = 'large'
-                            break
+            for box in bottle_results.boxes:
+                confidence = box.conf[0].item()
+                if confidence >= 0.7:
+                    class_id = int(box.cls[0])
+                    class_name = bottle_model.names[class_id].lower()
+
+                    x1, y1, x2, y2 = box.xyxy[0]  # Get bounding box coordinates
+                    box_width = x2 - x1
+                    box_height = y2 - y1
+                    box_area = box_width * box_height
+                    frame_area = frame_width * frame_height
+                    percentage = (box_area / frame_area) * 100
+
+                    print(f"[{class_name}] Detected area: {percentage:.2f}% of frame")
+
+                    if class_name == "small_bottle":
+                        bottle_detected = True
+                        bottle_size = 'small'
+                        break
+                    elif class_name == "large_bottle":
+                        bottle_detected = True
+                        bottle_size = 'large'
+                        break
 
             # Check general model
             if general_results.boxes is not None and len(general_results.boxes) > 0:
