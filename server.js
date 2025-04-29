@@ -6,6 +6,7 @@ const cors = require('cors');
 const app = express();
 const port = 80;
 app.use(bodyParser.json());
+const bodyParser = require('body-parser'); 
 
 let isDetectionRunning = false;
 let detectionProcess = null;
