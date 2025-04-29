@@ -1,4 +1,5 @@
 const express = require('express');
+const admin = require('firebase-admin');
 const path = require('path');
 const { spawn } = require('child_process');
 const app = express();
@@ -8,6 +9,39 @@ let isDetectionRunning = false;
 let detectionProcess = null;
 let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
+
+//==========================================================================
+// Initialize Firebase Admin
+const serviceAccount = path.join(__dirname, 'firebase-key.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
+
+app.get('/devices', (req, res) => {
+  const devicesRef = db.collection('Users Collection');
+
+  devicesRef.get()
+    .then(snapshot => {
+      const devices = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        devices.push({
+          ipAddress: data.ipAddress,
+          macAddress: data.macAddress,
+          status: data.status
+        });
+      });
+      res.json(devices);
+    })
+    .catch(error => {
+      console.error("Error getting devices: ", error);
+      res.status(500).send("Error getting devices.");
+    });
+});
+
+// ==================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
 app.use(express.static(__dirname));

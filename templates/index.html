@@ -37,8 +37,15 @@
             }
         }
     </script>
-
-
+    <h2 class="green-text">Connected Devices</h2>
+    <table border="1" id="deviceTable">
+        <tr>
+            <th>IP</th>
+            <th>MAC</th>
+            <th>Status</th>
+        </tr>
+    </table>
+    
 
     <div class="container">
         <div class="status-card">
@@ -106,5 +113,23 @@
 
      <!-- JavaScript -->
      <script src="/templates/script.js"></script>
+     <script>
+        // Fetch devices from your server and populate the table
+        fetch('/devices')
+            .then(res => res.json())
+            .then(devices => {
+                const table = document.getElementById('deviceTable');
+                devices.forEach(device => {
+                    const row = table.insertRow();
+                    row.insertCell(0).innerText = device.ipAddress;   // or device.ip
+                    row.insertCell(1).innerText = device.macAddress;  // or device.mac
+                    row.insertCell(2).innerText = device.status;
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching devices:', error);
+            });
+    </script>
+    
 </body>
 </html>
