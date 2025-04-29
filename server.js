@@ -16,36 +16,31 @@ let storeMacIpProcess = null;
 // ===================================================================
 // Function to get MAC address from MikroTik for a specific IP
 async function getMacAddressFromIp(clientIp) {
-    return new Promise((resolve, reject) => {
-        const device = new MikroNode('192.168.50.1'); // Replace with your MikroTik IP
+  return new Promise(async (resolve, reject) => {
+      const device = MikroNode.getConnection('192.168.50.1', 'admin', ''); // Add password if needed
 
-        device.connect('admin', '') // Replace with your MikroTik username/password
-            .then(([login]) => {
-                const chan = login.openChannel('leases');
-                chan.write('/ip/dhcp-server/lease/print');
+      try {
+          const [login] = await device.connect();
+          const chan = login.openChannel('leases');
 
-                chan.on('done', (data) => {
-                    const leases = MikroNode.parseItems(data);
-                    const match = leases.find(lease => lease.address === clientIp);
-                    login.close();
-                    if (match) {
-                        resolve(match['mac-address']);
-                    } else {
-                        resolve(null);
-                    }
-                });
+          chan.write('/ip/dhcp-server/lease/print');
 
-                chan.on('error', (err) => {
-                    login.close();
-                    reject(err);
-                });
-            })
-            .catch((err) => {
-                reject(err);
-            });
-    });
+          chan.on('done', (data) => {
+              const leases = MikroNode.parseItems(data);
+              const match = leases.find(lease => lease.address === clientIp);
+              login.close();
+              resolve(match ? match['mac-address'] : null);
+          });
+
+          chan.on('error', (err) => {
+              login.close();
+              reject(err);
+          });
+      } catch (err) {
+          reject(err);
+      }
+  });
 }
-
 // ===============================================================
 // Route to show current user's IP and MAC only
 app.get('/connected-info', async (req, res) => {
