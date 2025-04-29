@@ -21,31 +21,20 @@ const USER = 'admin';        // Replace with your username
 const PASS = '';        // Replace with your password
 
 app.get('/devices', async (req, res) => {
-  const device = new MikroNode(HOST);
-  
   try {
-    const connection = await device.connect();
-    const login = await connection.login(USER, PASS);
+    const [conn, resolve] = await MikroNode.connect(HOST, USER, PASS);
+    const chan = conn.openChannel('arp');
 
-    const chan = connection.openChannel();
-    chan.write('/ip/arp/print');
+    const data = await chan.write('/ip/arp/print');
+    const items = MikroNode.parseItems(data);
 
-    chan.on('done', (data) => {
-      const items = MikroNode.parseItems(data);
-      const devices = items.map(entry => ({
-        ipAddress: entry.address,
-        macAddress: entry['mac-address']
-      }));
-      res.json(devices);
-      connection.close();
-    });
+    const devices = items.map(entry => ({
+      ipAddress: entry.address,
+      macAddress: entry['mac-address']
+    }));
 
-    chan.on('trap', (err) => {
-      console.error('RouterOS Trap:', err);
-      res.status(500).json({ error: 'RouterOS trap error' });
-      connection.close();
-    });
-
+    res.json(devices);
+    conn.close();
   } catch (err) {
     console.error('Error connecting to RouterOS:', err);
     res.status(500).json({ error: 'Failed to connect to RouterOS' });
