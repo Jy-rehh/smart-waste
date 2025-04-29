@@ -36,6 +36,8 @@
             }
         }
     </script>
+    <p>IP Address: <span id="ip-display"></span></p>
+    <p>MAC Address: <span id="mac-display"></span></p>
 
     <script>
     const urlParams = new URLSearchParams(window.location.search);
@@ -52,7 +54,7 @@
                 <span class="icon">&#128246;</span>
                 <span class="disconnected">Disconnected</span>
             </div>
-            <p class="ip">IP: <span id="ip-display">Not found</span> | MAC: <span id="mac-display">Not found</span></p>
+            <p>IP: <span id="ip-display">Not found</span> | MAC: <span id="mac-display">Not found</span></p>
             <p class="remaining-time">Remaining Time:</p>
             <p class="time">- hr. - min. - sec</p>
             <button id="openModal" class="btn green">
@@ -110,5 +112,6 @@
 
      <!-- JavaScript -->
      <script src="/templates/script.js"></script>
+     
 </body>
 </html>
