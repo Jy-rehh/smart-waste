@@ -1,3 +1,6 @@
+import { db } from '../config/firebase-config.js'; // assumes firebase-config.js is in same folder
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
 const urlParams = new URLSearchParams(window.location.search);
 const ip  = urlParams.get('ip');
 const mac = urlParams.get('mac');
@@ -76,39 +79,31 @@ async function getCurrentMacWithQueueOne() {
     }
   });
 
-  
-  // index.js
-import { db } from './firebase-config.js';
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
-// Display on page load
-window.addEventListener("DOMContentLoaded", () => {
-  if (mac) {
-    loadWiFiTime(mac);
-  }
-});
+  async function loadWiFiTime(mac) {
+    try {
+        const docRef = doc(db, "users", mac);
+        const docSnap = await getDoc(docRef);
 
-async function loadWiFiTime(mac) {
-  try {
-    const docRef = doc(db, "users", mac); // assumes document named by MAC address
-    const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const timeInSeconds = docSnap.data().WiFiTimeAvailable;
 
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const timeInSeconds = data.WiFiTimeAvailable;
-
-      if (typeof timeInSeconds === 'number') {
-        const hrs = Math.floor(timeInSeconds / 3600);
-        const mins = Math.floor((timeInSeconds % 3600) / 60);
-        const secs = timeInSeconds % 60;
-        document.querySelector('.time').textContent = `${hrs} hr. ${mins} min. ${secs} sec.`;
-      } else {
-        document.querySelector('.time').textContent = "No time available.";
-      }
-    } else {
-      document.querySelector('.time').textContent = "No such user.";
+            if (typeof timeInSeconds === 'number') {
+                const hrs = Math.floor(timeInSeconds / 3600);
+                const mins = Math.floor((timeInSeconds % 3600) / 60);
+                const secs = timeInSeconds % 60;
+                document.getElementById('wifi-time').textContent = `${hrs} hr. ${mins} min. ${secs} sec.`;
+            } else {
+                document.getElementById('wifi-time').textContent = "No time available.";
+            }
+        } else {
+            document.getElementById('wifi-time').textContent = "User not found.";
+        }
+    } catch (err) {
+        console.error("Failed to load WiFi time:", err);
+        document.getElementById('wifi-time').textContent = "Error loading time.";
     }
-  } catch (err) {
-    console.error("Error loading WiFi time:", err);
-    document.querySelector('.time').textContent = "Error loading time.";
-  }
 }
+
+window.addEventListener("DOMContentLoaded", () => {
+    if (mac) loadWiFiTime(mac);
+});
