@@ -86,3 +86,6 @@ def manage_time():
             print(f"[!] Error managing time: {e}")
 
         time.sleep(1)
+
+if __name__ == "__main__":
+    manage_time()
