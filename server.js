@@ -1,8 +1,8 @@
 const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
-const MikroNode = require('mikronode-ng');
-//const MikroNode = require('mikronode');
+//const MikroNode = require('mikronode-ng');
+const MikroNode = require('mikronode');
 const { spawn } = require('child_process');
 const cors = require('cors');
 const app = express();
@@ -14,63 +14,62 @@ let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
 // ===================================================================
-// Function to get MAC address from MikroTik for a specific IP
 async function getMacAddressFromIp(clientIp) {
-  return new Promise(async (resolve, reject) => {
-      const device = MikroNode.getConnection('192.168.50.1', 'admin', ''); // Add password if needed
+  return new Promise((resolve, reject) => {
+      const device = new MikroNode('192.168.50.1'); // MikroTik IP address
 
-      try {
-          const [login] = await device.connect();
-          const chan = login.openChannel('leases');
+      device.connect('admin', '') // Replace with your MikroTik username and password
+          .then(([login]) => {
+              const chan = login.openChannel('leases');
+              chan.write('/ip/dhcp-server/lease/print');
 
-          chan.write('/ip/dhcp-server/lease/print');
+              chan.on('done', (data) => {
+                  const leases = MikroNode.parseItems(data);
+                  const match = leases.find(lease => lease.address === clientIp);
+                  login.close();
+                  if (match) {
+                      resolve(match['mac-address']);
+                  } else {
+                      resolve(null);
+                  }
+              });
 
-          chan.on('done', (data) => {
-              const leases = MikroNode.parseItems(data);
-              const match = leases.find(lease => lease.address === clientIp);
-              login.close();
-              resolve(match ? match['mac-address'] : null);
-          });
-
-          chan.on('error', (err) => {
-              login.close();
+              chan.on('error', (err) => {
+                  login.close();
+                  reject(err);
+              });
+          })
+          .catch((err) => {
               reject(err);
           });
-      } catch (err) {
-          reject(err);
-      }
   });
 }
-// ===============================================================
-// Route to show current user's IP and MAC only
+
 app.get('/connected-info', async (req, res) => {
-    const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const cleanedIp = clientIp.replace('::ffff:', '');
 
-    // Remove "::ffff:" from IPv4-mapped IPv6 address
-    const cleanedIp = clientIp.replace('::ffff:', '');
+  try {
+      const macAddress = await getMacAddressFromIp(cleanedIp);
 
-    try {
-        const macAddress = await getMacAddressFromIp(cleanedIp);
-
-        if (macAddress) {
-            res.send(`
-                <h1>Device Info</h1>
-                <p><strong>IP:</strong> ${cleanedIp}</p>
-                <p><strong>MAC:</strong> ${macAddress}</p>
-            `);
-        } else {
-            res.send(`
-                <h1>Device Info</h1>
-                <p><strong>IP:</strong> ${cleanedIp}</p>
-                <p><strong>MAC:</strong> Not found in MikroTik DHCP leases</p>
-            `);
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error fetching MAC address from MikroTik');
-    }
+      if (macAddress) {
+          res.send(`
+              <h1>Device Info</h1>
+              <p><strong>IP:</strong> ${cleanedIp}</p>
+              <p><strong>MAC:</strong> ${macAddress}</p>
+          `);
+      } else {
+          res.send(`
+              <h1>Device Info</h1>
+              <p><strong>IP:</strong> ${cleanedIp}</p>
+              <p><strong>MAC:</strong> Not found in MikroTik DHCP leases</p>
+          `);
+      }
+  } catch (error) {
+      console.error(error);
+      res.status(500).send('Error fetching MAC address from MikroTik');
+  }
 });
-
 // ==================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
