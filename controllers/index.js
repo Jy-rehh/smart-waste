@@ -75,3 +75,40 @@ async function getCurrentMacWithQueueOne() {
       await finishSession(mac);
     }
   });
+
+  
+  const firebaseConfig = require('../firebase-key.json');
+  admin.initializeApp({
+    credential: admin.credential.cert(firebaseConfig)
+  });
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Load time from Firebase based on MAC address
+async function loadWiFiTime(mac) {
+  try {
+    const snapshot = await db.ref(`users/${mac}/WiFiTimeAvailable`).once('value');
+    const timeInSeconds = snapshot.val();
+
+    if (typeof timeInSeconds === 'number') {
+      const hrs = Math.floor(timeInSeconds / 3600);
+      const mins = Math.floor((timeInSeconds % 3600) / 60);
+      const secs = timeInSeconds % 60;
+      document.getElementById('wifi-time').textContent = `${hrs} hr. ${mins} min. ${secs} sec.`;
+    } else {
+      document.getElementById('wifi-time').textContent = "No time available.";
+    }
+  } catch (err) {
+    console.error("Failed to load WiFi time:", err);
+    document.getElementById('wifi-time').textContent = "Error loading time.";
+  }
+}
+
+// Wait for the page to load, then fetch time
+window.addEventListener("DOMContentLoaded", () => {
+  if (mac) {
+    loadWiFiTime(mac);
+  }
+});

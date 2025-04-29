@@ -372,11 +372,11 @@ try:
                 
                 if bottle_size == 'small':
                     WiFiTimeAvailable += 5 * 60
-                    #TotalBottlesDeposited += 1
+                    TotalBottlesDeposited += 1
                     print("[+] Small bottle detected: +5 mins Wi-Fi")
                 elif bottle_size == 'large':
                     WiFiTimeAvailable += 10 * 60
-                    #TotalBottlesDeposited += 1
+                    TotalBottlesDeposited += 1
                     print("[+] Large bottle detected: +10 mins Wi-Fi")
 
                 update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
