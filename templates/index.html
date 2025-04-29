@@ -48,15 +48,6 @@
             IP: <span id="ip-display"></span> | MAC: <span id="mac-display"></span>
           </p>
 
-        <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const ip  = urlParams.get('ip');
-        const mac = urlParams.get('mac');
-
-        document.getElementById("ip-display").textContent = ip || 'Not found';
-        document.getElementById("mac-display").textContent = mac || 'Not found';
-        </script>
-
         <p class="remaining-time">Remaining Time:</p>
         <p class="time">- hr. - min. - sec</p>
         <button id="openModal" class="btn green">
