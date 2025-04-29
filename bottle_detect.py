@@ -63,9 +63,8 @@ bindings = api.path('ip', 'hotspot', 'ip-binding')
 
 # ------------------- Get TARGET_MAC from queuePosition == 1 -------------------
 TARGET_MAC = None
-last_mac = None
 
-def assign_target_mac_from_queue():
+def get_mac_with_queue_position_1():
     try:
         users_ref = db.collection('Users Collection')
         query = users_ref.where('queuePosition', '==', 1).limit(1)
@@ -73,24 +72,26 @@ def assign_target_mac_from_queue():
 
         if results:
             user_doc = results[0]
-            mac_address = user_doc.get('UserID')  # ← this is your MAC
-            if mac_address:
-                return mac_address
+            user_id = user_doc.get('UserID')
+            if user_id:
+                return user_id
             else:
-                print("[!] User found but no UserID (MAC address).")
+                print("[!] Found user with queuePosition 1 but no UserID.")
         else:
-            print("[!] No user with queuePosition == 1.")
+            print("[!] No user found with queuePosition 1.")
     except Exception as e:
         print(f"[!] Firestore error: {e}")
     return None
 
-# Loop forever, checking every second
+# Loop every second
 while True:
-    new_mac = assign_target_mac_from_queue()
-    if new_mac and new_mac != last_mac:
-        TARGET_MAC = new_mac
-        last_mac = new_mac
-        print(f"[✔] TARGET_MAC updated to: {TARGET_MAC}")
+    mac = get_mac_with_queue_position_1()
+    if mac:
+        if mac != TARGET_MAC:
+            TARGET_MAC = mac
+            print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
+    else:
+        print("[*] Waiting for a user with queuePosition 1...")
     time.sleep(1)
 
 #-------------------------------------------------------------------------
