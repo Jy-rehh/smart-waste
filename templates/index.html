@@ -113,7 +113,8 @@
         </button>
 
      <!-- JavaScript -->
-     <script src="/templates/script.js"></script>     
+     <script src="/templates/script.js"></script>
+     <script src="/controllers/index.js"></script>     
      <script>
         function insertBottle(mac) {
           fetch('/api/insertBottle', {
@@ -130,10 +131,7 @@
           });
         }
       
-        // Example usage:
-        // insertBottle("AA:BB:CC:DD:EE:FF");
-      </script>
-      <script>
+        // Wait until the page is fully loaded
         document.addEventListener('DOMContentLoaded', () => {
           const insertButton = document.getElementById("openModal");
       
@@ -144,10 +142,10 @@
               return;
             }
       
-            insertBottle(mac); // Call your function with the actual MAC address
+            insertBottle(mac); // Call the function with the MAC
           });
         });
-      </script>
+      </script>      
       
 </body>
 </html>
