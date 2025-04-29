@@ -37,30 +37,26 @@ connectToRouter(); // connect once on server start
 
 app.get('/devices', async (req, res) => {
   try {
-    deviceConnection.connect()
-    .then(([login]) => {
-      return login('admin', '');  // Use the correct login credentials
-    })
-    .then(conn => {
+    deviceConnection.connect().then((conn) => {
       const chan = conn.openChannel();
-      chan.write('/ip/arp/print');
+      chan.write('/ip/arp/print');  // Directly send the ARP print command
+    
       chan.on('done', (data) => {
         const devices = MikroNode.parseItems(data);
         const formattedDevices = devices.map(device => ({
           ipAddress: device.address,
           macAddress: device['mac-address']
         }));
-
+        
         res.json(formattedDevices);
         conn.close();
       });
-    })
-    .catch(err => {
-      console.error('Error connecting to RouterOS:', err);  // Log the error
+    }).catch(err => {
+      console.error('Error connecting:', err);
       res.status(500).send('Failed to connect to RouterOS');
-    });
+    });    
   } catch (err) {
-    console.error('Unexpected error:', err);
+    console.error('Error:', err);
     res.status(500).send('Internal server error');
   }
 });
