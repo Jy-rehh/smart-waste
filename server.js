@@ -2,11 +2,10 @@ const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
 const { spawn } = require('child_process');
+const bodyParser = require('body-parser'); 
 const cors = require('cors');
 const app = express();
 const port = 80;
-app.use(bodyParser.json());
-const bodyParser = require('body-parser'); 
 
 let isDetectionRunning = false;
 let detectionProcess = null;
@@ -20,6 +19,7 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+app.use(bodyParser.json());
 //===============================================================================
   // Insert Bottle and Queue Handler
   app.post('/api/insertBottle', async (req, res) => {

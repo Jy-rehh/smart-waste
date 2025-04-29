@@ -24,14 +24,14 @@ from librouteros import connect
 ROUTER_HOST = '192.168.50.1'
 ROUTER_USERNAME = 'admin'
 ROUTER_PASSWORD = ''
-TARGET_MAC = 'A2:DE:BF:8C:50:87'  # <<< Target device MAC address
-#TARGET_MAC = None
+#TARGET_MAC = 'A2:DE:BF:8C:50:87'  # <<< Target device MAC address
+TARGET_MAC = None
 
 # Function to update the MAC address dynamically based on user input
-#def update_mac_address(mac_address):
-#    global TARGET_MAC
-#    TARGET_MAC = mac_address
-#    print(f"MAC Address Updated to: {TARGET_MAC}")
+def update_mac_address(mac_address):
+    global TARGET_MAC
+    TARGET_MAC = mac_address
+    print(f"MAC Address Updated to: {TARGET_MAC}")
 
 # Connect to MikroTik
 try:
