@@ -89,10 +89,10 @@ def get_mac_with_queue_position_1():
 # Loop every second
 while True:
     mac = get_mac_with_queue_position_1()
-
+    TARGET_MAC = get_mac_with_queue_position_1()
     # Debugging prints
     print(f"[DEBUG] Fetched MAC: {mac}, Current TARGET_MAC: {TARGET_MAC}")
-    
+
 #-------------------------------------------------------------------------
     def find_binding(mac_address):
         try:
