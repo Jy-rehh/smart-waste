@@ -36,7 +36,6 @@
             }
         }
     </script>
-
     <script>
     const urlParams = new URLSearchParams(window.location.search);
     const ip  = urlParams.get('ip');
@@ -52,7 +51,7 @@
                 <span class="icon">&#128246;</span>
                 <span class="disconnected">Disconnected</span>
             </div>
-            <p class="ip">IP:  | MAC: </p>
+            <p class="ip">IP: <span id="ip-display">Not found</span> | MAC: <span id="mac-display">Not found</span></p>
             <p class="remaining-time">Remaining Time:</p>
             <p class="time">- hr. - min. - sec</p>
             <button id="openModal" class="btn green">
