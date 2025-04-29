@@ -82,11 +82,22 @@ def assign_target_mac_from_queue():
         print(f"[!] Error while assigning TARGET_MAC: {e}")
     return None
 
+# ------------------- Loop to continuously check -------------------
+def monitor_queue_position():
+    global TARGET_MAC
+    last_mac = None
 
-# Call the function once during startup
-TARGET_MAC = assign_target_mac_from_queue()
+    while True:
+        current_mac = assign_target_mac_from_queue()
+        if current_mac != last_mac and current_mac is not None:
+            TARGET_MAC = current_mac
+            print(f"[→] TARGET_MAC updated to: {TARGET_MAC}")
+            last_mac = current_mac
+        time.sleep(1)
 
-
+# Start monitoring
+monitor_queue_position()
+#--------------------------------------------------------------------------------------
 def find_binding(mac_address):
     try:
         for entry in bindings('print'):
