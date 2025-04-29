@@ -2,6 +2,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
 const MikroNode = require('mikronode-ng');
+const MikroNode = require('mikronode');
 const { spawn } = require('child_process');
 const cors = require('cors');
 const app = express();
@@ -12,59 +13,67 @@ let detectionProcess = null;
 let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
-//==========================================================================
-// Store the MAC address when the device first interacts
-async function storeMacAddressInFirebase(userId, macAddress) {
-  const db = admin.firestore();
-  const userRef = db.collection('Users COllection').doc(userId);  // Assuming you have a 'users' collection
+// ===================================================================
+// Function to get MAC address from MikroTik for a specific IP
+async function getMacAddressFromIp(clientIp) {
+    return new Promise((resolve, reject) => {
+        const device = new MikroNode('192.168.50.1'); // Replace with your MikroTik IP
 
-  await userRef.set({
-    macAddress: macAddress,
-    lastLogin: admin.firestore.FieldValue.serverTimestamp(),
-  }, { merge: true });
+        device.connect('admin', '') // Replace with your MikroTik username/password
+            .then(([login]) => {
+                const chan = login.openChannel('leases');
+                chan.write('/ip/dhcp-server/lease/print');
 
-  console.log('MAC Address stored in Firebase:', macAddress);
+                chan.on('done', (data) => {
+                    const leases = MikroNode.parseItems(data);
+                    const match = leases.find(lease => lease.address === clientIp);
+                    login.close();
+                    if (match) {
+                        resolve(match['mac-address']);
+                    } else {
+                        resolve(null);
+                    }
+                });
+
+                chan.on('error', (err) => {
+                    login.close();
+                    reject(err);
+                });
+            })
+            .catch((err) => {
+                reject(err);
+            });
+    });
 }
 
-// Compare the connected device's MAC address with the one in Firebase
+// ===============================================================
+// Route to show current user's IP and MAC only
 app.get('/connected-info', async (req, res) => {
-  const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  
-  // Assuming you can get the client's MAC address
-  const clientMac = await getMacAddressFromIp(clientIp);
+    const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
-  try {
-    const db = admin.firestore();
-    const userRef = db.collection('Users COllection').doc('userId');  // Get the current user's document by userId
-    
-    const userDoc = await userRef.get();
-    
-    if (userDoc.exists) {
-      const storedMac = userDoc.data().macAddress;  // The MAC address stored in Firebase
+    // Remove "::ffff:" from IPv4-mapped IPv6 address
+    const cleanedIp = clientIp.replace('::ffff:', '');
 
-      // Compare the MAC addresses
-      if (clientMac === storedMac) {
-        // MAC addresses match, return the device info
-        res.send(`
-          <h1>Connected Device Info</h1>
-          <p><strong>IP Address:</strong> ${clientIp}</p>
-          <p><strong>MAC Address:</strong> ${clientMac}</p>
-        `);
-      } else {
-        // No match found
-        res.send(`
-          <h1>Device Info Not Found</h1>
-          <p><strong>IP Address:</strong> ${clientIp}</p>
-          <p><strong>MAC Address:</strong> Not found or mismatch.</p>
-        `);
-      }
-    } else {
-      res.status(404).send('User not found');
+    try {
+        const macAddress = await getMacAddressFromIp(cleanedIp);
+
+        if (macAddress) {
+            res.send(`
+                <h1>Device Info</h1>
+                <p><strong>IP:</strong> ${cleanedIp}</p>
+                <p><strong>MAC:</strong> ${macAddress}</p>
+            `);
+        } else {
+            res.send(`
+                <h1>Device Info</h1>
+                <p><strong>IP:</strong> ${cleanedIp}</p>
+                <p><strong>MAC:</strong> Not found in MikroTik DHCP leases</p>
+            `);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error fetching MAC address from MikroTik');
     }
-  } catch (error) {
-    console.error('Error fetching device info:', error);
-    res.status(500).send('Error fetching device info.');
-  }
 });
 
 // ==================================================================
