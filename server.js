@@ -15,52 +15,39 @@ let storeMacIpProcess = null;
 //==========================================================================
 app.use(cors());
 
-// MikroTik connection details
-const HOST = '192.168.50.1';  // Replace with your MikroTik IP
-const USER = 'admin';         // Replace with your MikroTik username
-const PASS = '';              // Replace with your MikroTik password
+// Function to get the client's MAC address
+// For demonstration, assuming MAC is passed as query parameter
+app.get('/devices', (req, res) => {
+    const macAddress = req.query.mac;  // Get MAC address from query
 
-// Function to get the client's IP address from the request
-function getClientIp(req) {
-  // Try to get the IP address from headers or connection object
-  return req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.socket.remoteAddress || req.connection.socket.remoteAddress;
-}
-
-// Endpoint to fetch device details (IP and MAC)
-app.get('/devices', async (req, res) => {
-  const clientIp = getClientIp(req);  // Get the IP address of the client (requester's device)
-  console.log('Client IP:', clientIp); // Debug: log the client IP to ensure it's correct
-
-  try {
-    // Connect to MikroTik using MikroNode
-    const [conn, resolve] = await MikroNode.connect(HOST, USER, PASS);
-    const chan = conn.openChannel('arp');
-    
-    // Request the ARP table from MikroTik
-    const data = await chan.write('/ip/arp/print');
-    const items = MikroNode.parseItems(data);
-
-    // Find the device matching the requester's IP address in the ARP table
-    const device = items.find(entry => entry.address === clientIp);
-    
-    if (device) {
-      // If found, return the IP and MAC address of the requesting device
-      res.json({
-        ipAddress: device.address,
-        macAddress: device['mac-address']
-      });
-    } else {
-      // If not found, return an error message
-      res.status(404).json({ error: 'Device not found in ARP table' });
+    if (!macAddress) {
+        return res.status(400).json({ error: 'MAC address is required' });
     }
 
-    // Close the connection to MikroTik
-    conn.close();
-  } catch (err) {
-    // Handle connection errors
-    console.error('Error connecting to RouterOS:', err);
-    res.status(500).json({ error: 'Failed to connect to RouterOS' });
-  }
+    // Adjust paths for the Python executable and script
+    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Path to Python executable in the virtual environment
+    const pythonScript = '/home/pi/smart-waste/routeros_get_device.py';  // Path to your Python script
+
+    // Run the Python script to fetch device info based on MAC address
+    exec(`${pythonExecutable} ${pythonScript} ${macAddress}`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error executing Python script: ${error}`);
+            return res.status(500).json({ error: 'Error connecting to RouterOS' });
+        }
+        if (stderr) {
+            console.error(`stderr: ${stderr}`);
+            return res.status(500).json({ error: 'Error in Python script' });
+        }
+
+        // Parse and send the response from the Python script
+        try {
+            const deviceInfo = JSON.parse(stdout);
+            res.json(deviceInfo);
+        } catch (err) {
+            console.error('Error parsing Python script output:', err);
+            res.status(500).json({ error: 'Failed to parse device information' });
+        }
+    });
 });
 
 // ==================================================================
