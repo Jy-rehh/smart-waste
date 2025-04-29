@@ -74,7 +74,10 @@ TARGET_MAC = None
 
 def get_mac_with_queue_position_1():
     try:
-        print("[*] Checking Firestore...")
+        print("[*] Checking Firestore...", flush=True)
+        
+        # RECREATE FIRESTORE CLIENT FRESH
+        db = firestore.client()
         users_ref = db.collection('Users Collection')
         query = users_ref.where('queuePosition', '==', 1).limit(1)
         results = query.get()
@@ -82,42 +85,41 @@ def get_mac_with_queue_position_1():
         if results:
             user_doc = results[0]
             data = user_doc.to_dict()
-            print(f"[Debug] Retrieved user data: {data}")
+            print(f"[Debug] Retrieved user data: {data}", flush=True)
 
             user_id = data.get('UserID')
             if user_id:
                 return user_id
             else:
-                print("[!] User with queuePosition 1 has no UserID.")
+                print("[!] User with queuePosition 1 has no UserID.", flush=True)
         else:
-            print("[!] No user found with queuePosition 1.")
+            print("[!] No user found with queuePosition 1.", flush=True)
     except Exception as e:
-        print(f"[!] Firestore error: {e}")
+        print(f"[!] Firestore error: {e}", flush=True)
     return None
 
 # Infinite loop that never exits unless you kill it
 while True:
     try:
-        print("[*] Running loop...")
+        print("[*] Running loop...", flush=True)
 
         mac = get_mac_with_queue_position_1()
 
         if mac:
             if mac != TARGET_MAC:
                 TARGET_MAC = mac
-                print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
+                print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
             else:
-                print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}")
+                print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
         else:
             if TARGET_MAC is not None:
-                print("[*] No valid user found. Clearing TARGET_MAC.")
+                print("[*] No valid user found. Clearing TARGET_MAC.", flush=True)
                 TARGET_MAC = None
 
         time.sleep(1)
     except Exception as outer_err:
-        print(f"[!] Outer loop error: {outer_err}")
+        print(f"[!] Outer loop error: {outer_err}", flush=True)
         time.sleep(2)
-
 # kutob ari 
 #-------------------------------------------------------------------------
     def find_binding(mac_address):
