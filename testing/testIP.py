@@ -51,9 +51,12 @@ def get_mac_from_ip(client_ip):
 
 @app.route('/get-mac', methods=['GET'])
 def get_mac():
+    print("REMOTE_ADDR:", request.remote_addr)
+    print("X-FORWARDED-FOR:", request.headers.get('X-Forwarded-For'))
+
     client_ip = request.args.get('ip')  # Get IP address from query params
     mac_address = get_mac_from_ip(client_ip)
-    
+
     if mac_address:
         return jsonify({'mac-address': mac_address})
     else:
