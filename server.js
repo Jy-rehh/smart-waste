@@ -2,7 +2,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
 const { spawn } = require('child_process');
-const RouterOS = require('node-routeros');
+const { RouterOSClient } = require('node-routeros');
 const app = express();
 const port = 80;
 
@@ -19,10 +19,10 @@ admin.initializeApp({
 });
 const db = admin.firestore();
 
-const router = RouterOS({
-  host: '192.168.50.1',  // IP of your MikroTik router
-  user: 'admin',          // Router username
-  pass: ''        // Router password
+const router = new RouterOSClient({
+  host: '192.168.50.1',
+  user: 'admin',
+  password: ''
 });
 
 app.get('/devices', (req, res) => {
