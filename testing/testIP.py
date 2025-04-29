@@ -37,30 +37,42 @@ app = Flask(__name__)
 
 def get_mac_from_ip(client_ip):
     try:
-        # Connect to MikroTik Router
-        api = connect(username='admin', password='', host='192.168.50.1')  # Replace with your credentials
-        leases = api('/ip/dhcp-server/lease/print')
-        
-        # Look for matching IP address in leases
-        for lease in leases:
-            if lease.get('address') == client_ip:
-                return lease.get('mac-address')  # Return the MAC address for the matching IP
+        api = connect(username='admin', password='', host='192.168.50.1')  # Adjust credentials
+
+        # Check hotspot active (hotspot users)
+        try:
+            hotspot_active = api('/ip/hotspot/active/print')
+            for session in hotspot_active:
+                if session.get('address') == client_ip:
+                    return session.get('mac-address')
+        except Exception as e:
+            print("Hotspot active failed:", e)
+
+        # Fallback: DHCP leases (wired or non-hotspot wireless)
+        try:
+            leases = api('/ip/dhcp-server/lease/print')
+            for lease in leases:
+                if lease.get('address') == client_ip:
+                    return lease.get('mac-address')
+        except Exception as e:
+            print("DHCP leases failed:", e)
+
         return None
     except Exception as e:
-        return str(e)
+        return f'Router error: {e}'
 
 @app.route('/get-mac', methods=['GET'])
 def get_mac():
-    print("REMOTE_ADDR:", request.remote_addr)
-    print("X-FORWARDED-FOR:", request.headers.get('X-Forwarded-For'))
+    # Detect client's real IP
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    print("Detected IP:", client_ip)
 
-    client_ip = request.args.get('ip')  # Get IP address from query params
     mac_address = get_mac_from_ip(client_ip)
 
     if mac_address:
-        return jsonify({'mac-address': mac_address})
+        return jsonify({'ip': client_ip, 'mac-address': mac_address})
     else:
-        return jsonify({'error': 'MAC address not found'}), 404
+        return jsonify({'error': 'MAC not found for IP {}'.format(client_ip)}), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
