@@ -89,15 +89,10 @@ def get_mac_with_queue_position_1():
 # Loop every second
 while True:
     mac = get_mac_with_queue_position_1()
-    if mac:
-        if mac != TARGET_MAC:
-            TARGET_MAC = mac
-            print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
-    else:
-        if TARGET_MAC is not None:
-            print("[*] No valid user found. Clearing TARGET_MAC.")
-            TARGET_MAC = None
-    time.sleep(1)
+
+    # Debugging prints
+    print(f"[DEBUG] Fetched MAC: {mac}, Current TARGET_MAC: {TARGET_MAC}")
+    
 #-------------------------------------------------------------------------
     def find_binding(mac_address):
         try:
