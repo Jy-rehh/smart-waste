@@ -97,6 +97,7 @@ def get_mac_with_queue_position_1():
 
 # Loop every second
 while True:
+    print("[*] Running loop...")  # Add a message to confirm the loop is active
     mac = get_mac_with_queue_position_1()  # Check for users with queuePosition == 1
 
     # If a user with queuePosition == 1 is found
