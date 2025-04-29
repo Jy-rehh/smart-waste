@@ -116,23 +116,29 @@
      <script src="/templates/script.js"></script>
      <script>
         fetch('/devices')
-          .then(response => response.json())
-          .then(devices => {
-            const tableBody = document.querySelector('#device-table tbody');
-            devices.forEach(device => {
-              const row = document.createElement('tr');
-              const ipCell = document.createElement('td');
-              ipCell.textContent = device.ipAddress;
-              const macCell = document.createElement('td');
-              macCell.textContent = device.macAddress;
-              row.appendChild(ipCell);
-              row.appendChild(macCell);
-              tableBody.appendChild(row);
+            .then(response => response.json())
+            .then(devices => {
+                if (Array.isArray(devices)) {
+                const tableBody = document.querySelector('#device-table tbody');
+                devices.forEach(device => {
+                    const row = document.createElement('tr');
+                    const ipCell = document.createElement('td');
+                    ipCell.textContent = device.ipAddress;
+                    const macCell = document.createElement('td');
+                    macCell.textContent = device.macAddress;
+                    row.appendChild(ipCell);
+                    row.appendChild(macCell);
+                    tableBody.appendChild(row);
+                });
+                } else {
+                console.error("Devices is not an array:", devices);
+                document.querySelector('#info').textContent = "Error: Unable to fetch connected devices.";
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                document.querySelector('#info').textContent = "Error: Server connection failed.";
             });
-          })
-          .catch(error => {
-            console.error('Error:', error);
-          });
       </script>
       
       <div id="info">Loading...</div>      

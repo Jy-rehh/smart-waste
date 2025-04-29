@@ -36,35 +36,38 @@ async function connectToRouter() {
 connectToRouter(); // connect once on server start
 
 app.get('/devices', async (req, res) => {
-  if (!connection) {
-    return res.status(500).json({ error: 'Not connected to RouterOS' });
-  }
-
   try {
-    const chan = connection.openChannel();
-    chan.write('/ip/arp/print');
+    deviceConnection.connect()
+      .then(([login]) => {
+        console.log("Connected, trying to log in...");
+        return login('admin', '');
+      })
+      .then(conn => {
+        const chan = conn.openChannel();
+        chan.write('/ip/arp/print');
 
-    chan.on('done', (data) => {
-      const devices = MikroNode.parseItems(data);
-      const formattedDevices = devices.map(device => ({
-        ipAddress: device.address,
-        macAddress: device['mac-address']
-      }));
+        chan.on('done', (data) => {
+          const devices = MikroNode.parseItems(data);
+          const formattedDevices = devices.map(device => ({
+            ipAddress: device.address,
+            macAddress: device['mac-address']
+          }));
 
-      res.json(formattedDevices);
-      chan.close();
-    });
-
-    chan.on('trap', (err) => {
-      console.error('Error receiving ARP:', err);
-      res.status(500).json({ error: 'Failed to fetch ARP table' });
-    });
-
+          console.log("Devices found:", formattedDevices);
+          res.json(formattedDevices);
+          conn.close();
+        });
+      })
+      .catch(err => {
+        console.error('RouterOS connection error:', err);
+        res.status(500).json({ error: 'Not connected to RouterOS' });
+      });
   } catch (err) {
-    console.error('Error fetching devices:', err.message);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Unexpected error:', err);
+    res.status(500).send('Internal server error');
   }
 });
+
 // ==================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
