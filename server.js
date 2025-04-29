@@ -157,10 +157,12 @@ function startStoreMacIp() {
   }
 }
 
-function startsWifiManager(){
+let startsWifirProcess = null;
+
+function startsWifiManager() {
   if (!startsWifirProcess) {
-    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
-    const pythonScript = '/home/pi/smart-waste/wifi/wifi_time_manager.py';    // Adjust if needed
+    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';
+    const pythonScript = '/home/pi/smart-waste/wifi/wifi_time_manager.py';
 
     startsWifirProcess = spawn(pythonExecutable, [pythonScript]);
 
@@ -170,6 +172,11 @@ function startsWifiManager(){
 
     startsWifirProcess.stderr.on('data', (data) => {
       console.error(`stderr: ${data}`);
+    });
+
+    startsWifirProcess.on('close', (code) => {
+      console.log(`Child process exited with code ${code}`);
+      startsWifirProcess = null;
     });
   }
 }
