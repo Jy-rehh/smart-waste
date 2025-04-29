@@ -63,6 +63,13 @@ except Exception as e:
 bindings = api.path('ip', 'hotspot', 'ip-binding')
 
 # ------------------- Get TARGET_MAC from queuePosition == 1 -------------------
+# start here
+# dapat ma kuha niya ang queuePosition nga naay value 1 every time, 
+# ang queuePosition mugawas sa db if naay nag click insert bottle
+# ,kung walay queuePosition nga 1 kay wala ray mugawas,
+# basta dapat makita if naay queuePosition = 1, 
+# nya dapat if walay nay queuePosition kay di na makadawat ug WiFiTimeAvailable 
+# ug TotalBottlesDeposited tong mac nga nakuha
 TARGET_MAC = None
 
 def get_mac_with_queue_position_1():
@@ -108,6 +115,7 @@ while True:
 
     time.sleep(1)  # Wait for 1 second before checking again
 
+# kutob ari 
 #-------------------------------------------------------------------------
     def find_binding(mac_address):
         try:
