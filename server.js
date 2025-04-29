@@ -2,7 +2,8 @@ const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
 const { spawn } = require('child_process');
-const MikroNode = require('mikronode');
+const MikroNode = require('mikronode-ng');
+const cors = require('cors');
 const app = express();
 const port = 80;
 
@@ -12,52 +13,42 @@ let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
 //==========================================================================
-// Initialize Firebase Admin
-const serviceAccount = path.join(__dirname, 'firebase-key.json');
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
-const db = admin.firestore();
 
-const deviceConnection = new MikroNode('192.168.50.1');
+app.use(cors());
 
-let connection; // to store the connected session
-
-async function connectToRouter() {
-  try {
-    const [login] = await deviceConnection.connect();
-    connection = await login('admin', ''); // router username and password
-    console.log('Connected to MikroTik RouterOS');
-  } catch (err) {
-    console.error('Error connecting to RouterOS:', err.message);
-  }
-}
-
-connectToRouter(); // connect once on server start
+const HOST = '192.168.50.1'; // Replace with your MikroTik IP
+const USER = 'admin';        // Replace with your username
+const PASS = '';        // Replace with your password
 
 app.get('/devices', async (req, res) => {
+  const device = new MikroNode(HOST);
+  
   try {
-    deviceConnection.connect().then((conn) => {
-      const chan = conn.openChannel();
-      chan.write('/ip/arp/print');  // Directly send the ARP print command
-    
-      chan.on('done', (data) => {
-        const devices = MikroNode.parseItems(data);
-        const formattedDevices = devices.map(device => ({
-          ipAddress: device.address,
-          macAddress: device['mac-address']
-        }));
-        
-        res.json(formattedDevices);
-        conn.close();
-      });
-    }).catch(err => {
-      console.error('Error connecting:', err);
-      res.status(500).send('Failed to connect to RouterOS');
-    });    
+    const connection = await device.connect();
+    const login = await connection.login(USER, PASS);
+
+    const chan = connection.openChannel();
+    chan.write('/ip/arp/print');
+
+    chan.on('done', (data) => {
+      const items = MikroNode.parseItems(data);
+      const devices = items.map(entry => ({
+        ipAddress: entry.address,
+        macAddress: entry['mac-address']
+      }));
+      res.json(devices);
+      connection.close();
+    });
+
+    chan.on('trap', (err) => {
+      console.error('RouterOS Trap:', err);
+      res.status(500).json({ error: 'RouterOS trap error' });
+      connection.close();
+    });
+
   } catch (err) {
-    console.error('Error:', err);
-    res.status(500).send('Internal server error');
+    console.error('Error connecting to RouterOS:', err);
+    res.status(500).json({ error: 'Failed to connect to RouterOS' });
   }
 });
 

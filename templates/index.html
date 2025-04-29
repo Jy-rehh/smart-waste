@@ -116,30 +116,35 @@
      <script src="/templates/script.js"></script>
      <script>
         fetch('/devices')
-            .then(response => response.json())
-            .then(devices => {
-                if (Array.isArray(devices)) {
-                const tableBody = document.querySelector('#device-table tbody');
-                devices.forEach(device => {
-                    const row = document.createElement('tr');
-                    const ipCell = document.createElement('td');
-                    ipCell.textContent = device.ipAddress;
-                    const macCell = document.createElement('td');
-                    macCell.textContent = device.macAddress;
-                    row.appendChild(ipCell);
-                    row.appendChild(macCell);
-                    tableBody.appendChild(row);
-                });
-                } else {
-                console.error("Devices is not an array:", devices);
-                document.querySelector('#info').textContent = "Error: Unable to fetch connected devices.";
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error:', error);
-                document.querySelector('#info').textContent = "Error: Server connection failed.";
-            });
-      </script>
+          .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+          })
+          .then(devices => {
+            if (Array.isArray(devices)) {
+              const tableBody = document.querySelector('#device-table tbody');
+              tableBody.innerHTML = ''; // Clear existing rows
+        
+              devices.forEach(device => {
+                const row = document.createElement('tr');
+                const ipCell = document.createElement('td');
+                ipCell.textContent = device.ipAddress;
+                const macCell = document.createElement('td');
+                macCell.textContent = device.macAddress;
+                row.appendChild(ipCell);
+                row.appendChild(macCell);
+                tableBody.appendChild(row);
+              });
+            } else {
+              console.error("Devices is not an array:", devices);
+              document.querySelector('#info').textContent = "No devices found.";
+            }
+          })
+          .catch(error => {
+            console.error('Fetch error:', error);
+            document.querySelector('#info').textContent = "Error: Could not fetch devices.";
+          });
+        </script>        
       
       <div id="info">Loading...</div>      
     
