@@ -24,6 +24,7 @@ async function getMacAddressFromIp(clientIp) {
               chan.write('/ip/dhcp-server/lease/print');
 
               chan.on('done', (data) => {
+                  console.log('MikroTik response data:', data);  // Debugging: Log data received
                   const leases = MikroNode.parseItems(data);
                   const match = leases.find(lease => lease.address === clientIp);
                   login.close();
@@ -66,10 +67,11 @@ app.get('/connected-info', async (req, res) => {
           `);
       }
   } catch (error) {
-      console.error(error);
+      console.error('Error fetching MAC address from MikroTik:', error);
       res.status(500).send('Error fetching MAC address from MikroTik');
   }
 });
+
 // ==================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
