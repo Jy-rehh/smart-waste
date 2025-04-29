@@ -12,6 +12,7 @@ from lcd import display_message
 
 # ---------------- Firebase ----------------
 import firebase_admin
+from firebase_admin import firestore
 from firebase_admin import credentials, firestore
 
 cred = credentials.Certificate('firebase-key.json')  # <-- PUT YOUR JSON PATH
@@ -89,9 +90,19 @@ def get_mac_with_queue_position_1():
 # Loop every second
 while True:
     mac = get_mac_with_queue_position_1()
-    TARGET_MAC = get_mac_with_queue_position_1()
-    # Debugging prints
-    print(f"[DEBUG] Fetched MAC: {mac}, Current TARGET_MAC: {TARGET_MAC}")
+    if mac:
+        if mac != TARGET_MAC:
+            TARGET_MAC = mac
+            print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
+        else:
+            print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}")
+    else:
+        if TARGET_MAC is not None:
+            print("[*] No valid user found. Clearing TARGET_MAC.")
+            TARGET_MAC = None
+
+    # Wait for 1 second before checking again
+    time.sleep(1)
 
 #-------------------------------------------------------------------------
     def find_binding(mac_address):
