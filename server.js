@@ -2,7 +2,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
 const { spawn } = require('child_process');
-const { RouterOSClient } = require('node-routeros');
+const MikroNode = require('mikronode');
 const app = express();
 const port = 80;
 
@@ -19,29 +19,35 @@ admin.initializeApp({
 });
 const db = admin.firestore();
 
-const router = new RouterOSClient({
-  host: '192.168.50.1',
-  user: 'admin',
-  password: ''
-});
+const deviceConnection = new MikroNode('192.168.50.1');
 
-app.get('/devices', (req, res) => {
-  router.connect()
-    .then(() => router.path('/interface/arp').get())
-    .then((devices) => {
-      const deviceInfo = devices.map(device => ({
-        ipAddress: device.address,
-        macAddress: device.macAddress
-      }));
+app.get('/devices', async (req, res) => {
+  try {
+    deviceConnection.connect().then(([login]) => {
+      return login('admin', '');  // your router username and password
+    }).then(conn => {
+      const chan = conn.openChannel();
+      chan.write('/ip/arp/print');
 
-      res.json(deviceInfo);  // Send device IP and MAC in JSON format
-    })
-    .catch(err => {
-      console.error('Error fetching ARP table:', err);
-      res.status(500).send('Error fetching ARP table');
+      chan.on('done', (data) => {
+        const devices = MikroNode.parseItems(data);
+        const formattedDevices = devices.map(device => ({
+          ipAddress: device.address,
+          macAddress: device['mac-address']
+        }));
+
+        res.json(formattedDevices);
+        conn.close();
+      });
+    }).catch(err => {
+      console.error('Error connecting:', err);
+      res.status(500).send('Failed to connect to RouterOS');
     });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).send('Internal server error');
+  }
 });
-
 // ==================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
