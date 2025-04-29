@@ -157,11 +157,29 @@ function startStoreMacIp() {
   }
 }
 
+function startsWifiManager(){
+  if (!startsWifirProcess) {
+    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
+    const pythonScript = '/home/pi/smart-waste/wifi/wifi_time_manager.py';    // Adjust if needed
+
+    startsWifirProcess = spawn(pythonExecutable, [pythonScript]);
+
+    startsWifirProcess.stdout.on('data', (data) => {
+      console.log(`stdout: ${data}`);
+    });
+
+    startsWifirProcess.stderr.on('data', (data) => {
+      console.error(`stderr: ${data}`);
+    });
+  }
+}
+
 // Start all scripts when the server starts
 function startAllScripts() {
   startBottleDetection();
   startMacIpLogger();
   startStoreMacIp();
+  startsWifiManager();
 }
 
 // Start the server and run all scripts

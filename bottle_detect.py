@@ -5,6 +5,7 @@ import cv2
 from ultralytics import YOLO
 from time import sleep
 import subprocess
+from flask import Flask, request
 
 from servo import move_servo, stop_servo
 from lcd import display_message
@@ -16,6 +17,25 @@ from firebase_admin import credentials, firestore
 cred = credentials.Certificate('firebase-key.json')  # <-- PUT YOUR JSON PATH
 firebase_admin.initialize_app(cred)
 db = firestore.client()
+
+app = Flask(__name__)
+
+@app.route('/set_mac', methods=['POST'])
+def set_mac():
+    global TARGET_MAC
+    data = request.json
+    mac = data.get('macAddress')
+    if mac:
+        update_mac_address(mac)
+        return {'status': 'success', 'macAddress': mac}
+    return {'status': 'error', 'message': 'Missing MAC address'}, 400
+
+# Start Flask in a background thread
+def run_flask():
+    app.run(host='0.0.0.0', port=5000)
+
+threading.Thread(target=run_flask, daemon=True).start()
+
 
 # ---------------- Wi-Fi Time Management ----------------
 from librouteros import connect
@@ -98,51 +118,6 @@ def update_user_by_mac(mac_address, bottles, wifi_time):
             print(f"[!] No user found with MAC address {mac_address}")
     except Exception as e:
         print(f"[!] Failed to update user by MAC: {e}")
-
-# Thread to manage WiFi time
-def wifi_time_manager(mac_address):
-    global WiFiTimeAvailable
-
-    current_binding = None
-
-    while True:
-        try:
-            users_ref = db.collection('Users Collection')
-            query = users_ref.where('macAddress', '==', mac_address).limit(1)
-            results = query.get()
-
-            if results:
-                data = results[0].to_dict()
-                WiFiTimeAvailable = data.get('WiFiTimeAvailable', 0)
-            else:
-                print(f"[!] No user found with MAC {mac_address}")
-        except Exception as e:
-            print(f"[!] Failed to fetch WiFiTimeAvailable: {e}")
-
-        if WiFiTimeAvailable > 0:
-            if current_binding != 'bypassed':
-                add_or_update_binding(mac_address, 'bypassed')
-                current_binding = 'bypassed'
-
-            WiFiTimeAvailable -= 1
-
-            try:
-                user_ref = db.collection('Users Collection').document(results[0].id)
-                user_ref.update({'WiFiTimeAvailable': WiFiTimeAvailable})
-            except Exception as e:
-                print(f"[!] Failed to update WiFiTimeAvailable: {e}")
-
-            time.sleep(1)
-
-        else:
-            if current_binding != 'regular':
-                add_or_update_binding(mac_address, 'regular')
-                current_binding = 'regular'
-
-            time.sleep(5)
-
-# Start the WiFi manager thread
-threading.Thread(target=wifi_time_manager, args=(TARGET_MAC,), daemon=True).start()
 
 # Load your custom bottle-detection model
 bottle_model = YOLO('detect/train11/weights/best.pt')
