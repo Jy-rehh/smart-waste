@@ -62,10 +62,14 @@ def get_mac_from_ip(client_ip):
         return f'Router error: {e}'
 
 @app.route('/get-mac', methods=['GET'])
-@app.route('/get-mac', methods=['GET'])
 def get_mac():
+    # Get IP address from the request headers
     client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    
+    # Print out the IP for debugging
     print("Detected IP from client:", client_ip)
+
+    # Just return the IP back to the client for testing purposes
     return jsonify({'your_ip': client_ip})
 
     mac_address = get_mac_from_ip(client_ip)
