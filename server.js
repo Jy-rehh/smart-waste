@@ -19,27 +19,24 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-app.get('/devices', (req, res) => {
-  const devicesRef = db.collection('Users Collection');
+app.get('/my-device', (req, res) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-  devicesRef.where('status', '==', 'active').get()
-    .then(snapshot => {
-      const devices = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        devices.push({
-          ipAddress: data.ipAddress,
-          macAddress: data.macAddress
-        });
-      });
-      res.json(devices);
-    })
-    .catch(error => {
-      console.error("Error getting connected devices: ", error);
-      res.status(500).send("Error getting connected devices.");
+  const { exec } = require('child_process');
+  exec(`arp -n ${ip}`, (err, stdout, stderr) => {
+    if (err || stderr) {
+      return res.status(500).json({ error: 'Failed to get MAC address' });
+    }
+
+    const match = stdout.match(/(([a-f0-9]{2}[:-]){5}[a-f0-9]{2})/i);
+    const mac = match ? match[0] : 'MAC not found';
+
+    res.json({
+      ipAddress: ip,
+      macAddress: mac
     });
+  });
 });
-
 
 // ==================================================================
 
