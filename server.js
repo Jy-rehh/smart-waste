@@ -13,7 +13,6 @@ let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
 //==========================================================================
-const MikroNode = require('mikronode-ng');  // you already have this
 
 // Function to get MAC address from MikroTik given the client IP
 async function getMacAddressFromIp(clientIp) {
