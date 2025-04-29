@@ -35,17 +35,6 @@
             }
         }
     </script>
-    <p>IP Address: <span id="ip-display"></span></p>
-    <p>MAC Address: <span id="mac-display"></span></p>
-
-    <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const ip  = urlParams.get('ip');
-    const mac = urlParams.get('mac');
-
-    document.getElementById("ip-display").textContent = ip || 'Not found';
-    document.getElementById("mac-display").textContent = mac || 'Not found';
-    </script>
 
     <div class="container">
         <div class="status-card">
@@ -53,7 +42,7 @@
                 <span class="icon">&#128246;</span>
                 <span class="disconnected">Disconnected</span>
             </div>
-            <p class="ip">IP: <span id="ip-display">Not found</span> | MAC: <span id="mac-display">Not found</span></p>
+            <p class="ip">IP: <span id="ip-display-status">Not found</span> | MAC: <span id="mac-display-status">Not found</span></p>
             <p class="remaining-time">Remaining Time:</p>
             <p class="time">- hr. - min. - sec</p>
             <button id="openModal" class="btn green">
@@ -112,14 +101,15 @@
      <!-- JavaScript -->
      <script src="/templates/script.js"></script>
      <script>
-         window.addEventListener('DOMContentLoaded', () => {
-             const urlParams = new URLSearchParams(window.location.search);
-             const ip  = urlParams.get('ip');
-             const mac = urlParams.get('mac');
-     
-             document.getElementById("ip-display").textContent = ip || 'Not found';
-             document.getElementById("mac-display").textContent = mac || 'Not found';
-         });
-     </script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ip  = urlParams.get('ip') || 'Not found';
+            const mac = urlParams.get('mac') || 'Not found';
+        
+            document.getElementById("ip-display-main").textContent = ip;
+            document.getElementById("ip-display-status").textContent = ip;
+            document.getElementById("mac-display-status").textContent = mac;
+        });
+        </script>        
 </body>
 </html>
