@@ -15,61 +15,67 @@ let storeMacIpProcess = null;
 
 // ===================================================================
 async function getMacAddressFromIp(clientIp) {
-  return new Promise((resolve, reject) => {
-      const device = new MikroNode('192.168.50.1'); // MikroTik IP address
+    return new Promise((resolve, reject) => {
+        const device = new MikroNode('192.168.50.1'); // MikroTik IP address
 
-      device.connect('admin', '') // Replace with your MikroTik username and password
-          .then(([login]) => {
-              const chan = login.openChannel('leases');
-              chan.write('/ip/dhcp-server/lease/print');
+        device.connect('admin', '') // MikroTik credentials (adjust if needed)
+            .then(([login]) => {
+                console.log('Connected to MikroTik');
 
-              chan.on('done', (data) => {
-                  console.log('MikroTik response data:', data);  // Debugging: Log data received
-                  const leases = MikroNode.parseItems(data);
-                  const match = leases.find(lease => lease.address === clientIp);
-                  login.close();
-                  if (match) {
-                      resolve(match['mac-address']);
-                  } else {
-                      resolve(null);
-                  }
-              });
+                const chan = login.openChannel('leases');
+                chan.write('/interface/wireless/registration-table/print');  // Use this for wireless devices
 
-              chan.on('error', (err) => {
-                  login.close();
-                  reject(err);
-              });
-          })
-          .catch((err) => {
-              reject(err);
-          });
-  });
+                chan.on('done', (data) => {
+                    console.log('MikroTik response data:', data);  // Debug the raw response
+                    const items = MikroNode.parseItems(data);
+                    const match = items.find(item => item.address === clientIp);
+                    login.close();
+
+                    if (match) {
+                        resolve(match['mac-address']);
+                    } else {
+                        resolve(null);
+                    }
+                });
+
+                chan.on('error', (err) => {
+                    console.error('Channel error:', err);  // Log channel error
+                    login.close();
+                    reject(err);
+                });
+            })
+            .catch((err) => {
+                console.error('Connection error:', err);  // Log connection error
+                reject(err);
+            });
+    });
 }
 
+// The endpoint remains the same
 app.get('/connected-info', async (req, res) => {
-  const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  const cleanedIp = clientIp.replace('::ffff:', '');
+    const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const cleanedIp = clientIp.replace('::ffff:', '');
 
-  try {
-      const macAddress = await getMacAddressFromIp(cleanedIp);
+    try {
+        const macAddress = await getMacAddressFromIp(cleanedIp);
 
-      if (macAddress) {
-          res.send(`
-              <h1>Device Info</h1>
-              <p><strong>IP:</strong> ${cleanedIp}</p>
-              <p><strong>MAC:</strong> ${macAddress}</p>
-          `);
-      } else {
-          res.send(`
-              <h1>Device Info</h1>
-              <p><strong>IP:</strong> ${cleanedIp}</p>
-              <p><strong>MAC:</strong> Not found in MikroTik DHCP leases</p>
-          `);
-      }
-  } catch (error) {
-      console.error('Error fetching MAC address from MikroTik:', error);
-      res.status(500).send('Error fetching MAC address from MikroTik');
-  }
+        if (macAddress) {
+            res.send(`
+                <h1>Device Info</h1>
+                <p><strong>IP:</strong> ${cleanedIp}</p>
+                <p><strong>MAC:</strong> ${macAddress}</p>
+            `);
+        } else {
+            res.send(`
+                <h1>Device Info</h1>
+                <p><strong>IP:</strong> ${cleanedIp}</p>
+                <p><strong>MAC:</strong> Not found in MikroTik Wireless Registration Table</p>
+            `);
+        }
+    } catch (error) {
+        console.error('Error fetching MAC address from MikroTik:', error);
+        res.status(500).send('Error fetching MAC address from MikroTik');
+    }
 });
 
 // ==================================================================
