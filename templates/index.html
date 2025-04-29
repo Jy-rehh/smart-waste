@@ -36,6 +36,19 @@
             }
         }
     </script>
+    <h1>Connected Devices</h1>
+    <table id="device-table">
+      <thead>
+        <tr>
+          <th>IP Address</th>
+          <th>MAC Address</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    <p>IP Address: <span id="ip-display"></span></p>
+    <p>MAC Address: <span id="mac-display"></span></p>
 
     <script>
     const urlParams = new URLSearchParams(window.location.search);
