@@ -16,7 +16,7 @@ let storeMacIpProcess = null;
 // Store the MAC address when the device first interacts
 async function storeMacAddressInFirebase(userId, macAddress) {
   const db = admin.firestore();
-  const userRef = db.collection('users').doc(userId);  // Assuming you have a 'users' collection
+  const userRef = db.collection('Users COllection').doc(userId);  // Assuming you have a 'users' collection
 
   await userRef.set({
     macAddress: macAddress,
@@ -35,7 +35,7 @@ app.get('/connected-info', async (req, res) => {
 
   try {
     const db = admin.firestore();
-    const userRef = db.collection('users').doc('userId');  // Get the current user's document by userId
+    const userRef = db.collection('Users COllection').doc('userId');  // Get the current user's document by userId
     
     const userDoc = await userRef.get();
     
