@@ -36,18 +36,32 @@
         }
     </script>
 
-    <div class="container">
-        <div class="status-card">
-            <div class="status">
-                <span class="icon">&#128246;</span>
-                <span class="disconnected">Disconnected</span>
-            </div>
-            <p class="ip">IP: <span id="ip-display-status">Not found</span> | MAC: <span id="mac-display-status">Not found</span></p>
-            <p class="remaining-time">Remaining Time:</p>
-            <p class="time">- hr. - min. - sec</p>
-            <button id="openModal" class="btn green">
-                <i class="fa-solid fa-recycle"></i> Insert Bottles
-            </button>
+<div class="container">
+    <div class="status-card">
+        <div class="status">
+            <span class="icon">
+                <img src="../Designs/no-wifi.png" alt="Network Icon" style="width: 20px; height: 20px;">
+            </span>
+            <span class="disconnected">Disconnected</span>
+        </div>
+        <p class="ip">
+            IP: <span id="ip-display"></span> | MAC: <span id="mac-display"></span>
+          </p>
+
+        <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const ip  = urlParams.get('ip');
+        const mac = urlParams.get('mac');
+
+        document.getElementById("ip-display").textContent = ip || 'Not found';
+        document.getElementById("mac-display").textContent = mac || 'Not found';
+        </script>
+
+        <p class="remaining-time">Remaining Time:</p>
+        <p class="time">- hr. - min. - sec</p>
+        <button id="openModal" class="btn green">
+            <i class="fa-solid fa-recycle"></i> Insert Bottles
+        </button>
         
             <!-- Modal -->
             <div id="insertModal" class="modal">
@@ -56,7 +70,7 @@
                     <h2>Please Insert Bottles</h2>
                     <div class="image-container">
                         <img src="../Designs/image 4.png" alt="Insert Bottle">
-                    </div>
+                    </div>  
                     <p class="status">Waiting for <span class="my-b">60 sec</span></p>
                     <div class="progress-container">
                         <div class="progress-bar" id="progressBar"></div>
@@ -99,17 +113,6 @@
         </button>
 
      <!-- JavaScript -->
-     <script src="/templates/script.js"></script>
-     <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const ip  = urlParams.get('ip') || 'Not found';
-            const mac = urlParams.get('mac') || 'Not found';
-        
-            document.getElementById("ip-display-main").textContent = ip;
-            document.getElementById("ip-display-status").textContent = ip;
-            document.getElementById("mac-display-status").textContent = mac;
-        });
-        </script>        
+     <script src="/templates/script.js"></script>     
 </body>
 </html>
