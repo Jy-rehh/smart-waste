@@ -46,27 +46,6 @@ while True:
                 known_devices[mac] = 'inactive'
                 print(f"[-] {mac} is now INACTIVE")
 
-        # Step 3: Add new devices (optional: only from DHCP leases if needed)
-        dhcp_leases = list(api.path('ip', 'dhcp-server', 'lease'))
-
-        for lease in dhcp_leases:
-            mac = lease.get('mac-address', '')
-            ip = lease.get('address', '')
-
-            if mac and mac not in known_devices:
-                doc_ref = db.collection('Users Collection').document(mac)
-                doc_ref.set({
-                    'UserID': mac,
-                    'macAddress': mac,
-                    'ipAddress': ip,
-                    'WiFiTimeAvailable': 0,
-                    'TotalBottlesDeposited': 0,
-                    'time_remaining': 0,
-                    'status': 'active' if mac in connected_now else 'inactive'
-                })
-                known_devices[mac] = 'active' if mac in connected_now else 'inactive'
-                print(f"[+] Added new device {mac} with status {known_devices[mac]}")
-
     except Exception as e:
         print(f"[!] Error while monitoring devices: {e}")
 

@@ -1,8 +1,6 @@
 const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
-//const MikroNode = require('mikronode-ng');
-const MikroNode = require('mikronode');
 const { spawn } = require('child_process');
 const cors = require('cors');
 const app = express();
@@ -12,42 +10,6 @@ let isDetectionRunning = false;
 let detectionProcess = null;
 let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
-
-// ===================================================================
-const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Your venv python path
-const pythonScript = '/home/pi/smart-waste/testing/testIP.py';
-
-// Run Flask API in the background
-const flaskProcess = spawn(pythonExecutable, [pythonScript], {
-  detached: true,
-  stdio: 'ignore'  // Optional: Ignore stdout and stderr logs
-});
-
-flaskProcess.unref();  // Allow Flask to run in the background
-
-console.log('Flask MAC API server started on port 5000');
-
-// Endpoint to get MAC address from Flask API
-app.get('/get-mac', async (req, res) => {
-  const clientIp = req.ip.replace('::ffff:', '');  // Clean up IPv6 to IPv4 format
-  
-  try {
-      const response = await fetch(`http://localhost:5000/get-mac?ip=${clientIp}`);
-      const data = await response.json();
-      
-      if (data['mac-address']) {
-          res.send(`IP: ${clientIp} - MAC Address: ${data['mac-address']}`);
-      } else {
-          res.send('MAC address not found');
-      }
-  } catch (err) {
-      console.error('Error fetching MAC address:', err);
-      res.status(500).send('Error fetching MAC address from Flask API');
-  }
-});
-
-
-// ==================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
 app.use(express.static(__dirname));
