@@ -5,11 +5,49 @@ const { spawn } = require('child_process');
 const cors = require('cors');
 const app = express();
 const port = 80;
+const db = admin.firestore();
 
 let isDetectionRunning = false;
 let detectionProcess = null;
 let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
+
+//===============================================================================
+// Insert Bottle and Queue Handler
+app.post('/api/insertBottle', async (req, res) => {
+  try {
+    const macAddress = req.body.macAddress;
+    if (!macAddress) {
+      return res.status(400).json({ success: false, message: "MAC address is required." });
+    }
+
+    const queueCollection = db.collection('bottleQueue');
+
+    // Check if user is already in the queue
+    const snapshot = await queueCollection.where('mac', '==', macAddress).get();
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      return res.json({ success: true, queue: doc.data().queue });
+    }
+
+    // Get current queue length
+    const allDocs = await queueCollection.orderBy('queue', 'asc').get();
+    const newQueue = allDocs.size + 1;
+
+    // Add to Firestore
+    await queueCollection.add({
+      mac: macAddress,
+      queue: newQueue,
+      inserted_at: admin.firestore.Timestamp.now()
+    });
+
+    return res.json({ success: true, queue: newQueue });
+  } catch (error) {
+    console.error("Error inserting into queue:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+//===============================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
 app.use(express.static(__dirname));

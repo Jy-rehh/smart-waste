@@ -114,5 +114,40 @@
 
      <!-- JavaScript -->
      <script src="/templates/script.js"></script>     
+     <script>
+        function insertBottle(mac) {
+          fetch('/api/insertBottle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ macAddress: mac })
+          })
+          .then(response => response.json())
+          .then(data => {
+            alert("You are number " + data.queue + " in line.");
+          })
+          .catch(err => {
+            console.error("Queue error:", err);
+          });
+        }
+      
+        // Example usage:
+        // insertBottle("AA:BB:CC:DD:EE:FF");
+      </script>
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const insertButton = document.getElementById("openModal");
+      
+          insertButton.addEventListener("click", () => {
+            const mac = new URLSearchParams(window.location.search).get("mac");
+            if (!mac) {
+              alert("MAC address not found.");
+              return;
+            }
+      
+            insertBottle(mac); // Call your function with the actual MAC address
+          });
+        });
+      </script>
+      
 </body>
 </html>
