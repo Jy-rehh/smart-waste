@@ -36,19 +36,6 @@
             }
         }
     </script>
-    <h1>Connected Devices</h1>
-    <table id="device-table">
-      <thead>
-        <tr>
-          <th>IP Address</th>
-          <th>MAC Address</th>
-        </tr>
-      </thead>
-      <tbody>
-      </tbody>
-    </table>
-    <p>IP Address: <span id="ip-display"></span></p>
-    <p>MAC Address: <span id="mac-display"></span></p>
 
     <script>
     const urlParams = new URLSearchParams(window.location.search);
@@ -121,34 +108,7 @@
             <i class="fa-solid fa-wifi"></i> Wi-Fi and Bottle Rates
         </button>
 
-
-
      <!-- JavaScript -->
      <script src="/templates/script.js"></script>
-     <script>
-        fetch('/devices')
-          .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
-          })
-          .then(device => {
-            if (device.ipAddress && device.macAddress) {
-              // Show the device IP and MAC address in the HTML
-              document.querySelector('#device-info').innerHTML = `
-                <p>IP Address: ${device.ipAddress}</p>
-                <p>MAC Address: ${device.macAddress}</p>
-              `;
-            } else {
-              document.querySelector('#device-info').textContent = "Device not found in ARP table.";
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            document.querySelector('#device-info').textContent = "Error: Could not fetch device information.";
-          });
-      </script>
-      
-      <div id="device-info">Loading...</div>         
-    
 </body>
 </html>
