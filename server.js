@@ -17,56 +17,54 @@ let storeMacIpProcess = null;
 // Function to get MAC address from MikroTik given the client IP
 async function getMacAddressFromIp(clientIp) {
   return new Promise((resolve, reject) => {
-    const device = new MikroNode('192.168.50.1');
-    device.connect('admin', '')
+    const device = new MikroNode('192.168.50.1');  // MikroTik Router IP
+    device.connect('admin', '')  // MikroTik Login (Ensure password is correct)
       .then(([login]) => {
         const chan = login.openChannel('dhcp-lease');
-        chan.write('/ip/dhcp-server/lease/print');
+        chan.write('/ip/dhcp-server/lease/print');  // Send command to get DHCP leases
 
         chan.on('done', (data) => {
-          console.log('MikroTik DHCP Leases:', data);  // Log the data received from MikroTik
-          const leases = MikroNode.parseItems(data);
-          const matchedLease = leases.find(lease => lease.address === clientIp);
+          // Log DHCP leases response for debugging
+          console.log('MikroTik DHCP Leases:', data);
+
+          const leases = MikroNode.parseItems(data);  // Parse the data into items
+          const matchedLease = leases.find(lease => lease.address === clientIp);  // Find lease by IP
 
           if (matchedLease) {
-            resolve(matchedLease['mac-address']);
+            resolve(matchedLease['mac-address']);  // Resolve with MAC address if found
           } else {
-            resolve(null);
+            resolve(null);  // Resolve with null if IP not found
           }
-          login.close();
+          login.close();  // Close login after processing
         });
 
         chan.on('error', (err) => {
-          console.error('Channel error', err);
-          reject(err);
+          console.error('Channel error:', err);
+          reject(err);  // Reject promise if there's an error
           login.close();
         });
       })
       .catch(err => {
-        console.error('Connection error', err);
-        reject(err);
+        console.error('Connection error:', err);
+        reject(err);  // Reject promise if connection fails
       });
   });
 }
 
 // New route to display IP and MAC
 app.get('/connected-info', async (req, res) => {
-  const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const clientIp = req.connection.remoteAddress;  // Get IP directly from the connection
 
   try {
-    console.log('Request received for IP:', clientIp); // Log incoming IP
-
-    const macAddress = await getMacAddressFromIp(clientIp);
+    const macAddress = await getMacAddressFromIp(clientIp);  // Get MAC address using the IP
 
     if (macAddress) {
-      console.log('MAC Address found:', macAddress); // Log the MAC address
       res.send(`
         <h1>Connected Device Info</h1>
         <p><strong>IP Address:</strong> ${clientIp}</p>
         <p><strong>MAC Address:</strong> ${macAddress}</p>
       `);
     } else {
-      console.log('MAC Address not found for IP:', clientIp); // Log when no MAC address is found
       res.send(`
         <h1>Device Info Not Found</h1>
         <p><strong>IP Address:</strong> ${clientIp}</p>
@@ -74,13 +72,9 @@ app.get('/connected-info', async (req, res) => {
       `);
     }
   } catch (error) {
-    console.error('Error fetching MAC address:', error); // Log the error
     res.status(500).send('Error fetching device info.');
   }
 });
-
-const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-console.log('Client IP:', clientIp);
 
 // ==================================================================
 
