@@ -37,15 +37,17 @@
             }
         }
     </script>
-    <h2 class="green-text">Connected Devices</h2>
-    <table border="1" id="deviceTable">
+    <h1>Connected Devices</h1>
+    <table id="device-table">
+      <thead>
         <tr>
-            <th>IP</th>
-            <th>MAC</th>
-            <th>Status</th>
+          <th>IP Address</th>
+          <th>MAC Address</th>
         </tr>
+      </thead>
+      <tbody>
+      </tbody>
     </table>
-    
 
     <div class="container">
         <div class="status-card">
@@ -114,17 +116,23 @@
      <!-- JavaScript -->
      <script src="/templates/script.js"></script>
      <script>
-        fetch('/my-device')
-          .then(res => res.json())
-          .then(data => {
-            document.getElementById('info').innerHTML = `
-              <p>IP Address: ${data.ipAddress}</p>
-              <p>MAC Address: ${data.macAddress}</p>
-            `;
+        fetch('/devices')
+          .then(response => response.json())
+          .then(devices => {
+            const tableBody = document.querySelector('#device-table tbody');
+            devices.forEach(device => {
+              const row = document.createElement('tr');
+              const ipCell = document.createElement('td');
+              ipCell.textContent = device.ipAddress;
+              const macCell = document.createElement('td');
+              macCell.textContent = device.macAddress;
+              row.appendChild(ipCell);
+              row.appendChild(macCell);
+              tableBody.appendChild(row);
+            });
           })
-          .catch(err => {
-            console.error(err);
-            document.getElementById('info').innerText = 'Error retrieving device info.';
+          .catch(error => {
+            console.error('Error:', error);
           });
       </script>
       

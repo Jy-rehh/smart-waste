@@ -2,6 +2,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
 const { spawn } = require('child_process');
+const RouterOS = require('node-routeros');
 const app = express();
 const port = 80;
 
@@ -16,26 +17,29 @@ const serviceAccount = path.join(__dirname, 'firebase-key.json');
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
-
 const db = admin.firestore();
 
-app.get('/my-device', (req, res) => {
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+const router = RouterOS({
+  host: '192.168.50.1',  // IP of your MikroTik router
+  user: 'admin',          // Router username
+  pass: ''        // Router password
+});
 
-  const { exec } = require('child_process');
-  exec(`arp -n ${ip}`, (err, stdout, stderr) => {
-    if (err || stderr) {
-      return res.status(500).json({ error: 'Failed to get MAC address' });
-    }
+app.get('/devices', (req, res) => {
+  router.connect()
+    .then(() => router.path('/interface/arp').get())
+    .then((devices) => {
+      const deviceInfo = devices.map(device => ({
+        ipAddress: device.address,
+        macAddress: device.macAddress
+      }));
 
-    const match = stdout.match(/(([a-f0-9]{2}[:-]){5}[a-f0-9]{2})/i);
-    const mac = match ? match[0] : 'MAC not found';
-
-    res.json({
-      ipAddress: ip,
-      macAddress: mac
+      res.json(deviceInfo);  // Send device IP and MAC in JSON format
+    })
+    .catch(err => {
+      console.error('Error fetching ARP table:', err);
+      res.status(500).send('Error fetching ARP table');
     });
-  });
 });
 
 // ==================================================================
