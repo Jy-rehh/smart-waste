@@ -1,6 +1,7 @@
 const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
+const MikroNode = require('mikronode-ng');
 const { spawn } = require('child_process');
 const cors = require('cors');
 const app = express();
@@ -12,38 +13,51 @@ let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
 //==========================================================================
-const MikroNode = require('mikronode-ng');  // Ensure this is included
+app.use(cors());
 
 // MikroTik connection details
-const HOST = '192.168.50.1'; // Replace with your MikroTik IP
-const USER = 'admin';        // Replace with your username
-const PASS = '';             // Replace with your password
+const HOST = '192.168.50.1';  // Replace with your MikroTik IP
+const USER = 'admin';         // Replace with your MikroTik username
+const PASS = '';              // Replace with your MikroTik password
 
+// Function to get the client's IP address from the request
+function getClientIp(req) {
+  // Try to get the IP address from headers or connection object
+  return req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.socket.remoteAddress || req.connection.socket.remoteAddress;
+}
+
+// Endpoint to fetch device details (IP and MAC)
 app.get('/devices', async (req, res) => {
   const clientIp = getClientIp(req);  // Get the IP address of the client (requester's device)
-  
+  console.log('Client IP:', clientIp); // Debug: log the client IP to ensure it's correct
+
   try {
+    // Connect to MikroTik using MikroNode
     const [conn, resolve] = await MikroNode.connect(HOST, USER, PASS);
     const chan = conn.openChannel('arp');
     
+    // Request the ARP table from MikroTik
     const data = await chan.write('/ip/arp/print');
     const items = MikroNode.parseItems(data);
 
-    // Find the device matching the requester's IP
+    // Find the device matching the requester's IP address in the ARP table
     const device = items.find(entry => entry.address === clientIp);
-
+    
     if (device) {
-      // Return the IP and MAC of the requesting device
+      // If found, return the IP and MAC address of the requesting device
       res.json({
         ipAddress: device.address,
         macAddress: device['mac-address']
       });
     } else {
+      // If not found, return an error message
       res.status(404).json({ error: 'Device not found in ARP table' });
     }
 
+    // Close the connection to MikroTik
     conn.close();
   } catch (err) {
+    // Handle connection errors
     console.error('Error connecting to RouterOS:', err);
     res.status(500).json({ error: 'Failed to connect to RouterOS' });
   }
