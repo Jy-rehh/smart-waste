@@ -91,16 +91,18 @@ def get_mac_with_queue_position_1():
 # Loop every second
 while True:
     mac = get_mac_with_queue_position_1()
+    
+    # If a user with queuePosition == 1 is found
     if mac:
         if mac != TARGET_MAC:
-            TARGET_MAC = mac
+            TARGET_MAC = mac  # Update TARGET_MAC to the user_id (mac)
             print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
         else:
-            print(f"[*] TARGET_MAC remains th   e same: {TARGET_MAC}")
+            print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}")
     else:
         if TARGET_MAC is not None:
             print("[*] No valid user found. Clearing TARGET_MAC.")
-            TARGET_MAC = None
+            TARGET_MAC = None  # Clear TARGET_MAC if no user is found
 
     # Wait for 1 second before checking again
     time.sleep(1)
