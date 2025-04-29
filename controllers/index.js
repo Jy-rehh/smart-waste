@@ -11,7 +11,7 @@ document.getElementById("openModal").addEventListener("click", function () {
         return;
     }
 
-    fetch('http://<YOUR-BACKEND-IP>:<PORT>/start-bottle-session', {
+    fetch('http://192.168.50.252:80/start-bottle-session', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
