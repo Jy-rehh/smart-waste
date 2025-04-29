@@ -12,42 +12,49 @@ let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
 //==========================================================================
-
 app.use(cors());
 
+const HOST = '192.168.50.1'; // Replace with your MikroTik IP
+const USER = 'admin';        // Replace with your username
+const PASS = '';             // Replace with your password
 
-// Endpoint to get devices from MikroTik
-app.get('/devices', (req, res) => {
-  // Start the Python process
-  const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust path if needed
-  const pythonScript = '/home/pi/smart-waste/fetch_devices.py';    // Adjust path to the Python script
+// Function to get the user's IP address
+function getClientIp(req) {
+  let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  return ip.includes('::ffff:') ? ip.split('::ffff:')[1] : ip;
+}
 
-  const pythonProcess = spawn(pythonExecutable, [pythonScript]);
+// Endpoint to return the IP and MAC address of the requester's device
+app.get('/devices', async (req, res) => {
+  const clientIp = getClientIp(req);  // Get the IP address of the client (requester's device)
+  
+  try {
+    const [conn, resolve] = await MikroNode.connect(HOST, USER, PASS);
+    const chan = conn.openChannel('arp');
+    
+    const data = await chan.write('/ip/arp/print');
+    const items = MikroNode.parseItems(data);
 
-  let data = '';
+    // Find the device matching the requester's IP
+    const device = items.find(entry => entry.address === clientIp);
 
-  // Collect data from the Python process
-  pythonProcess.stdout.on('data', (chunk) => {
-    data += chunk;
-  });
-
-  pythonProcess.stderr.on('data', (err) => {
-    console.error('Error: ', err.toString());
-  });
-
-  pythonProcess.on('close', (code) => {
-    if (code === 0) {
-      try {
-        const devices = JSON.parse(data);  // Parse JSON data from Python script
-        res.json(devices);                 // Send the devices data as JSON
-      } catch (error) {
-        res.status(500).json({ error: 'Failed to parse device data' });
-      }
+    if (device) {
+      // Return the IP and MAC of the requesting device
+      res.json({
+        ipAddress: device.address,
+        macAddress: device['mac-address']
+      });
     } else {
-      res.status(500).json({ error: 'Error fetching devices' });
+      res.status(404).json({ error: 'Device not found in ARP table' });
     }
-  });
+
+    conn.close();
+  } catch (err) {
+    console.error('Error connecting to RouterOS:', err);
+    res.status(500).json({ error: 'Failed to connect to RouterOS' });
+  }
 });
+
 // ==================================================================
 
 // Serve static files (CSS, JS, images) from the current directory

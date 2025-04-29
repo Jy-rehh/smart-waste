@@ -120,33 +120,29 @@
             if (!response.ok) throw new Error('Network response was not ok');
             return response.json();
           })
-          .then(devices => {
-            if (Array.isArray(devices)) {
-              const tableBody = document.querySelector('#device-table tbody');
-              tableBody.innerHTML = ''; // Clear existing rows
-        
-              devices.forEach(device => {
-                const row = document.createElement('tr');
-                const ipCell = document.createElement('td');
-                ipCell.textContent = device.ipAddress;
-                const macCell = document.createElement('td');
-                macCell.textContent = device.macAddress;
-                row.appendChild(ipCell);
-                row.appendChild(macCell);
-                tableBody.appendChild(row);
-              });
+          .then(device => {
+            // Check if device data is available
+            if (device && device.ipAddress && device.macAddress) {
+              const ipAddress = device.ipAddress;
+              const macAddress = device.macAddress;
+              
+              // Display the IP and MAC address of the current device
+              document.querySelector('#device-ip').textContent = `IP Address: ${ipAddress}`;
+              document.querySelector('#device-mac').textContent = `MAC Address: ${macAddress}`;
             } else {
-              console.error("Devices is not an array:", devices);
-              document.querySelector('#info').textContent = "No devices found.";
+              console.error("Device data not found:", device);
+              document.querySelector('#info').textContent = "Device not found.";
             }
           })
           .catch(error => {
             console.error('Fetch error:', error);
-            document.querySelector('#info').textContent = "Error: Could not fetch devices.";
+            document.querySelector('#info').textContent = "Error: Could not fetch device information.";
           });
-        </script>        
+      </script>
       
-      <div id="info">Loading...</div>      
+      <div id="info">Loading...</div>
+      <div id="device-ip"></div>
+      <div id="device-mac"></div>         
     
 </body>
 </html>
