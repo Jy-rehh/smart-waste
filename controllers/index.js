@@ -1,28 +1,35 @@
-import { db } from "../config/firebase-config.js";  // Firestore configuration
+// index.js
+import { db } from "../config/firebase-config.js";
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-async function displayUserInfo(macAddress) {
-  try {
-    // Fetch the user's document from Firestore by MAC address
-    const docRef = db.collection('Users Collection').doc(macAddress);
-    const docSnapshot = await docRef.get();
+async function fetchActiveUsers() {
+    const usersCol = collection(db, "Users Collection");
+    const q = query(usersCol, where("status", "==", "active"));
 
-    // Check if the document exists
-    if (docSnapshot.exists) {
-      const userData = docSnapshot.data();
-      const ipAddress = userData.ipAddress || 'Unknown IP';
-      const mac = userData.macAddress || 'Unknown MAC';
-
-      // Update the IP and MAC display
-      const ipElement = document.querySelector('.ip');
-      ipElement.textContent = `IP: ${ipAddress} | MAC: ${mac}`;
-    } else {
-      console.log("No user data found for this MAC address.");
+    try {
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            console.log(`MAC: ${data.macAddress}, IP: ${data.ipAddress}`);
+            updateStatusCard(data.macAddress, data.ipAddress);
+        });
+    } catch (error) {
+        console.error("Error fetching users:", error);
     }
-  } catch (error) {
-    console.error('Error fetching user data:', error);
-  }
 }
 
-// Example call with device's MAC address
-const userMacAddress = "device-mac-address";  // Replace with actual MAC address
-displayUserInfo(userMacAddress);
+function updateStatusCard(mac, ip) {
+    const statusElement = document.querySelector(".status");
+    const ipElement = document.querySelector(".ip");
+    
+    if (mac && ip) {
+        statusElement.innerHTML = `<span class="icon">&#128246;</span> <span class="connected">Connected</span>`;
+        ipElement.textContent = `IP: ${ip} | MAC: ${mac}`;
+    } else {
+        statusElement.innerHTML = `<span class="icon">&#128246;</span> <span class="disconnected">Disconnected</span>`;
+        ipElement.textContent = `IP: | MAC: `;
+    }
+}
+
+// Call it when page loads
+fetchActiveUsers();
