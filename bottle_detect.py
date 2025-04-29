@@ -73,6 +73,7 @@ def get_mac_with_queue_position_1():
 
         if results:
             user_doc = results[0]
+            print(f"[Debug] Retrieved user data: {user_doc.to_dict()}")
             if 'queuePosition' in user_doc.to_dict():
                 user_id = user_doc.get('UserID')
                 if user_id:
@@ -95,7 +96,7 @@ while True:
             TARGET_MAC = mac
             print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
         else:
-            print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}")
+            print(f"[*] TARGET_MAC remains th   e same: {TARGET_MAC}")
     else:
         if TARGET_MAC is not None:
             print("[*] No valid user found. Clearing TARGET_MAC.")
