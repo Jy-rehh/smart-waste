@@ -5,13 +5,20 @@ const { spawn } = require('child_process');
 const cors = require('cors');
 const app = express();
 const port = 80;
-const db = admin.firestore();
+app.use(bodyParser.json());
 
 let isDetectionRunning = false;
 let detectionProcess = null;
 let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
+// ✅ Initialize Firebase
+const serviceAccount = require('./firebase-key.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
 //===============================================================================
   // Insert Bottle and Queue Handler
   app.post('/api/insertBottle', async (req, res) => {
