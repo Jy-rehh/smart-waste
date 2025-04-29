@@ -58,7 +58,6 @@ while True:
                         'WiFiTimeAvailable': 0,
                         'TotalBottlesDeposited': 0,
                         'status': "active",
-                        'time_remaining': 0
                     })
                     known_macs.add(mac)
                     print(f"[+] Added MAC: {mac}, IP: {ip} to Firestore.")

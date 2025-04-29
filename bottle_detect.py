@@ -16,7 +16,9 @@ from firebase_admin import firestore
 from firebase_admin import credentials, firestore
 
 cred = credentials.Certificate('firebase-key.json')  # <-- PUT YOUR JSON PATH
-firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://smart-waste-c39ac-default-rtdb.firebaseio.com/'
+})
 db = firestore.client()
 
 app = Flask(__name__)
@@ -202,20 +204,16 @@ TotalBottlesDeposited = 0
 # Function to update user based on MAC address
 def update_user_by_mac(mac_address, bottles, wifi_time):
     try:
-        users_ref = db.collection('Users Collection')
-        query = users_ref.where('macAddress', '==', mac_address).limit(1)
-        results = query.get()
+        mac_address_sanitized = mac_address.replace(":", "-")  # Optional: Firebase keys cannot contain '. # $ [ ] /'
+        user_ref = db.reference(f'users/{mac_address}')
 
-        if results:
-            user_doc = results[0]
-            user_ref = users_ref.document(user_doc.id)
-            user_ref.update({
-                'TotalBottlesDeposited': bottles,
-                'WiFiTimeAvailable': wifi_time
-            })
-            print(f"[+] Updated user {mac_address} - Bottles: {bottles}, WiFi Time: {wifi_time}")
-        else:
-            print(f"[!] No user found with MAC address {mac_address}")
+        # Update the fields
+        user_ref.update({
+            'TotalBottlesDeposited': bottles,
+            'WiFiTimeAvailable': wifi_time
+        })
+
+        print(f"[+] Updated user {mac_address} - Bottles: {bottles}, WiFi Time: {wifi_time}")
     except Exception as e:
         print(f"[!] Failed to update user by MAC: {e}")
 
