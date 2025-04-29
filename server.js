@@ -22,24 +22,24 @@ const db = admin.firestore();
 app.get('/devices', (req, res) => {
   const devicesRef = db.collection('Users Collection');
 
-  devicesRef.get()
+  devicesRef.where('status', '==', 'connected').get()
     .then(snapshot => {
       const devices = [];
       snapshot.forEach(doc => {
         const data = doc.data();
         devices.push({
           ipAddress: data.ipAddress,
-          macAddress: data.macAddress,
-          status: data.status
+          macAddress: data.macAddress
         });
       });
       res.json(devices);
     })
     .catch(error => {
-      console.error("Error getting devices: ", error);
-      res.status(500).send("Error getting devices.");
+      console.error("Error getting connected devices: ", error);
+      res.status(500).send("Error getting connected devices.");
     });
 });
+
 
 // ==================================================================
 
