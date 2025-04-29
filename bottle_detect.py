@@ -6,7 +6,7 @@ from ultralytics import YOLO
 from time import sleep
 import subprocess
 from flask import Flask, request
-
+from firebase_admin import firestore, db as realtime_db
 from servo import move_servo, stop_servo
 from lcd import display_message
 
@@ -97,7 +97,33 @@ def get_mac_with_queue_position_1():
     except Exception as e:
         print(f"[!] Firestore error: {e}")
     return None
+def sync_firestore_to_realtime():
+    try:
+        firestore_users = db.collection('Users Collection').where('queuePosition', '==', 1).stream()
 
+        for user_doc in firestore_users:
+            user_data = user_doc.to_dict()
+            mac_address = user_data.get('UserID')
+            if not mac_address:
+                continue
+
+            mac_sanitized = mac_address.replace(":", "-")
+            rt_ref = realtime_db.reference(f'users/{mac_sanitized}')
+            rt_user = rt_ref.get()
+
+            # If UserID matches, update the values
+            if rt_user and rt_user.get('UserID') == mac_address:
+                rt_ref.update({
+                    'WiFiTimeAvailable': user_data.get('WiFiTimeAvailable', 0),
+                    'TotalBottlesDeposited': user_data.get('TotalBottlesDeposited', 0)
+                })
+                print(f"[✓] Synced user {mac_address} to Realtime DB.")
+            else:
+                print(f"[!] Realtime DB entry for {mac_address} not found or mismatched.")
+
+    except Exception as e:
+        print(f"[!] Sync failed: {e}")
+        
 # Function to update the TotalBottlesDeposited for the current device with queuePosition == 1
 def update_total_bottles_for_current_user():
     try:
