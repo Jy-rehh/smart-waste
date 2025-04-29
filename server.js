@@ -20,13 +20,13 @@ async function getMacAddressFromIp(clientIp) {
 
       device.connect('admin', '') // Replace with your MikroTik username and password
           .then(([login]) => {
-              const chan = login.openChannel('registration');
-              chan.write('/interface/wireless/registration-table/print');
+              const chan = login.openChannel('leases');
+              chan.write('/ip/dhcp-server/lease/print');
 
               chan.on('done', (data) => {
-                  console.log('MikroTik wireless registration data:', data);  // Debugging: Log data received
-                  const devices = MikroNode.parseItems(data);
-                  const match = devices.find(device => device['ip-address'] === clientIp);
+                  console.log('MikroTik response data:', data);  // Debugging: Log data received
+                  const leases = MikroNode.parseItems(data);
+                  const match = leases.find(lease => lease.address === clientIp);
                   login.close();
                   if (match) {
                       resolve(match['mac-address']);
@@ -63,7 +63,7 @@ app.get('/connected-info', async (req, res) => {
           res.send(`
               <h1>Device Info</h1>
               <p><strong>IP:</strong> ${cleanedIp}</p>
-              <p><strong>MAC:</strong> Not found in Wireless Registration</p>
+              <p><strong>MAC:</strong> Not found in MikroTik DHCP leases</p>
           `);
       }
   } catch (error) {
