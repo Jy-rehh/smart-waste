@@ -2,7 +2,6 @@ const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
 const { spawn } = require('child_process');
-const MikroNode = require('mikronode-ng');
 const cors = require('cors');
 const app = express();
 const port = 80;
@@ -16,31 +15,39 @@ let storeMacIpProcess = null;
 
 app.use(cors());
 
-const HOST = '192.168.50.1'; // Replace with your MikroTik IP
-const USER = 'admin';        // Replace with your username
-const PASS = '';        // Replace with your password
 
-app.get('/devices', async (req, res) => {
-  try {
-    const [conn, resolve] = await MikroNode.connect(HOST, USER, PASS);
-    const chan = conn.openChannel('arp');
+// Endpoint to get devices from MikroTik
+app.get('/devices', (req, res) => {
+  // Start the Python process
+  const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust path if needed
+  const pythonScript = '/home/pi/smart-waste/fetch_devices.py';    // Adjust path to the Python script
 
-    const data = await chan.write('/ip/arp/print');
-    const items = MikroNode.parseItems(data);
+  const pythonProcess = spawn(pythonExecutable, [pythonScript]);
 
-    const devices = items.map(entry => ({
-      ipAddress: entry.address,
-      macAddress: entry['mac-address']
-    }));
+  let data = '';
 
-    res.json(devices);
-    conn.close();
-  } catch (err) {
-    console.error('Error connecting to RouterOS:', err);
-    res.status(500).json({ error: 'Failed to connect to RouterOS' });
-  }
+  // Collect data from the Python process
+  pythonProcess.stdout.on('data', (chunk) => {
+    data += chunk;
+  });
+
+  pythonProcess.stderr.on('data', (err) => {
+    console.error('Error: ', err.toString());
+  });
+
+  pythonProcess.on('close', (code) => {
+    if (code === 0) {
+      try {
+        const devices = JSON.parse(data);  // Parse JSON data from Python script
+        res.json(devices);                 // Send the devices data as JSON
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to parse device data' });
+      }
+    } else {
+      res.status(500).json({ error: 'Error fetching devices' });
+    }
+  });
 });
-
 // ==================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
