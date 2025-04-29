@@ -90,22 +90,23 @@ def get_mac_with_queue_position_1():
 
 # Loop every second
 while True:
-    mac = get_mac_with_queue_position_1()
-    
+    mac = get_mac_with_queue_position_1()  # Check for users with queuePosition == 1
+
     # If a user with queuePosition == 1 is found
     if mac:
+        # Only update TARGET_MAC if it's different
         if mac != TARGET_MAC:
-            TARGET_MAC = mac  # Update TARGET_MAC to the user_id (mac)
+            TARGET_MAC = mac
             print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
         else:
             print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}")
     else:
+        # If no user is found, reset TARGET_MAC to None
         if TARGET_MAC is not None:
             print("[*] No valid user found. Clearing TARGET_MAC.")
-            TARGET_MAC = None  # Clear TARGET_MAC if no user is found
+            TARGET_MAC = None  # Clear TARGET_MAC if no user found
 
-    # Wait for 1 second before checking again
-    time.sleep(1)
+    time.sleep(1)  # Wait for 1 second before checking again
 
 #-------------------------------------------------------------------------
     def find_binding(mac_address):
