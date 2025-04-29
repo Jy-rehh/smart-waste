@@ -205,7 +205,7 @@ TotalBottlesDeposited = 0
 def update_user_by_mac(mac_address, bottles, wifi_time):
     try:
         mac_address_sanitized = mac_address.replace(":", "-")  # Optional: Firebase keys cannot contain '. # $ [ ] /'
-        user_ref = db.reference(f'users/{mac_address}')
+        user_ref = db.reference(f'users/{mac_address_sanitized}')
 
         # Update the fields
         user_ref.update({
