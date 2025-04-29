@@ -38,30 +38,27 @@ connectToRouter(); // connect once on server start
 app.get('/devices', async (req, res) => {
   try {
     deviceConnection.connect()
-      .then(([login]) => {
-        console.log("Connected, trying to log in...");
-        return login('admin', '');
-      })
-      .then(conn => {
-        const chan = conn.openChannel();
-        chan.write('/ip/arp/print');
+    .then(([login]) => {
+      return login('admin', '');  // Use the correct login credentials
+    })
+    .then(conn => {
+      const chan = conn.openChannel();
+      chan.write('/ip/arp/print');
+      chan.on('done', (data) => {
+        const devices = MikroNode.parseItems(data);
+        const formattedDevices = devices.map(device => ({
+          ipAddress: device.address,
+          macAddress: device['mac-address']
+        }));
 
-        chan.on('done', (data) => {
-          const devices = MikroNode.parseItems(data);
-          const formattedDevices = devices.map(device => ({
-            ipAddress: device.address,
-            macAddress: device['mac-address']
-          }));
-
-          console.log("Devices found:", formattedDevices);
-          res.json(formattedDevices);
-          conn.close();
-        });
-      })
-      .catch(err => {
-        console.error('RouterOS connection error:', err);
-        res.status(500).json({ error: 'Not connected to RouterOS' });
+        res.json(formattedDevices);
+        conn.close();
       });
+    })
+    .catch(err => {
+      console.error('Error connecting to RouterOS:', err);  // Log the error
+      res.status(500).send('Failed to connect to RouterOS');
+    });
   } catch (err) {
     console.error('Unexpected error:', err);
     res.status(500).send('Internal server error');
