@@ -58,8 +58,6 @@ def add_or_update_binding(mac_address, binding_type):
 
 # ---------------- Countdown Loop ----------------
 def manage_time():
-    current_binding = None
-
     while True:
         try:
             users_ref = db.collection('Users Collection')
@@ -70,23 +68,21 @@ def manage_time():
                 mac = user_data.get('macAddress', '').upper()
                 time_left = user_data.get('WiFiTimeAvailable', 0)
 
-                if mac and time_left > 0:
-                    new_time = time_left - 1
-                    users_ref.document(user.id).update({'WiFiTimeAvailable': new_time})
-                    print(f"[↓] {mac} - WiFiTimeAvailable: {new_time}")
+                if mac:
+                    if time_left > 0:
+                        # Update the WiFi time for this user
+                        new_time = time_left - 1
+                        users_ref.document(user.id).update({'WiFiTimeAvailable': new_time})
+                        print(f"[↓] {mac} - WiFiTimeAvailable: {new_time}")
 
-                    if current_binding != 'bypassed':
+                        # Set the binding to 'bypassed' if it's not already
                         add_or_update_binding(mac, 'bypassed')
-                        current_binding = 'bypassed'
-                else:
-                    if mac and current_binding != 'regular':
+                    else:
+                        # If time is 0, change to 'regular' status
                         add_or_update_binding(mac, 'regular')
-                        current_binding = 'regular'
+                        print(f"[↑] {mac} - WiFiTimeAvailable is 0, set to 'regular' status.")
 
         except Exception as e:
             print(f"[!] Error managing time: {e}")
 
         time.sleep(1)
-
-if __name__ == "__main__":
-    manage_time()

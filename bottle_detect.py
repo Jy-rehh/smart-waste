@@ -72,11 +72,14 @@ def get_mac_with_queue_position_1():
 
         if results:
             user_doc = results[0]
-            user_id = user_doc.get('UserID')
-            if user_id:
-                return user_id
+            if 'queuePosition' in user_doc.to_dict():
+                user_id = user_doc.get('UserID')
+                if user_id:
+                    return user_id
+                else:
+                    print("[!] User with queuePosition 1 has no UserID.")
             else:
-                print("[!] Found user with queuePosition 1 but no UserID.")
+                print("[!] queuePosition field is missing in the document.")
         else:
             print("[!] No user found with queuePosition 1.")
     except Exception as e:
@@ -91,9 +94,10 @@ while True:
             TARGET_MAC = mac
             print(f"[✔] TARGET_MAC updated: {TARGET_MAC}")
     else:
-        print("[*] Waiting for a user with queuePosition 1...")
+        if TARGET_MAC is not None:
+            print("[*] No valid user found. Clearing TARGET_MAC.")
+            TARGET_MAC = None
     time.sleep(1)
-
 #-------------------------------------------------------------------------
     def find_binding(mac_address):
         try:
