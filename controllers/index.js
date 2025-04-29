@@ -74,4 +74,23 @@ async function getCurrentMacWithQueueOne() {
     if (mac) {
       await finishSession(mac);
     }
-  });
+    
+    // 🔽 Fetch time_remaining from Firestore (you can change this endpoint)
+try {
+    const mac = urlParams.get('mac'); // Replace with actual MAC address (e.g., from URL params or elsewhere)
+
+    const res = await fetch(`/api/get-time-remaining?mac=${mac}`);
+    const data = await res.json();
+
+    if (res.ok && data.time_remaining) {
+        // 🔁 Redirect to index.html with time_remaining and mac in URL
+        window.location.href = `index.html?time=${data.time_remaining}&mac=${mac}`;
+    } else {
+        alert("Failed to get time remaining.");
+    }
+} catch (err) {
+    console.error("Error fetching time remaining:", err);
+    alert("An error occurred while fetching the time remaining.");
+}
+});
+  

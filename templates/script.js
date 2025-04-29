@@ -3,6 +3,7 @@ const insertModal = document.getElementById("insertModal");
 const openInsertModalBtn = document.getElementById("openModal");
 const closeInsertModalBtn = insertModal.querySelector(".close");
 const cancelInsertBtn = insertModal.querySelector(".action-cancel");
+const doneInsertBtn = insertModal.querySelector(".action-done");
 const timerElement = document.querySelector(".my-b");
 const spinner = document.querySelector(".progress-container");
 
@@ -63,6 +64,37 @@ function startCountdown(durationInSeconds) {
     }, 1000);
 }
 
+// Fetch time_remaining from Firestore and redirect to index.html
+async function fetchTimeRemainingAndRedirect(mac) {
+    try {
+        const res = await fetch(`/api/get-time-remaining?mac=${mac}`);
+        const data = await res.json();
+
+        if (res.ok && data.time_remaining) {
+            // Redirect to index.html with time_remaining in URL
+            window.location.href = `index.html?time=${data.time_remaining}&mac=${mac}`;
+        } else {
+            alert("Failed to get time remaining.");
+        }
+    } catch (err) {
+        console.error("Error fetching time remaining:", err);
+        alert("An error occurred while fetching the time remaining.");
+    }
+}
+
+// Handle cancel button click
+cancelInsertBtn.addEventListener("click", () => {
+    insertModal.style.display = "none"; // Close modal on cancel
+    clearInterval(countdown); // Stop the countdown
+});
+
+// Handle done button click
+doneInsertBtn.addEventListener("click", async () => {
+    const mac = "AA:BB:CC:DD:EE:FF"; // Replace with actual MAC address (e.g., from URL params or elsewhere)
+    
+    // Fetch time remaining and redirect to index.html
+    await fetchTimeRemainingAndRedirect(mac);
+});
 
 
 // Wi-Fi Rates Modal

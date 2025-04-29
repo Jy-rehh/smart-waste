@@ -119,7 +119,9 @@ body::before {
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease-in-out;
+    box-sizing: border-box;
 }
+
 .btn i {
     margin-right: 8px; /* Adds space between icon and text */
 }
@@ -174,20 +176,19 @@ body::before {
     }
 }
 
-/* Responsive Design */
-@media (max-width: 480px) {
+/* Responsive: Tablets and smaller */
+@media (max-width: 768px) {
     .btn {
-        font-size: 14px;
+        font-size: 15px;
         padding: 10px;
     }
 }
 
-@media (max-width: 768px) {
+/* Responsive: Phones */
+@media (max-width: 480px) {
     .btn {
-        width: 90%; /* Make buttons take up more space on smaller screens */
-        max-width: 200px; /* Prevent them from getting too large */
-        font-size: 14px; /* Reduce font size for better fit */
-        padding: 8px 12px; /* Adjust padding to maintain proportion */
+        font-size: 14px;
+        padding: 8px;
     }
 }
 
