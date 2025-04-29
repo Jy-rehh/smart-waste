@@ -21,31 +21,48 @@ const db = admin.firestore();
 
 const deviceConnection = new MikroNode('192.168.50.1');
 
-app.get('/devices', async (req, res) => {
+let connection; // to store the connected session
+
+async function connectToRouter() {
   try {
-    deviceConnection.connect().then(([login]) => {
-      return login('admin', '');  // your router username and password
-    }).then(conn => {
-      const chan = conn.openChannel();
-      chan.write('/ip/arp/print');
-
-      chan.on('done', (data) => {
-        const devices = MikroNode.parseItems(data);
-        const formattedDevices = devices.map(device => ({
-          ipAddress: device.address,
-          macAddress: device['mac-address']
-        }));
-
-        res.json(formattedDevices);
-        conn.close();
-      });
-    }).catch(err => {
-      console.error('Error connecting:', err);
-      res.status(500).send('Failed to connect to RouterOS');
-    });
+    const [login] = await deviceConnection.connect();
+    connection = await login('admin', ''); // router username and password
+    console.log('Connected to MikroTik RouterOS');
   } catch (err) {
-    console.error('Error:', err);
-    res.status(500).send('Internal server error');
+    console.error('Error connecting to RouterOS:', err.message);
+  }
+}
+
+connectToRouter(); // connect once on server start
+
+app.get('/devices', async (req, res) => {
+  if (!connection) {
+    return res.status(500).json({ error: 'Not connected to RouterOS' });
+  }
+
+  try {
+    const chan = connection.openChannel();
+    chan.write('/ip/arp/print');
+
+    chan.on('done', (data) => {
+      const devices = MikroNode.parseItems(data);
+      const formattedDevices = devices.map(device => ({
+        ipAddress: device.address,
+        macAddress: device['mac-address']
+      }));
+
+      res.json(formattedDevices);
+      chan.close();
+    });
+
+    chan.on('trap', (err) => {
+      console.error('Error receiving ARP:', err);
+      res.status(500).json({ error: 'Failed to fetch ARP table' });
+    });
+
+  } catch (err) {
+    console.error('Error fetching devices:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 // ==================================================================
