@@ -20,19 +20,21 @@ db = firestore.client()
 
 app = Flask(__name__)
 
-@app.route('/set_mac', methods=['POST'])
-def set_mac():
-    global TARGET_MAC
+@app.route('/start-bottle-session', methods=['POST'])
+def start_bottle_session():
     data = request.json
-    mac = data.get('macAddress')
-    if mac:
-        update_mac_address(mac)
-        return {'status': 'success', 'macAddress': mac}
-    return {'status': 'error', 'message': 'Missing MAC address'}, 400
+    mac = data.get('mac')
+    ip = data.get('ip')
+
+    if mac and ip:
+        print(f"[✔] Session started with MAC: {mac}, IP: {ip}")
+        return {'status': 'ok'}
+    
+    return {'status': 'error', 'message': 'Missing mac or ip'}, 400
 
 # Start Flask in a background thread
 def run_flask():
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=80)
 
 threading.Thread(target=run_flask, daemon=True).start()
 
