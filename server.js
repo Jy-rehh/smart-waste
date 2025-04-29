@@ -196,26 +196,34 @@ function startStoreMacIp() {
   }
 }
 
-let startsWifirProcess = null;
+let startsWifiProcess = null;
 
 function startsWifiManager() {
-  if (!startsWifirProcess) {
-    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';
-    const pythonScript = '/home/pi/smart-waste/wifi/wifi_time_manager.py';
+  if (!startsWifiProcess) {
+    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Path to python executable in your virtual environment
+    const pythonScript = '/home/pi/smart-waste/wifi/wifi_time_manager.py';  // Path to your Python script
 
-    startsWifirProcess = spawn(pythonExecutable, [pythonScript]);
+    startsWifiProcess = spawn(pythonExecutable, [pythonScript]);
 
-    startsWifirProcess.stdout.on('data', (data) => {
-      console.log(`stdout: ${data}`);
+    // Capture stdout (output from the Python script)
+    startsWifiProcess.stdout.on('data', (data) => {
+      console.log(`stdout: ${data.toString()}`);  // Convert buffer data to string
     });
 
-    startsWifirProcess.stderr.on('data', (data) => {
-      console.error(`stderr: ${data}`);
+    // Capture stderr (errors from the Python script)
+    startsWifiProcess.stderr.on('data', (data) => {
+      console.error(`stderr: ${data.toString()}`);
     });
 
-    startsWifirProcess.on('close', (code) => {
+    // Handle the Python process closing
+    startsWifiProcess.on('close', (code) => {
       console.log(`Child process exited with code ${code}`);
-      startsWifirProcess = null;
+      startsWifiProcess = null;  // Reset process tracker
+    });
+
+    // Handle process errors (e.g., if the Python script crashes)
+    startsWifiProcess.on('error', (err) => {
+      console.error(`Failed to start Python process: ${err.message}`);
     });
   }
 }
