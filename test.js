@@ -7,8 +7,6 @@ const cors = require('cors');
 const app = express();
 const port = 80;
 
-const MikroNode = require('mikronode-ng');
-
 const device = new MikroNode('192.168.50.1');
 device.connect('admin', '1234')  // Replace with correct password
     .then(([login]) => {
