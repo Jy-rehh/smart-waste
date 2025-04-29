@@ -47,13 +47,9 @@ ROUTER_HOST = '192.168.50.1'
 ROUTER_USERNAME = 'admin'
 ROUTER_PASSWORD = ''
 #TARGET_MAC = 'A2:DE:BF:8C:50:87'  # <<< Target device MAC address
-TARGET_MAC = None
+#TARGET_MAC = None
 
-# Function to update the MAC address dynamically based on user input
-def update_mac_address(mac_address):
-    global TARGET_MAC
-    TARGET_MAC = mac_address
-    print(f"MAC Address Updated to: {TARGET_MAC}")
+# kung ang iyang queuePosition gikab sa db kay 1, ibutang ari ang TARGET_MAC
 
 # Connect to MikroTik
 try:
@@ -64,6 +60,32 @@ except Exception as e:
     exit()
 
 bindings = api.path('ip', 'hotspot', 'ip-binding')
+
+# ------------------- Get TARGET_MAC from queuePosition == 1 -------------------
+def assign_target_mac_from_queue():
+    try:
+        users_ref = db.collection('Users Collection')
+        query = users_ref.where('queuePosition', '==', 1).limit(1)
+        results = query.get()
+
+        if results:
+            user_doc = results[0]
+            mac_address = user_doc.get('macAddress')
+            if mac_address:
+                print(f"[✔] Found MAC Address: {mac_address}")
+                return mac_address
+            else:
+                print("[!] User found but has no macAddress field.")
+        else:
+            print("[!] No user with queuePosition == 1")
+    except Exception as e:
+        print(f"[!] Error while assigning TARGET_MAC: {e}")
+    return None
+
+
+# Call the function once during startup
+TARGET_MAC = assign_target_mac_from_queue()
+
 
 def find_binding(mac_address):
     try:

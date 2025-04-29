@@ -89,6 +89,26 @@ app.post('/finish-bottle-session', async (req, res) => {
   await batch.commit();
   res.json({ message: 'User removed and queue updated' });
 });
+/**
+ * Get the MAC address of the user at queue position 1
+ */
+app.get('/api/get-queue-position-one', async (req, res) => {
+  try {
+    const usersRef = db.collection('Users Collection');
+    const snapshot = await usersRef.where('queuePosition', '==', 1).limit(1).get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({ error: 'No user with queuePosition 1' });
+    }
+
+    const user = snapshot.docs[0].data();
+    res.json({ mac: user.UserID });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 //===============================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
@@ -97,24 +117,6 @@ app.use(express.static(__dirname));
 // Serve HTML from the templates folder
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'templates', 'index.html'));
-});
-
-// Endpoint to stop bottle detection
-app.get('/stop-detection', (req, res) => {
-  if (isDetectionRunning && detectionProcess) {
-    // Stop the Python process (detection)
-    detectionProcess.kill('SIGTERM'); // Sends a termination signal to the process
-
-    detectionProcess.on('close', (code) => {
-      console.log(`Python process terminated with code ${code}`);
-    });
-
-    isDetectionRunning = false; // Update the detection status
-    detectionProcess = null;
-    res.json({ success: true, message: 'Detection stopped.' });
-  } else {
-    res.json({ success: false, message: 'Detection is not running.' });
-  }
 });
 
 // Function to start the bottle detection process
