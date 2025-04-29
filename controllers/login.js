@@ -2,6 +2,8 @@ import { auth, db } from "../config/firebase-config.js";
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
+const urlParams = new URLSearchParams(window.location.search);
+
 document.getElementById("login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
 

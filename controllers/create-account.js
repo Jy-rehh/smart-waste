@@ -3,6 +3,8 @@ import { auth, db } from "../config/firebase-config.js";
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
+const urlParams = new URLSearchParams(window.location.search);
+
 // Wait until the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("create-account-btn").addEventListener("click", async () => {
