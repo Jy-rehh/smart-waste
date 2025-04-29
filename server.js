@@ -19,39 +19,76 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-app.use(bodyParser.json());
+app.use(express.json());
+app.use(cors());
 //===============================================================================
-  // Insert Bottle and Queue Handler
-  app.post('/api/insertBottle', async (req, res) => {
-    try {
-      const macAddress = req.body.macAddress;
-      if (!macAddress) {
-        return res.status(400).json({ success: false, message: "MAC address is required." });
-      }
-  
-      const queueCollection = db.collection('bottleQueue');
-  
-      const snapshot = await queueCollection.where('mac', '==', macAddress).get();
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        return res.json({ success: true, queue: doc.data().queue });
-      }
-  
-      const allDocs = await queueCollection.orderBy('queue', 'asc').get();
-      const newQueue = allDocs.size + 1;
-  
-      await queueCollection.add({
-        mac: macAddress,
-        queue: newQueue,
-        inserted_at: admin.firestore.Timestamp.now()
-      });
-  
-      return res.json({ success: true, queue: newQueue });
-    } catch (error) {
-      console.error("Error inserting into queue:", error);
-      res.status(500).json({ success: false, message: "Server error." });
+ /**
+ * Start bottle session — assign queue position to a user in Users collection
+ */
+app.post('/start-bottle-session', async (req, res) => {
+  const { mac } = req.body;
+  if (!mac) return res.status(400).json({ error: 'MAC is required' });
+
+  const usersRef = db.collection('Users Collection');
+  const snapshot = await usersRef.where('queuePosition', '!=', null).orderBy('queuePosition').get();
+
+  let nextQueuePos = 1;
+  snapshot.forEach(doc => {
+    const user = doc.data();
+    if (user.queuePosition >= nextQueuePos) {
+      nextQueuePos = user.queuePosition + 1;
     }
   });
+
+  // Find the user by mac (userId)
+  const userDoc = await usersRef.where('UserID', '==', mac).limit(1).get();
+  if (userDoc.empty) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const docId = userDoc.docs[0].id;
+  await usersRef.doc(docId).update({ queuePosition: nextQueuePos });
+
+  res.json({ queuePosition: nextQueuePos });
+});
+
+/**
+ * Finish session — remove the user from queue and shift others
+ */
+app.post('/finish-bottle-session', async (req, res) => {
+  const { mac } = req.body;
+  if (!mac) return res.status(400).json({ error: 'MAC is required' });
+
+  const usersRef = db.collection('Users Collection');
+  const userDocSnap = await usersRef.where('UserID', '==', mac).limit(1).get();
+
+  if (userDocSnap.empty) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const userDoc = userDocSnap.docs[0];
+  const userData = userDoc.data();
+  const currentQueue = userData.queuePosition;
+
+  if (!currentQueue) return res.status(400).json({ error: 'User is not in the queue' });
+
+  // Remove queuePosition from current user
+  await usersRef.doc(userDoc.id).update({ queuePosition: admin.firestore.FieldValue.delete() });
+
+  // Shift queuePosition down for others
+  const queueSnap = await usersRef
+    .where('queuePosition', '>', currentQueue)
+    .get();
+
+  const batch = db.batch();
+  queueSnap.forEach(doc => {
+    const current = doc.data().queuePosition;
+    batch.update(doc.ref, { queuePosition: current - 1 });
+  });
+
+  await batch.commit();
+  res.json({ message: 'User removed and queue updated' });
+});
 //===============================================================================
 
 // Serve static files (CSS, JS, images) from the current directory
