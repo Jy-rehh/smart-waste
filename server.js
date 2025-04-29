@@ -12,19 +12,13 @@ let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
 //==========================================================================
-app.use(cors());
+const MikroNode = require('mikronode-ng');  // Ensure this is included
 
+// MikroTik connection details
 const HOST = '192.168.50.1'; // Replace with your MikroTik IP
 const USER = 'admin';        // Replace with your username
 const PASS = '';             // Replace with your password
 
-// Function to get the user's IP address
-function getClientIp(req) {
-  let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  return ip.includes('::ffff:') ? ip.split('::ffff:')[1] : ip;
-}
-
-// Endpoint to return the IP and MAC address of the requester's device
 app.get('/devices', async (req, res) => {
   const clientIp = getClientIp(req);  // Get the IP address of the client (requester's device)
   
