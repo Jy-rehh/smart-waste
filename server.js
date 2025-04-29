@@ -14,69 +14,38 @@ let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
 // ===================================================================
-async function getMacAddressFromIp(clientIp) {
-    return new Promise((resolve, reject) => {
-        const device = new MikroNode('192.168.50.1'); // MikroTik IP address
+const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Your venv python path
+const pythonScript = '/home/pi/smart-waste/testing/testIP.py';
 
-        device.connect('admin', '') // MikroTik credentials (adjust if needed)
-            .then(([login]) => {
-                console.log('Connected to MikroTik');
-
-                const chan = login.openChannel('leases');
-                chan.write('/interface/wireless/registration-table/print');  // Use this for wireless devices
-
-                chan.on('done', (data) => {
-                    console.log('MikroTik response data:', data);  // Debug the raw response
-                    const items = MikroNode.parseItems(data);
-                    const match = items.find(item => item.address === clientIp);
-                    login.close();
-
-                    if (match) {
-                        resolve(match['mac-address']);
-                    } else {
-                        resolve(null);
-                    }
-                });
-
-                chan.on('error', (err) => {
-                    console.error('Channel error:', err);  // Log channel error
-                    login.close();
-                    reject(err);
-                });
-            })
-            .catch((err) => {
-                console.error('Connection error:', err);  // Log connection error
-                reject(err);
-            });
-    });
-}
-
-// The endpoint remains the same
-app.get('/connected-info', async (req, res) => {
-    const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const cleanedIp = clientIp.replace('::ffff:', '');
-
-    try {
-        const macAddress = await getMacAddressFromIp(cleanedIp);
-
-        if (macAddress) {
-            res.send(`
-                <h1>Device Info</h1>
-                <p><strong>IP:</strong> ${cleanedIp}</p>
-                <p><strong>MAC:</strong> ${macAddress}</p>
-            `);
-        } else {
-            res.send(`
-                <h1>Device Info</h1>
-                <p><strong>IP:</strong> ${cleanedIp}</p>
-                <p><strong>MAC:</strong> Not found in MikroTik Wireless Registration Table</p>
-            `);
-        }
-    } catch (error) {
-        console.error('Error fetching MAC address from MikroTik:', error);
-        res.status(500).send('Error fetching MAC address from MikroTik');
-    }
+// Run Flask API in the background
+const flaskProcess = spawn(pythonExecutable, [pythonScript], {
+  detached: true,
+  stdio: 'ignore'  // Optional: Ignore stdout and stderr logs
 });
+
+flaskProcess.unref();  // Allow Flask to run in the background
+
+console.log('Flask MAC API server started on port 5000');
+
+// Endpoint to get MAC address from Flask API
+app.get('/get-mac', async (req, res) => {
+  const clientIp = req.ip.replace('::ffff:', '');  // Clean up IPv6 to IPv4 format
+  
+  try {
+      const response = await fetch(`http://localhost:5000/get-mac?ip=${clientIp}`);
+      const data = await response.json();
+      
+      if (data['mac-address']) {
+          res.send(`IP: ${clientIp} - MAC Address: ${data['mac-address']}`);
+      } else {
+          res.send('MAC address not found');
+      }
+  } catch (err) {
+      console.error('Error fetching MAC address:', err);
+      res.status(500).send('Error fetching MAC address from Flask API');
+  }
+});
+
 
 // ==================================================================
 
