@@ -71,6 +71,7 @@ bindings = api.path('ip', 'hotspot', 'ip-binding')
 # nya dapat if walay nay queuePosition kay di na makadawat ug WiFiTimeAvailable 
 # ug TotalBottlesDeposited tong mac nga nakuha
 TARGET_MAC = None
+previous_user_id = None
 
 def get_mac_with_queue_position_1():
     try:
@@ -95,6 +96,43 @@ def get_mac_with_queue_position_1():
         print(f"[!] Firestore error: {e}")
     return None
 
+# Function to update the TotalBottlesDeposited for the current device with queuePosition == 1
+def update_total_bottles_for_current_user():
+    try:
+        print("[*] Updating TotalBottlesDeposited for the current active user with queuePosition == 1...")
+
+        # Fetch the current active user (with queuePosition == 1)
+        users_ref = db.collection('Users Collection')
+        query = users_ref.where('queuePosition', '==', 1)
+        results = query.get()
+
+        if results:
+            user_doc = results[0]
+            data = user_doc.to_dict()
+            user_id = data.get('UserID')
+
+            # Check if the user ID has changed (this means a new device is now queuePosition == 1)
+            global previous_user_id
+            if user_id != previous_user_id:
+                # Reset the bottles count for the old user if they no longer have queuePosition == 1
+                if previous_user_id:
+                    print(f"[✔] Stopping bottle count for the previous user {previous_user_id}")
+                # Now, the previous user is this one, so we update their TotalBottlesDeposited
+                previous_user_id = user_id
+
+            # Increment the TotalBottlesDeposited for the current user
+            current_bottles = data.get('TotalBottlesDeposited', 0)
+            new_bottle_count = current_bottles + 1  # Increment by 1 for each detected bottle
+            user_ref = users_ref.document(user_doc.id)
+            user_ref.update({'TotalBottlesDeposited': new_bottle_count})
+
+            print(f"[✔] TotalBottlesDeposited updated for user {user_id}. New count: {new_bottle_count}")
+
+        else:
+            print("[!] No active user with queuePosition == 1.")
+    except Exception as e:
+        print(f"[!] Error while updating TotalBottlesDeposited: {e}")
+
 # Infinite loop that never exits unless you kill it
 def monitor_firestore_for_queue():
     global TARGET_MAC
@@ -106,20 +144,23 @@ def monitor_firestore_for_queue():
                 if mac != TARGET_MAC:
                     TARGET_MAC = mac
                     print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
+
+                    # Start updating the TotalBottlesDeposited for the current active user
+                    update_total_bottles_for_current_user()
                 else:
                     print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
             else:
                 if TARGET_MAC is not None:
                     print("[*] No valid user found. Clearing TARGET_MAC.", flush=True)
                     TARGET_MAC = None
+
             time.sleep(1)
         except Exception as outer_err:
             print(f"[!] Firestore monitoring error: {outer_err}", flush=True)
             time.sleep(2)
 
-    # Start monitoring in a separate thread
+# Start monitoring in a separate thread
 threading.Thread(target=monitor_firestore_for_queue, daemon=True).start()
-
 # kutob ari 
 #-------------------------------------------------------------------------
 def find_binding(mac_address):
