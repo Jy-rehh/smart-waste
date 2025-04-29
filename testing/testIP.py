@@ -1,39 +1,35 @@
-from flask import Flask, render_template_string
-import subprocess
-import os
+# server.py
+from flask import Flask, request, jsonify
+from librouteros import connect
 
 app = Flask(__name__)
 
-def ping_all_devices():
-    base_ip = "192.168.1."
-    for i in range(2, 255):
-        os.system(f"ping -c 1 -W 1 {base_ip}{i} > /dev/null")
+def get_mac_from_ip(client_ip):
+    api = connect(username='admin', password='', host='192.168.50.1')  # <-- Change password here!
 
-def get_connected_devices():
-    ping_all_devices()
-    output = subprocess.check_output("arp -a", shell=True).decode()
-    devices = []
-    for line in output.splitlines():
-        if '(' in line:
-            parts = line.split()
-            ip = parts[1].strip('()')
-            mac = parts[3]
-            devices.append({'ip': ip, 'mac': mac})
-    return devices
+    leases = api('/ip/dhcp-server/lease/print')
+    for lease in leases:
+        if lease.get('address') == client_ip:
+            return lease.get('mac-address')
+    return None
 
 @app.route('/')
-def portal():
-    devices = get_connected_devices()
-    html = '''
-    <h1>Welcome to Piso WiFi Portal</h1>
-    <table border="1">
-        <tr><th>IP Address</th><th>MAC Address</th></tr>
-        {% for device in devices %}
-        <tr><td>{{ device.ip }}</td><td>{{ device.mac }}</td></tr>
-        {% endfor %}
-    </table>
-    '''
-    return render_template_string(html, devices=devices)
+def home():
+    client_ip = request.remote_addr  # Get the IP of the connected device
+    mac_address = get_mac_from_ip(client_ip)
+
+    if mac_address:
+        return f'''
+            <h1>Connected Device Info</h1>
+            <p><strong>IP Address:</strong> {client_ip}</p>
+            <p><strong>MAC Address:</strong> {mac_address}</p>
+        '''
+    else:
+        return f'''
+            <h1>Device Info Not Found</h1>
+            <p><strong>IP Address:</strong> {client_ip}</p>
+            <p><strong>MAC Address:</strong> Not found in DHCP leases.</p>
+        '''
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80)  # Or port=5000 first for testing
+    app.run(host='0.0.0.0', port=5000)

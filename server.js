@@ -13,41 +13,67 @@ let macIpLoggerProcess = null;
 let storeMacIpProcess = null;
 
 //==========================================================================
-app.use(cors());
+const MikroNode = require('mikronode-ng');  // you already have this
 
-// Function to get the client's MAC address
-// For demonstration, assuming MAC is passed as query parameter
-app.get('/devices', (req, res) => {
-    const macAddress = req.query.mac;  // Get MAC address from query
+// Function to get MAC address from MikroTik given the client IP
+async function getMacAddressFromIp(clientIp) {
+    return new Promise((resolve, reject) => {
+        const device = new MikroNode('192.168.50.1');  // Your MikroTik IP
+        device.connect('admin', '1234')  // Your MikroTik username and password
+            .then(([login]) => {
+                const chan = login.openChannel('dhcp-lease');
+                chan.write('/ip/dhcp-server/lease/print');
 
-    if (!macAddress) {
-        return res.status(400).json({ error: 'MAC address is required' });
-    }
+                chan.on('done', (data) => {
+                    const leases = MikroNode.parseItems(data);
 
-    // Adjust paths for the Python executable and script
-    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Path to Python executable in the virtual environment
-    const pythonScript = '/home/pi/smart-waste/routeros_get_device.py';  // Path to your Python script
+                    const matchedLease = leases.find(lease => lease.address === clientIp);
 
-    // Run the Python script to fetch device info based on MAC address
-    exec(`${pythonExecutable} ${pythonScript} ${macAddress}`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error executing Python script: ${error}`);
-            return res.status(500).json({ error: 'Error connecting to RouterOS' });
-        }
-        if (stderr) {
-            console.error(`stderr: ${stderr}`);
-            return res.status(500).json({ error: 'Error in Python script' });
-        }
+                    if (matchedLease) {
+                        resolve(matchedLease['mac-address']);
+                    } else {
+                        resolve(null);
+                    }
+                    login.close();
+                });
 
-        // Parse and send the response from the Python script
-        try {
-            const deviceInfo = JSON.parse(stdout);
-            res.json(deviceInfo);
-        } catch (err) {
-            console.error('Error parsing Python script output:', err);
-            res.status(500).json({ error: 'Failed to parse device information' });
-        }
+                chan.on('error', (err) => {
+                    console.error('Channel error', err);
+                    reject(err);
+                    login.close();
+                });
+            })
+            .catch(err => {
+                console.error('Connection error', err);
+                reject(err);
+            });
     });
+}
+
+// ======================================================================
+// New route to display IP and MAC
+app.get('/connected-info', async (req, res) => {
+    const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    try {
+        const macAddress = await getMacAddressFromIp(clientIp);
+
+        if (macAddress) {
+            res.send(`
+                <h1>Connected Device Info</h1>
+                <p><strong>IP Address:</strong> ${clientIp}</p>
+                <p><strong>MAC Address:</strong> ${macAddress}</p>
+            `);
+        } else {
+            res.send(`
+                <h1>Device Info Not Found</h1>
+                <p><strong>IP Address:</strong> ${clientIp}</p>
+                <p><strong>MAC Address:</strong> Not found in DHCP leases.</p>
+            `);
+        }
+    } catch (error) {
+        res.status(500).send('Error fetching device info.');
+    }
 });
 
 // ==================================================================
