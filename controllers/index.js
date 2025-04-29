@@ -75,22 +75,49 @@ async function getCurrentMacWithQueueOne() {
       await finishSession(mac);
     }
     
-    // 🔽 Fetch time_remaining from Firestore (you can change this endpoint)
-try {
-    const mac = urlParams.get('mac'); // Replace with actual MAC address (e.g., from URL params or elsewhere)
+    
+    try {
+        const mac = urlParams.get('mac'); // Replace with actual MAC address (e.g., from URL params or elsewhere)
 
-    const res = await fetch(`/api/get-time-remaining?mac=${mac}`);
-    const data = await res.json();
+        const res = await fetch(`/api/get-wifi-time-available?mac=${mac}`); // Adjust this API endpoint accordingly
+        const data = await res.json();
 
-    if (res.ok && data.time_remaining) {
-        // 🔁 Redirect to index.html with time_remaining and mac in URL
-        window.location.href = `index.html?time=${data.time_remaining}&mac=${mac}`;
-    } else {
-        alert("Failed to get time remaining.");
+        if (res.ok && data.wifi_time_available) {
+            // Display WiFi Time Available in the HTML
+            const wifiTimeElement = document.getElementById('wifi-time');
+            wifiTimeElement.textContent = `${data.wifi_time_available.hr} hr. ${data.wifi_time_available.min} min. ${data.wifi_time_available.sec} sec`;
+
+            // 🔁 Optionally redirect to index.html with time_remaining and mac in URL if needed
+            window.location.href = `templates/index.html?time=${data.time_remaining}&mac=${mac}`;
+        } else {
+            alert("Failed to get WiFi Time Available.");
+        }
+    } catch (err) {
+        console.error("Error fetching WiFi time available:", err);
+        alert("An error occurred while fetching the WiFi time available.");
     }
-} catch (err) {
-    console.error("Error fetching time remaining:", err);
-    alert("An error occurred while fetching the time remaining.");
-}
 });
-  
+
+// Function to check the network status
+function checkNetwork(event, url) {
+    if (navigator.onLine) {
+        // If online, allow the link to function as usual
+        window.location.href = url;
+    } else {
+        // If offline, prevent the link click and show an alert
+        event.preventDefault();
+        alert("You are offline. Please connect to the internet to proceed.");
+    }
+}
+
+// Call checkNetwork when trying to navigate
+document.getElementById('doneButton').addEventListener('click', function(event) {
+    checkNetwork(event, 'index.html'); // Replace 'index.html' with your desired URL
+});
+
+// Prevent page from closing if offline
+window.onbeforeunload = function(event) {
+    if (!navigator.onLine) {
+        return "You are offline. Are you sure you want to leave?";
+    }
+};

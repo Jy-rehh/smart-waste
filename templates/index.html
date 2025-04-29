@@ -132,26 +132,45 @@
      <script src="/templates/script.js"></script>
     <script src="/controllers/index.js"></script>
     <script>
-        // Function to check the network status
-        function checkNetwork(event, url) {
+        // Prevent page reload or exit when online
+        window.addEventListener('beforeunload', function(event) {
+            // This will prompt the user if they try to leave the page
             if (navigator.onLine) {
-                // If online, allow the link to function as usual
-                window.location.href = url;
+                const message = "Are you sure you want to leave the page?";
+                event.returnValue = message;  // Standard for most browsers
+                return message;  // Some browsers may still need this for the prompt
+            }
+        });
+        
+        // Prevent automatic redirection when internet is connected
+        let wasOnline = navigator.onLine;
+        window.addEventListener('online', function() {
+            if (wasOnline) {
+                return; // Already online, no need to handle
+            }
+        
+            console.log("You are now online.");
+            // Do not trigger any redirection here if you don't want automatic exit
+            // You can handle what to do when online here instead
+            wasOnline = true;
+        });
+        
+        window.addEventListener('offline', function() {
+            console.log("You are offline.");
+            // You can handle offline actions here if needed, like reloading page or showing alerts
+        });
+        
+        document.getElementById("doneButton").addEventListener('click', function(event) {
+            if (navigator.onLine) {
+                // If online, redirect to your desired page
+                window.location.href = 'index.html';
             } else {
-                // If offline, prevent the link click and show an alert
+                // If offline, prevent default and show alert
                 event.preventDefault();
                 alert("You are offline. Please connect to the internet to proceed.");
             }
-        }
-
-        // Optional: Listen for online and offline events to update the UI or logic
-        window.addEventListener('online', function() {
-            console.log("You are now online.");
         });
-
-        window.addEventListener('offline', function() {
-            console.log("You are offline.");
-        });
-    </script>
+        </script>
+        
 </body>
 </html>
