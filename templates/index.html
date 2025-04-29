@@ -121,28 +121,23 @@
             return response.json();
           })
           .then(device => {
-            // Check if device data is available
-            if (device && device.ipAddress && device.macAddress) {
-              const ipAddress = device.ipAddress;
-              const macAddress = device.macAddress;
-              
-              // Display the IP and MAC address of the current device
-              document.querySelector('#device-ip').textContent = `IP Address: ${ipAddress}`;
-              document.querySelector('#device-mac').textContent = `MAC Address: ${macAddress}`;
+            if (device.ipAddress && device.macAddress) {
+              // Show the device IP and MAC address in the HTML
+              document.querySelector('#device-info').innerHTML = `
+                <p>IP Address: ${device.ipAddress}</p>
+                <p>MAC Address: ${device.macAddress}</p>
+              `;
             } else {
-              console.error("Device data not found:", device);
-              document.querySelector('#info').textContent = "Device not found.";
+              document.querySelector('#device-info').textContent = "Device not found in ARP table.";
             }
           })
           .catch(error => {
-            console.error('Fetch error:', error);
-            document.querySelector('#info').textContent = "Error: Could not fetch device information.";
+            console.error('Error:', error);
+            document.querySelector('#device-info').textContent = "Error: Could not fetch device information.";
           });
       </script>
       
-      <div id="info">Loading...</div>
-      <div id="device-ip"></div>
-      <div id="device-mac"></div>         
+      <div id="device-info">Loading...</div>      
     
 </body>
 </html>
