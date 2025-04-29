@@ -1,10 +1,6 @@
 import { auth } from "../config/firebase-config.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 
-const urlParams = new URLSearchParams(window.location.search);
-const ip  = urlParams.get('ip');
-const mac = urlParams.get('mac');
-
 // Logout event listener
 document.querySelector(".logout-btn").addEventListener("click", () => {
     signOut(auth)

@@ -2,10 +2,6 @@ import { auth, db } from "../config/firebase-config.js";
 import { getDoc, doc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 
-const urlParams = new URLSearchParams(window.location.search);
-const ip  = urlParams.get('ip');
-const mac = urlParams.get('mac');
-
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         try {
