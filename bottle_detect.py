@@ -229,20 +229,49 @@ WiFiTimeAvailable = 0  # seconds
 TotalBottlesDeposited = 0
 
 # Function to update user based on MAC address
-def update_user_by_mac(mac_address, bottles, wifi_time):
+def update_user_by_mac(mac_address, bottles_increment, wifi_time_increment):
     try:
-        mac_address_sanitized = mac_address.replace(":", "-")  # Optional: Firebase keys cannot contain '. # $ [ ] /'
-        user_ref = db.reference(f'users/{mac_address_sanitized}')
+        # --- Sanitize MAC for Firebase keys ---
+        mac_sanitized = mac_address.replace(":", "-")
 
-        # Update the fields
+        # --- Step 1: Check Firestore queuePosition ---
+        firestore_user = db.collection('Users Collection').document(mac_address).get()
+        if not firestore_user.exists:
+            print(f"[!] User {mac_address} not found in Firestore.")
+            return
+
+        firestore_data = firestore_user.to_dict()
+        queue_position = firestore_data.get('queuePosition', -1)
+
+        if queue_position != 1:
+            print(f"[!] Skipping update — User {mac_address} is not at queue position 1.")
+            return
+
+        # --- Step 2: Fetch current values from Realtime DB ---
+        user_ref = realtime_db.reference(f'users/{mac_sanitized}')
+        user_data = user_ref.get()
+
+        if not user_data:
+            print(f"[!] No user data found in Realtime DB for {mac_address}")
+            return
+
+        current_bottles = user_data.get('TotalBottlesDeposited', 0)
+        current_wifi = user_data.get('WiFiTimeAvailable', 0)
+
+        # --- Step 3: Update with increments ---
+        new_bottles = current_bottles + bottles_increment
+        new_wifi = current_wifi + wifi_time_increment
+
         user_ref.update({
-            'TotalBottlesDeposited': bottles,
-            'WiFiTimeAvailable': wifi_time
+            'TotalBottlesDeposited': new_bottles,
+            'WiFiTimeAvailable': new_wifi
         })
 
-        print(f"[+] Updated user {mac_address} - Bottles: {bottles}, WiFi Time: {wifi_time}")
+        print(f"[✓] Updated user {mac_address} - Bottles: {new_bottles}, WiFi Time: {new_wifi} seconds")
+
     except Exception as e:
         print(f"[!] Failed to update user by MAC: {e}")
+
 
 # Load your custom bottle-detection model
 bottle_model = YOLO('detect/train11/weights/best.pt')
