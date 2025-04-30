@@ -1,14 +1,15 @@
 import RPi.GPIO as GPIO
 import time
 
-# Set the pin numbering mode (either GPIO.BOARD or GPIO.BCM)
-GPIO.setmode(GPIO.BCM)  # You can use GPIO.BOARD if you prefer board pin numbers
+# Set the pin numbering mode to GPIO.BOARD for physical pin numbers
+GPIO.setmode(GPIO.BOARD)
 
 # Cleanup GPIO to avoid warnings about pins being already in use
 GPIO.cleanup()
 
-TRIG_PIN = 11
-ECHO_PIN = 8
+# Set physical pin numbers
+TRIG_PIN = 26  # Physical pin 26
+ECHO_PIN = 24  # Physical pin 24
 
 # Setup pins
 GPIO.setup(TRIG_PIN, GPIO.OUT)
