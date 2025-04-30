@@ -4,6 +4,9 @@ import time
 # Set the pin numbering mode (either GPIO.BOARD or GPIO.BCM)
 GPIO.setmode(GPIO.BCM)  # You can use GPIO.BOARD if you prefer board pin numbers
 
+# Cleanup GPIO to avoid warnings about pins being already in use
+GPIO.cleanup()
+
 TRIG_PIN = 11
 ECHO_PIN = 8
 
