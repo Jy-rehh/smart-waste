@@ -183,8 +183,9 @@ def monitor_firestore_for_queue():
                     TARGET_MAC = mac
                     print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
 
-                    #update_total_bottles_for_current_user()
-                    #sync_firestore_to_realtime()
+                    update_total_bottles_for_current_user()
+                    sync_firestore_to_realtime()
+
                 else:
                     print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
             else:
@@ -196,13 +197,6 @@ def monitor_firestore_for_queue():
         except Exception as outer_err:
             print(f"[!] Firestore monitoring error: {outer_err}", flush=True)
             time.sleep(2)
-
-def process_bottle_detected(mac_address, bottle_size):
-    try:
-        print(f"[✔] Processing bottle detected for {mac_address}...")
-        update_user_by_mac(mac_address, bottle_size)  # Handles Realtime DB and bottle count
-    except Exception as e:
-        print(f"[!] Error processing bottle: {e}")
 
 # Start monitoring in a separate thread
 threading.Thread(target=monitor_firestore_for_queue, daemon=True).start()
@@ -245,7 +239,8 @@ WiFiTimeAvailable = 0  # seconds
 TotalBottlesDeposited = 0
 
 # Function to update user based on MAC address
-def update_user_by_mac(mac_address, bottle_size):
+# Function to update user based on MAC address
+def update_user_by_mac(mac_address, bottle_size=None):
     try:
         # Sanitize MAC for Firebase keys
         mac_sanitized = mac_address.replace(":", "-")
@@ -259,8 +254,14 @@ def update_user_by_mac(mac_address, bottle_size):
         firestore_data = firestore_user.to_dict()
         queue_position = firestore_data.get('queuePosition', -1)
 
+        # Check if this user is the active one in queuePosition == 1
         if queue_position != 1:
             print(f"[!] Skipping update — User {mac_address} is not at queue position 1.")
+            return
+
+        # Check if a bottle size is detected
+        if bottle_size is None:
+            print(f"[!] No bottle detected for MAC {mac_address}. Skipping WiFi time update.")
             return
 
         # Step 2: Fetch current values from Realtime DB
@@ -445,9 +446,6 @@ try:
             neutral_classes = ["bottle", "toilet", "surfboard", "bottles"]
 
             if bottle_detected and not container_full:
-                if TARGET_MAC:  # Make sure there's an active user
-                    process_bottle_detected(TARGET_MAC, bottle_size='small')  # or 'large'
-                    bottle_detected = False  # reset if needed
                 display_message("Accepting Bottle")
                 
                 if bottle_size == 'small':
