@@ -6,7 +6,7 @@ from firebase_admin import credentials, db as realtime_db
 # ---------------- Firebase Realtime DB ----------------
 cred = credentials.Certificate('firebase-key.json')
 firebase_admin.initialize_app(cred, {
-    'databaseURL': 'https://smart-waste-c39ac-default-rtdb.firebaseio.com/'  # <-- Replace with your actual database URL
+    'databaseURL': 'https://smart-waste-c39ac-default-rtdb.firebaseio.com/'
 })
 
 # ---------------- MikroTik Router ----------------
@@ -16,9 +16,9 @@ ROUTER_PASSWORD = ''
 
 try:
     api = connect(username=ROUTER_USERNAME, password=ROUTER_PASSWORD, host=ROUTER_HOST)
-    print("[*] Connected to MikroTik Router.")
+    # print("[*] Connected to MikroTik Router.")
 except Exception as e:
-    print(f"[!] MikroTik connection failed: {e}")
+    # print(f"[!] MikroTik connection failed: {e}")
     exit()
 
 bindings = api.path('ip', 'hotspot', 'ip-binding')
@@ -29,68 +29,53 @@ def find_binding(mac_address):
             if entry.get('mac-address', '').upper() == mac_address.upper():
                 return entry
     except Exception as e:
-        print(f"[!] Error fetching bindings: {e}")
+        pass  # Optional: log to file if needed
     return None
 
 def add_or_update_binding(mac_address, binding_type):
     try:
         existing = find_binding(mac_address)
         if existing:
-            bindings.update(
-                **{
-                    '.id': existing['.id'],
-                    'type': binding_type
-                }
-            )
-            print(f"[*] Updated MAC {mac_address} to '{binding_type}'.")
+            bindings.update(**{
+                '.id': existing['.id'],
+                'type': binding_type
+            })
         else:
-            bindings.add(
-                **{
-                    'mac-address': mac_address,
-                    'type': binding_type,
-                    'comment': 'Connected'
-                }
-            )
-            print(f"[*] Added new MAC {mac_address} with type '{binding_type}'.")
+            bindings.add(**{
+                'mac-address': mac_address,
+                'type': binding_type,
+                'comment': 'Connected'
+            })
     except Exception as e:
-        print(f"[!] Error adding/updating binding: {e}")
+        pass  # Optional: log to file if needed
 
 # ---------------- Countdown Loop ----------------
 def manage_wifi_time():
-    while True:  # Keep running to decrement every second
+    while True:
         try:
             users_ref = realtime_db.reference('users')
             all_users = users_ref.get()
 
             if not all_users:
-                print("[!] No users found in Realtime DB.")
+                # No users to process
                 return
 
             for mac_sanitized, user_data in all_users.items():
                 mac = user_data.get('UserID', '').upper()
                 time_left = user_data.get('WiFiTimeAvailable', 0)
 
-                # Debug print to check current WiFiTimeAvailable value
-                print(f"[INFO] {mac} - WiFiTimeAvailable: {time_left}")
-
                 if mac:
                     if time_left > 0:
-                        # Decrement WiFiTimeAvailable by 1 second
                         new_time = time_left - 1
                         users_ref.child(mac_sanitized).update({'WiFiTimeAvailable': new_time})
-                        # Set binding to 'bypassed' while time is available
                         add_or_update_binding(mac, 'bypassed')
-                        print(f"[↓] {mac} - WiFiTimeAvailable: {new_time} (bypassed)")
                     else:
-                        # If no time left, set to 'regular'
                         add_or_update_binding(mac, 'regular')
-                        print(f"[↑] {mac} - WiFiTimeAvailable is 0, set to 'regular' status.")
 
-            time.sleep(1)  # Wait for 1 second before checking again
+            time.sleep(1)
 
         except Exception as e:
-            print(f"[!] Error managing WiFi time: {e}")
-            time.sleep(1)  # Wait for 1 second before retrying in case of error
+            time.sleep(1)
 
 if __name__ == "__main__":
     manage_wifi_time()
