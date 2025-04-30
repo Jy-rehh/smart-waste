@@ -73,7 +73,7 @@ app.post('/finish-bottle-session', async (req, res) => {
   if (!currentQueue) return res.status(400).json({ error: 'User is not in the queue' });
 
   // Remove queuePosition from current user
-  await usersRef.doc(userDoc.id).update({ queuePosition: admin.firestore.FieldValue - 1 });
+  await usersRef.doc(userDoc.id).update({ queuePosition: admin.firestore.FieldValue == 1 });
 
   // Shift queuePosition down for others
   const queueSnap = await usersRef
@@ -225,30 +225,6 @@ function startsWifiManager() {
     startsWifiProcess.on('error', (err) => {
       console.error(`Failed to start Python process: ${err.message}`);
     });
-  }
-}
-
-function startContainerDetection() {
-  if (!containerProcess) {
-    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
-    const pythonScript = '/home/pi/smart-waste/container_full.py';   // Adjust if needed
-
-    containerProcess = spawn(pythonExecutable, [pythonScript]);
-
-    containerProcess.stdout.on('data', (data) => {
-      console.log(`stdout: ${data}`);
-    });
-
-    containerProcess.stderr.on('data', (data) => {
-      console.error(`stderr: ${data}`);
-    });
-
-    containerProcess.on('close', (code) => {
-      console.log(`mac_ip_logger.py exited with code ${code}`);
-      containerProcess = null;
-    });
-
-    console.log("MAC IP Logger started.");
   }
 }
 

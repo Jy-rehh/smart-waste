@@ -37,10 +37,9 @@ def get_distance(TRIG, ECHO):
     return distance
 
 def send_email():
-    # Sender and receiver details
-    sender_email = "your_email@gmail.com"  # Replace with your Gmail address
+    sender_email = "your-email@gmail.com"  # Replace with your email
     receiver_email = "smartwastesmartaccess@gmail.com"
-    password = "ospk xejd cpxz djbh"  # Replace with the App Password you generated
+    password = "ospk xejd cpxz djbh"  # Replace with your generated App Password
 
     subject = "📦 RVM Notification: Bottle Bin Full – Collection Required"
     body = """
@@ -63,22 +62,18 @@ def send_email():
     This is a system-generated email. Please do not reply.
     """
 
-    # Create the email
-    message = MIMEMultipart()
-    message['From'] = sender_email
-    message['To'] = receiver_email
-    message['Subject'] = subject
-    message.attach(MIMEText(body, 'plain'))
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
 
     try:
-        # Set up the server and send the email
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)  # Use 465 for SSL connection
-        server.login(sender_email, password)
-        text = message.as_string()
-        server.sendmail(sender_email, receiver_email, text)
-        server.quit()
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()  # Secure connection
+            server.login(sender_email, password)  # Login using your email and App Password
+            server.sendmail(sender_email, receiver_email, msg.as_string())  # Send the email
         print("Email sent successfully!")
-
     except Exception as e:
         print(f"Failed to send email: {e}")
 
