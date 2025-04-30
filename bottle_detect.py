@@ -241,6 +241,10 @@ TotalBottlesDeposited = 0
 # Function to update user based on MAC address
 def update_user_by_mac(mac_address, bottle_size):
     try:
+        if not mac_address:
+            print("[!] No MAC address provided")
+            return False
+
         # Sanitize MAC for Firebase keys
         mac_sanitized = mac_address.replace(":", "-")
 
@@ -248,45 +252,37 @@ def update_user_by_mac(mac_address, bottle_size):
         firestore_user = db.collection('Users Collection').document(mac_address).get()
         if not firestore_user.exists:
             print(f"[!] User {mac_address} not found in Firestore.")
-            return
+            return False
 
         firestore_data = firestore_user.to_dict()
         queue_position = firestore_data.get('queuePosition', -1)
 
         if queue_position != 1:
             print(f"[!] Skipping update — User {mac_address} is not at queue position 1.")
-            return
+            return False
 
-        # Step 2: Fetch current values from Realtime DB
-        user_ref = realtime_db.reference(f'users/{mac_sanitized}')
-        user_data = user_ref.get()
-
-        if not user_data:
-            print(f"[!] No user data found in Realtime DB for {mac_address}")
-            return
-
-        current_bottles = user_data.get('TotalBottlesDeposited', 0)
-        current_wifi = user_data.get('WiFiTimeAvailable', 0)
-
-        # Step 3: Determine Wi-Fi time increment based on bottle size
+        # Step 2: Determine Wi-Fi time increment based on bottle size
         wifi_time_increment = 5 * 60  # Default to 5 minutes for small bottle
         if bottle_size == 'large':
             wifi_time_increment = 10 * 60  # 10 minutes for large bottle
 
-        # Increment the values
-        new_bottles = current_bottles + 1
-        new_wifi = current_wifi + wifi_time_increment
-
-        # Step 4: Update Realtime DB with new values
+        # Step 3: Update Firestore first
+        user_ref = db.collection('Users Collection').document(mac_address)
+        
+        # Atomically increment the bottle count
         user_ref.update({
-            'TotalBottlesDeposited': new_bottles,
-            'WiFiTimeAvailable': new_wifi
+            'TotalBottlesDeposited': firestore.FieldValue.increment(1),
+            'bottle_size': bottle_size  # Store the last bottle size for sync
         })
 
-        print(f"[✓] Updated user {mac_address} - Bottles: {new_bottles}, WiFi Time: {new_wifi} seconds")
+        # Step 4: Sync to Realtime DB
+        sync_firestore_to_realtime()
+
+        return True
 
     except Exception as e:
         print(f"[!] Failed to update user by MAC: {e}")
+        return False
 
 
 # Load your custom bottle-detection model
@@ -441,22 +437,22 @@ try:
             if bottle_detected and not container_full:
                 display_message("Accepting Bottle")
                 
-                if bottle_size == 'small':
-                    WiFiTimeAvailable += 5 * 60
-                    TotalBottlesDeposited += 1
-                    print("[+] Small bottle detected: +5 mins Wi-Fi")
-                elif bottle_size == 'large':
-                    WiFiTimeAvailable += 10 * 60
-                    TotalBottlesDeposited += 1
-                    print("[+] Large bottle detected: +10 mins Wi-Fi")
-
+                # if bottle_size == 'small':
+                #     WiFiTimeAvailable += 5 * 60
+                #     TotalBottlesDeposited += 1
+                #     print("[+] Small bottle detected: +5 mins Wi-Fi")
+                # elif bottle_size == 'large':
+                #     WiFiTimeAvailable += 10 * 60
+                #     TotalBottlesDeposited += 1
+                #     print("[+] Large bottle detected: +10 mins Wi-Fi")
+                if TARGET_MAC:
                 #update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
-                try:
-                    result = update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
-                    if not result:
-                        print("❗ update_user_by_mac failed or returned no result.")
-                except Exception as e:
-                    print(f"❌ Exception in update_user_by_mac: {e}")
+                    try:
+                        result = update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
+                        if not result:
+                            print("❗ update_user_by_mac failed or returned no result.")
+                    except Exception as e:
+                        print(f"❌ Exception in update_user_by_mac: {e}")
 
                 set_servo_position(1)  # Accept
                 sleep(2)
