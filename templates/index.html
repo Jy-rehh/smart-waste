@@ -11,7 +11,7 @@
     <div class="header">
         <h1><span class="green-text">Smart Waste </span> <br> <span class="green-text">Smart Access</span></h1>
     </div>
-
+<!-- 
     <div class="buttons">
         <a href="/templates/index.html" id="guest-btn" class="btn guess">Guest</a>
         <a href="/templates/login.html" class="btn login">Log In</a>
@@ -35,6 +35,7 @@
             }
         }
     </script>
+    -->
 
 <div class="container">
     <div class="status-card">
@@ -131,27 +132,5 @@
      <!-- JavaScript -->
      <script src="/templates/script.js"></script>
     <script src="/controllers/index.js"></script>
-    <script>
-        // Function to check the network status
-        function checkNetwork(event, url) {
-            if (navigator.onLine) {
-                // If online, allow the link to function as usual
-                window.location.href = url;
-            } else {
-                // If offline, prevent the link click and show an alert
-                event.preventDefault();
-                alert("You are offline. Please connect to the internet to proceed.");
-            }
-        }
-
-        // Optional: Listen for online and offline events to update the UI or logic
-        window.addEventListener('online', function() {
-            console.log("You are now online.");
-        });
-
-        window.addEventListener('offline', function() {
-            console.log("You are offline.");
-        });
-    </script>
 </body>
 </html>

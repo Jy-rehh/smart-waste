@@ -68,29 +68,48 @@ async function getCurrentMacWithQueueOne() {
       await finishSession(mac);
     }
   });
-
+  // Done button logic
   document.getElementById('doneButton').addEventListener('click', async () => {
     const mac = await getCurrentMacWithQueueOne();
-    if (mac) {
-      await finishSession(mac);
+    if (!mac) {
+        alert("MAC address not found.");
+        return;
     }
-    
-    // 🔽 Fetch time_remaining from Firestore (you can change this endpoint)
-try {
-    const mac = urlParams.get('mac'); // Replace with actual MAC address (e.g., from URL params or elsewhere)
 
-    const res = await fetch(`/api/get-time-remaining?mac=${mac}`);
-    const data = await res.json();
+    // Finish the session first
+    await finishSession(mac);
 
-    if (res.ok && data.time_remaining) {
-        // 🔁 Redirect to index.html with time_remaining and mac in URL
-        window.location.href = `index.html?time=${data.time_remaining}&mac=${mac}`;
-    } else {
-        alert("Failed to get time remaining.");
+    // Try to fetch the time remaining
+    try {
+        const res = await fetch(`/api/get-time-remaining?mac=${mac}`);
+        console.log("Raw response from /api/get-time-remaining:", res);
+
+        // Check if response is ok
+        if (!res.ok) {
+            alert(`Server returned an error: ${res.status}`);
+            return;
+        }
+
+        // Try parsing the response JSON
+        let data;
+        try {
+            data = await res.json();
+        } catch (parseErr) {
+            console.error("Failed to parse JSON:", parseErr);
+            alert("Received an invalid response format.");
+            return;
+        }
+
+        // Check if time_remaining exists in the response
+        if (data.time_remaining) {
+            window.location.href = `index.html?time=${data.time_remaining}&mac=${mac}`;
+        } else {
+            alert("Failed to get time remaining from server.");
+        }
+
+    } catch (err) {
+        console.error("Error fetching time remaining:", err);
+        alert("An error occurred while fetching the time remaining.");
     }
-} catch (err) {
-    console.error("Error fetching time remaining:", err);
-    alert("An error occurred while fetching the time remaining.");
-}
 });
   
