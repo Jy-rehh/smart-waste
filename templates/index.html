@@ -136,7 +136,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
-
+    
         // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAnY3P1JJBP6DigzoyrLw1Zikj1fH_occA",
@@ -148,41 +148,42 @@
             appId: "1:645631527511:web:96117a712c70e3231ef112",
             measurementId: "G-YNWWZDNHZZ"
         };
-
+    
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-
+    
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const userID = urlParams.get('UserID');
-        const ip = urlParams.get('ip');
-        const mac = urlParams.get('mac');
-
+        const mac = urlParams.get('mac'); // Get the MAC address from URL
+        const ip = urlParams.get('ip'); // Get the IP from URL
+    
         // Display IP and MAC
         document.getElementById("ip-display").textContent = ip || 'Not found';
         document.getElementById("mac-display").textContent = mac || 'Not found';
-
-        // Fetch Wi-Fi Time Available from Firebase using UserID (which is MAC)
-        async function fetchWifiTime(userID) {
-            if (!userID || userID === 'Not found') {
-                alert("UserID (MAC address) is not available.");
+    
+        // Fetch Wi-Fi Time Available from Firebase using MAC address (UserID)
+        async function fetchWifiTime(mac) {
+            if (!mac || mac === 'Not found') {
+                alert("MAC address (UserID) is not available.");
                 return;
             }
-
+    
             try {
-                const snapshot = await get(child(ref(db), `users/${userID}`));
+                // Reference to the user node in Firebase with the MAC address as the key
+                const snapshot = await get(child(ref(db), `users/${mac}`));
+    
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    const wifiTime = data.WifiTimeAvailable;
-
+                    const wifiTime = data.WifiTimeAvailable; // Fetch WifiTimeAvailable
+    
                     if (typeof wifiTime === "number") {
                         // Convert to hours/minutes/seconds (optional)
                         const minutes = Math.floor(wifiTime / 60);
                         const hours = Math.floor(minutes / 60);
                         const mins = minutes % 60;
                         const seconds = wifiTime % 60;
-
+    
                         document.getElementById("wifi-time").textContent = `${hours} hr. ${mins} min. ${seconds} sec`;
                     } else {
                         alert("WifiTimeAvailable is not a valid number.");
@@ -195,9 +196,9 @@
                 alert("Failed to fetch time from Firebase.");
             }
         }
-
-        // Call function to fetch Wi-Fi time
-        fetchWifiTime(userID);
-    </script>
+    
+        // Call function to fetch Wi-Fi time based on the MAC address
+        fetchWifiTime(mac);
+    </script>    
 </body>
 </html>
