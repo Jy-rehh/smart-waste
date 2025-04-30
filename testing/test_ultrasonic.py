@@ -1,11 +1,13 @@
-# container_full.py
-
 import RPi.GPIO as GPIO
 import time
+
+# Set the pin numbering mode (either GPIO.BOARD or GPIO.BCM)
+GPIO.setmode(GPIO.BCM)  # You can use GPIO.BOARD if you prefer board pin numbers
 
 TRIG_PIN = 11
 ECHO_PIN = 8
 
+# Setup pins
 GPIO.setup(TRIG_PIN, GPIO.OUT)
 GPIO.setup(ECHO_PIN, GPIO.IN)
 
