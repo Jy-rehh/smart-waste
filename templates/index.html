@@ -155,7 +155,7 @@
 
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const userID = urlParams.get('userID');
+        const userID = urlParams.get('UserID');
         const ip = urlParams.get('ip');
         const mac = urlParams.get('mac');
 
@@ -171,7 +171,7 @@
             }
 
             try {
-                const snapshot = await get(child(ref(db), `Users/${userID}`));
+                const snapshot = await get(child(ref(db), `users/${userID}`));
                 if (snapshot.exists()) {
                     const data = snapshot.val();
                     const wifiTime = data.WifiTimeAvailable;
