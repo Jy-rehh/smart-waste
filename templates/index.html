@@ -130,12 +130,9 @@
         </button>
 
      <!-- JavaScript -->
-     <script src="/templates/script.js"></script>
-    <script src="/controllers/index.js"></script>
-    <!-- JavaScript -->
-    <script type="module">
+     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+        import { getDatabase, ref, onValue, child } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
     
         // Firebase configuration
         const firebaseConfig = {
@@ -155,7 +152,7 @@
     
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        let mac = urlParams.get('mac'); // e.g., DC:E7:22:E2:AF:E1
+        let mac = urlParams.get('mac');
         const ip = urlParams.get('ip');
     
         // Replace colons with dashes to match Firebase keys
@@ -168,63 +165,61 @@
         document.getElementById("mac-display").textContent = mac || 'Not found';
     
         // Countdown timer function
-        function startCountdown(seconds) {
+        function startCountdownLive(mac) {
             const display = document.getElementById("wifi-time");
+            const bottleDisplay = document.getElementById("total-bottles");
+            const userRef = ref(db, `users/${mac}`);
     
-            const interval = setInterval(() => {
-                if (seconds <= 0) {
-                    clearInterval(interval);
-                    display.textContent = "Wi-Fi time expired!";
-                    return;
-                }
+            let countdownInterval;
     
-                const minutes = Math.floor(seconds / 60);
-                const hours = Math.floor(minutes / 60);
-                const mins = minutes % 60;
-                const sec = seconds % 60;
+            // Listen for real-time data changes from Firebase
+            onValue(userRef, (snapshot) => {
+                const data = snapshot.val();
     
-                display.textContent = `${hours} hr. ${mins} min. ${sec} sec`;
-                seconds--;
-            }, 1000);
-        }
-    
-        // Fetch WiFi time from Firebase
-        async function fetchWifiTime(mac) {
-            if (!mac || mac === 'Not found') {
-                alert("MAC address (UserID) is not available.");
-                return;
-            }
-    
-            try {
-                const snapshot = await get(child(ref(db), `users/${mac}`));
-    
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
+                if (data) {
                     const wifiTime = data.WiFiTimeAvailable;
                     const totalBottles = data.TotalBottlesDeposited;
     
+                    // Clear old countdown
+                    if (countdownInterval) {
+                        clearInterval(countdownInterval);
+                    }
+    
                     if (typeof wifiTime === "number") {
-                        startCountdown(wifiTime);
+                        let seconds = wifiTime;
+    
+                        countdownInterval = setInterval(() => {
+                            if (seconds <= 0) {
+                                clearInterval(countdownInterval);
+                                display.textContent = "Wi-Fi time expired!";
+                                return;
+                            }
+    
+                            const minutes = Math.floor(seconds / 60);
+                            const hours = Math.floor(minutes / 60);
+                            const mins = minutes % 60;
+                            const sec = seconds % 60;
+    
+                            display.textContent = `${hours} hr. ${mins} min. ${sec} sec`;
+                            seconds--;
+                        }, 1000);
                     } else {
-                        alert("WiFiTimeAvailable is not a valid number.");
+                        display.textContent = "WiFi time not available";
                     }
     
                     if (typeof totalBottles === "number") {
-                        document.getElementById("total-bottles").textContent = `Total Bottles Deposited: ${totalBottles}`;
-                    } else {
-                        alert("TotalBottlesDeposited is not a valid number.");
+                        bottleDisplay.textContent = `Total Bottles Deposited: ${totalBottles}`;
                     }
                 } else {
-                    alert("User not found in Realtime Database.");
+                    display.textContent = "User not found in database";
                 }
-            } catch (err) {
-                console.error("Error fetching WifiTimeAvailable:", err);
-                alert("Failed to fetch time from Firebase.");
-            }
+            });
         }
     
-        // Start
-        fetchWifiTime(mac);
-    </script>     
+        // Start countdown on page load
+        if (mac) {
+            startCountdownLive(mac);
+        }
+    </script>    
 </body>
 </html>

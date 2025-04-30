@@ -78,41 +78,5 @@ async function getCurrentMacWithQueueOne() {
 
     // Finish the session first
     await finishSession(mac);
-
-    // Try to fetch the time remaining
-    
-    try {
-      
-      const res = await fetch(`http://192.168.50.252:3000/api/get-time-remaining?mac=${mac}`);
-
-        console.log("Raw response from /api/get-time-remaining:", res);
-
-        // Check if response is ok
-        if (!res.ok) {
-            alert(`Server returned an error: ${res.status}`);
-            return; 
-        }
-
-        // Try parsing the response JSON
-        let data;
-        try {
-            data = await res.json();
-        } catch (parseErr) {
-            console.error("Failed to parse JSON:", parseErr);
-            alert("Received an invalid response format.");
-            return;
-        }
-
-        // Check if time_remaining exists in the response
-        if (data.WifiTimeAvailable) {
-          window.location.href = `index.html?time=${data.WifiTimeAvailable}&mac=${mac}`;
-      } else {
-          alert("Failed to get WifiTimeAvailable from server.");
-      }
-      
-    } catch (err) {
-        console.error("Error fetching time remaining:", err);
-        alert("An error occurred while fetching the time remaining.");
-    }
 }); 
   
