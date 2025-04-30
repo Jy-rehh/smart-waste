@@ -1,12 +1,15 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
+from firebase_admin import db as realtime_db  # Avoid naming conflict
 from librouteros import connect
 from datetime import datetime
 import time
 
 # ——— Initialize Firebase Admin with Firestore ———
 cred = credentials.Certificate('firebase-key.json')
-firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://smart-waste-c39ac-default-rtdb.firebaseio.com/'
+})
 db = firestore.client()
 
 # ——— Connect to MikroTik Router ———
@@ -60,6 +63,16 @@ while True:
                         'status': "active",
                     })
                     known_macs.add(mac)
+                    # Realtime DB path: /users/{mac_address_sanitized}
+                    mac_sanitized = mac.replace(":", "-")  # Firebase Realtime DB keys cannot contain ":"
+
+                    user_realtime_ref = realtime_db.reference(f'users/{mac_sanitized}')
+                    user_realtime_ref.set({
+                        'UserID': mac,
+                        'WiFiTimeAvailable': 0,
+                        'TotalBottlesDeposited': 0
+                    })
+
                     print(f"[+] Added MAC: {mac}, IP: {ip} to Firestore.")
 
     except Exception as e:

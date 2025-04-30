@@ -6,7 +6,7 @@ from ultralytics import YOLO
 from time import sleep
 import subprocess
 from flask import Flask, request
-
+from firebase_admin import firestore, db as realtime_db
 from servo import move_servo, stop_servo
 from lcd import display_message
 
@@ -16,7 +16,9 @@ from firebase_admin import firestore
 from firebase_admin import credentials, firestore
 
 cred = credentials.Certificate('firebase-key.json')  # <-- PUT YOUR JSON PATH
-firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://smart-waste-c39ac-default-rtdb.firebaseio.com/'
+})
 db = firestore.client()
 
 app = Flask(__name__)
@@ -95,7 +97,31 @@ def get_mac_with_queue_position_1():
     except Exception as e:
         print(f"[!] Firestore error: {e}")
     return None
+def sync_firestore_to_realtime():
+    try:
+        firestore_users = db.collection('Users Collection').where('queuePosition', '==', 1).stream()
 
+        for user_doc in firestore_users:
+            user_data = user_doc.to_dict()
+            mac_address = user_data.get('UserID')
+            if not mac_address:
+                continue
+
+            mac_sanitized = mac_address.replace(":", "-")
+            rt_ref = realtime_db.reference(f'users/{mac_sanitized}')
+            rt_user = rt_ref.get()
+
+            if rt_user and rt_user.get('UserID') == mac_address:
+                rt_ref.update({
+                    'WiFiTimeAvailable': user_data.get('WiFiTimeAvailable', 0),
+                    'TotalBottlesDeposited': user_data.get('TotalBottlesDeposited', 0)
+                })
+                print(f"[✓] Synced user {mac_address} to Realtime DB.")
+            else:
+                print(f"[!] Realtime DB entry for {mac_address} not found or mismatched.")
+    except Exception as e:
+        print(f"[!] Sync failed: {e}")
+        
 # Function to update the TotalBottlesDeposited for the current device with queuePosition == 1
 def update_total_bottles_for_current_user():
     try:
@@ -145,8 +171,11 @@ def monitor_firestore_for_queue():
                     TARGET_MAC = mac
                     print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
 
-                    # Start updating the TotalBottlesDeposited for the current active user
                     update_total_bottles_for_current_user()
+                    
+                    # ✅ ADD THIS LINE
+                    sync_firestore_to_realtime()
+
                 else:
                     print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
             else:
@@ -202,20 +231,16 @@ TotalBottlesDeposited = 0
 # Function to update user based on MAC address
 def update_user_by_mac(mac_address, bottles, wifi_time):
     try:
-        users_ref = db.collection('Users Collection')
-        query = users_ref.where('macAddress', '==', mac_address).limit(1)
-        results = query.get()
+        mac_address_sanitized = mac_address.replace(":", "-")  # Optional: Firebase keys cannot contain '. # $ [ ] /'
+        user_ref = db.reference(f'users/{mac_address_sanitized}')
 
-        if results:
-            user_doc = results[0]
-            user_ref = users_ref.document(user_doc.id)
-            user_ref.update({
-                'TotalBottlesDeposited': bottles,
-                'WiFiTimeAvailable': wifi_time
-            })
-            print(f"[+] Updated user {mac_address} - Bottles: {bottles}, WiFi Time: {wifi_time}")
-        else:
-            print(f"[!] No user found with MAC address {mac_address}")
+        # Update the fields
+        user_ref.update({
+            'TotalBottlesDeposited': bottles,
+            'WiFiTimeAvailable': wifi_time
+        })
+
+        print(f"[+] Updated user {mac_address} - Bottles: {bottles}, WiFi Time: {wifi_time}")
     except Exception as e:
         print(f"[!] Failed to update user by MAC: {e}")
 
@@ -376,7 +401,7 @@ try:
                     print("[+] Small bottle detected: +5 mins Wi-Fi")
                 elif bottle_size == 'large':
                     WiFiTimeAvailable += 10 * 60
-                    otalBottlesDeposited += 1
+                    TotalBottlesDeposited += 1
                     print("[+] Large bottle detected: +10 mins Wi-Fi")
 
                 update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
