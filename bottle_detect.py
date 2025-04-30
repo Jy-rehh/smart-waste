@@ -142,7 +142,7 @@ def update_total_bottles_for_current_user():
             user_id = data.get('UserID')
 
             if user_id != previous_user_id:
-                # Reset the bottle count for the old user
+                # If the user has changed, stop the old user from updating
                 if previous_user_id:
                     print(f"[✔] Stopping bottle count for the previous user {previous_user_id}")
                 previous_user_id = user_id
@@ -169,20 +169,26 @@ def monitor_firestore_for_queue():
         try:
             print("[*] Running Firestore queue check...", flush=True)
             mac = get_mac_with_queue_position_1()
+
             if mac:
                 if mac != TARGET_MAC:
+                    # New user with queuePosition == 1, start updating their data
                     TARGET_MAC = mac
                     print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
-
                     update_total_bottles_for_current_user()
+
                 else:
-                    print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
+                    # Continue adding for the same user as long as queuePosition == 1
+                    print(f"[✔] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
+                    update_total_bottles_for_current_user()
             else:
                 if TARGET_MAC is not None:
+                    # TARGET_MAC no longer valid (queuePosition != 1), stop adding
                     print("[*] No valid user found. Clearing TARGET_MAC.", flush=True)
                     TARGET_MAC = None
 
             time.sleep(1)
+
         except Exception as outer_err:
             print(f"[!] Firestore monitoring error: {outer_err}", flush=True)
             time.sleep(2)
