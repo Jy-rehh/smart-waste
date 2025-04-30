@@ -112,15 +112,27 @@ def sync_firestore_to_realtime():
             rt_user = rt_ref.get()
 
             if rt_user and rt_user.get('UserID') == mac_address:
+                # Get the current value from Realtime DB
+                current_wifi_time = rt_user.get('WiFiTimeAvailable', 0)
+
+                # Get the WiFi time increment based on the bottle size (5 minutes for small, 10 for large)
+                wifi_time_increment = 5 * 60  # Default to 5 minutes (in seconds)
+
+                if user_data.get('bottle_size') == 'large':
+                    wifi_time_increment = 10 * 60  # 10 minutes for large bottle
+
+                # Update only if the new WiFi time is different
+                new_wifi_time = current_wifi_time + wifi_time_increment
                 rt_ref.update({
-                    'WiFiTimeAvailable': user_data.get('WiFiTimeAvailable', 0),
+                    'WiFiTimeAvailable': new_wifi_time,
                     'TotalBottlesDeposited': user_data.get('TotalBottlesDeposited', 0)
                 })
-                print(f"[✓] Synced user {mac_address} to Realtime DB.")
+                print(f"[✓] Synced user {mac_address} to Realtime DB. New WiFiTimeAvailable: {new_wifi_time}")
             else:
                 print(f"[!] Realtime DB entry for {mac_address} not found or mismatched.")
     except Exception as e:
         print(f"[!] Sync failed: {e}")
+
         
 # Function to update the TotalBottlesDeposited for the current device with queuePosition == 1
 def update_total_bottles_for_current_user():
@@ -229,12 +241,12 @@ WiFiTimeAvailable = 0  # seconds
 TotalBottlesDeposited = 0
 
 # Function to update user based on MAC address
-def update_user_by_mac(mac_address, bottles_increment, wifi_time_increment):
+def update_user_by_mac(mac_address, bottle_size):
     try:
-        # --- Sanitize MAC for Firebase keys ---
+        # Sanitize MAC for Firebase keys
         mac_sanitized = mac_address.replace(":", "-")
 
-        # --- Step 1: Check Firestore queuePosition ---
+        # Step 1: Check Firestore queuePosition
         firestore_user = db.collection('Users Collection').document(mac_address).get()
         if not firestore_user.exists:
             print(f"[!] User {mac_address} not found in Firestore.")
@@ -247,7 +259,7 @@ def update_user_by_mac(mac_address, bottles_increment, wifi_time_increment):
             print(f"[!] Skipping update — User {mac_address} is not at queue position 1.")
             return
 
-        # --- Step 2: Fetch current values from Realtime DB ---
+        # Step 2: Fetch current values from Realtime DB
         user_ref = realtime_db.reference(f'users/{mac_sanitized}')
         user_data = user_ref.get()
 
@@ -258,10 +270,16 @@ def update_user_by_mac(mac_address, bottles_increment, wifi_time_increment):
         current_bottles = user_data.get('TotalBottlesDeposited', 0)
         current_wifi = user_data.get('WiFiTimeAvailable', 0)
 
-        # --- Step 3: Update with increments ---
-        new_bottles = current_bottles + bottles_increment
+        # Step 3: Determine Wi-Fi time increment based on bottle size
+        wifi_time_increment = 5 * 60  # Default to 5 minutes for small bottle
+        if bottle_size == 'large':
+            wifi_time_increment = 10 * 60  # 10 minutes for large bottle
+
+        # Increment the values
+        new_bottles = current_bottles + 1
         new_wifi = current_wifi + wifi_time_increment
 
+        # Step 4: Update Realtime DB with new values
         user_ref.update({
             'TotalBottlesDeposited': new_bottles,
             'WiFiTimeAvailable': new_wifi
