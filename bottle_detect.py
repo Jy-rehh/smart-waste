@@ -239,8 +239,7 @@ WiFiTimeAvailable = 0  # seconds
 TotalBottlesDeposited = 0
 
 # Function to update user based on MAC address
-# Function to update user based on MAC address
-def update_user_by_mac(mac_address, bottle_size=None):
+def update_user_by_mac(mac_address, bottle_size):
     try:
         # Sanitize MAC for Firebase keys
         mac_sanitized = mac_address.replace(":", "-")
@@ -254,14 +253,8 @@ def update_user_by_mac(mac_address, bottle_size=None):
         firestore_data = firestore_user.to_dict()
         queue_position = firestore_data.get('queuePosition', -1)
 
-        # Check if this user is the active one in queuePosition == 1
         if queue_position != 1:
             print(f"[!] Skipping update — User {mac_address} is not at queue position 1.")
-            return
-
-        # Check if a bottle size is detected
-        if bottle_size is None:
-            print(f"[!] No bottle detected for MAC {mac_address}. Skipping WiFi time update.")
             return
 
         # Step 2: Fetch current values from Realtime DB
