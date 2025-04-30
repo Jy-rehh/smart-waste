@@ -493,6 +493,7 @@ try:
 
             last_detection_time = current_time
 
+
 except KeyboardInterrupt:
     print("🛑 Exiting gracefully...")
 
@@ -501,3 +502,5 @@ finally:
     cv2.destroyAllWindows()
     set_servo_position(0.5)
     stop_servo()
+
+threading.Thread(target=detection_loop, daemon=True).start()
