@@ -70,46 +70,54 @@ async function getCurrentMacWithQueueOne() {
   });
   // Done button logic
   document.getElementById('doneButton').addEventListener('click', async () => {
-    const mac = await getCurrentMacWithQueueOne();
-    if (!mac) {
+    const mac = document.getElementById("mac-display").textContent.trim();
+
+    if (!mac || mac === 'Not found') {
         alert("MAC address not found.");
         return;
     }
 
-    // Finish the session first
+    // Finish the session (your existing logic)
     await finishSession(mac);
 
-    // Try to fetch the time remaining
     try {
-        const res = await fetch(`/api/get-time-remaining?mac=${mac}`);
-        console.log("Raw response from /api/get-time-remaining:", res);
+        // Reference Firebase Realtime DB
+        const dbRef = firebase.database().ref('users'); // Adjust the path as needed
 
-        // Check if response is ok
-        if (!res.ok) {
-            alert(`Server returned an error: ${res.status}`);
+        // Fetch all users once
+        const snapshot = await dbRef.once('value');
+
+        if (!snapshot.exists()) {
+            alert("No users found in database.");
             return;
         }
 
-        // Try parsing the response JSON
-        let data;
-        try {
-            data = await res.json();
-        } catch (parseErr) {
-            console.error("Failed to parse JSON:", parseErr);
-            alert("Received an invalid response format.");
+        let matchedUser = null;
+
+        snapshot.forEach(childSnapshot => {
+            const userData = childSnapshot.val();
+
+            if (userData.UserID === mac) {
+                matchedUser = userData;
+            }
+        });
+
+        if (!matchedUser) {
+            alert("No user found matching the MAC address.");
             return;
         }
 
-        // Check if time_remaining exists in the response
-        if (data.time_remaining) {
-            window.location.href = `index.html?time=${data.time_remaining}&mac=${mac}`;
+        const timeRemaining = matchedUser.WiFiTimeAvailable;
+
+        if (typeof timeRemaining !== 'undefined') {
+          document.getElementById("time-display").innerText = `${timeRemaining} min`;
+          window.location.href = `index.html?time=${timeRemaining}&mac=${mac}`;
         } else {
-            alert("Failed to get time remaining from server.");
+            alert("WiFiTimeAvailable not found for this user.");
         }
 
     } catch (err) {
-        console.error("Error fetching time remaining:", err);
-        alert("An error occurred while fetching the time remaining.");
+        console.error("Error fetching time from Firebase:", err);
+        alert("An error occurred while fetching time from the database.");
     }
 });
-  
