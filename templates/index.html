@@ -175,10 +175,11 @@
     
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    const wifiTime = data.WifiTimeAvailable; // Fetch WifiTimeAvailable
+                    const wifiTime = data.WiFiTimeAvailable; // Fetch WifiTimeAvailable
+                    const totalBottles = data.TotalBottlesDeposited; // Fetch TotalBottlesDeposited
     
+                    // Display Wi-Fi time
                     if (typeof wifiTime === "number") {
-                        // Convert to hours/minutes/seconds (optional)
                         const minutes = Math.floor(wifiTime / 60);
                         const hours = Math.floor(minutes / 60);
                         const mins = minutes % 60;
@@ -186,7 +187,14 @@
     
                         document.getElementById("wifi-time").textContent = `${hours} hr. ${mins} min. ${seconds} sec`;
                     } else {
-                        alert("WifiTimeAvailable is not a valid number.");
+                        alert("WiFiTimeAvailable is not a valid number.");
+                    }
+    
+                    // Display Total Bottles Deposited (optional)
+                    if (typeof totalBottles === "number") {
+                        document.getElementById("total-bottles").textContent = `Total Bottles Deposited: ${totalBottles}`;
+                    } else {
+                        alert("TotalBottlesDeposited is not a valid number.");
                     }
                 } else {
                     alert("User not found in Realtime Database.");
@@ -199,6 +207,6 @@
     
         // Call function to fetch Wi-Fi time based on the MAC address
         fetchWifiTime(mac);
-    </script>    
+    </script>      
 </body>
 </html>
