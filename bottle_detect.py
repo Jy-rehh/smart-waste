@@ -310,9 +310,21 @@ frame = None
 def capture_frames():
     global frame
     while True:
-        ret, new_frame = cap.read()
-        if ret:
-            frame = new_frame
+        try:
+            ret, new_frame = cap.read()
+            if ret:
+                frame = new_frame
+            else:
+                print("[!] Failed to capture frame. Retrying...")
+                time.sleep(1)  # Retry after a short delay
+
+        except cv2.error as e:
+            print(f"[!] OpenCV error: {e}. Retrying...")
+            time.sleep(1)  # Retry after a short delay
+        except Exception as e:
+            print(f"[!] Unexpected error: {e}. Retrying...")
+            time.sleep(2)  # Retry after a short delay
+
 
 thread = threading.Thread(target=capture_frames, daemon=True)
 thread.start()
