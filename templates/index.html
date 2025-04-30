@@ -155,12 +155,14 @@
     
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const mac = urlParams.get('mac'); // Get the MAC address from URL
-        const ip = urlParams.get('ip'); // Get the IP from URL
+        let mac = urlParams.get('mac'); // ✅ Use let so we can modify it
+        const ip = urlParams.get('ip');
     
+        // Remove colons from MAC address to match Firebase key format
         if (mac) {
             mac = mac.replace(/:/g, '');
         }
+    
         // Display IP and MAC
         document.getElementById("ip-display").textContent = ip || 'Not found';
         document.getElementById("mac-display").textContent = mac || 'Not found';
@@ -173,13 +175,11 @@
             }
     
             try {
-                // Reference to the user node in Firebase with the MAC address as the key
                 const snapshot = await get(child(ref(db), `users/${mac}`));
-    
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    const wifiTime = data.WiFiTimeAvailable; // Fetch WifiTimeAvailable
-                    const totalBottles = data.TotalBottlesDeposited; // Fetch TotalBottlesDeposited
+                    const wifiTime = data.WiFiTimeAvailable;
+                    const totalBottles = data.TotalBottlesDeposited;
     
                     // Display Wi-Fi time
                     if (typeof wifiTime === "number") {
@@ -193,7 +193,7 @@
                         alert("WiFiTimeAvailable is not a valid number.");
                     }
     
-                    // Display Total Bottles Deposited (optional)
+                    // Display Total Bottles Deposited
                     if (typeof totalBottles === "number") {
                         document.getElementById("total-bottles").textContent = `Total Bottles Deposited: ${totalBottles}`;
                     } else {
@@ -210,6 +210,6 @@
     
         // Call function to fetch Wi-Fi time based on the MAC address
         fetchWifiTime(mac);
-    </script>      
+    </script>    
 </body>
 </html>
