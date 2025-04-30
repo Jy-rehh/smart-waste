@@ -461,7 +461,7 @@ try:
                     print(f"❌ Exception in update_user_by_mac: {e}")
 
                 set_servo_position(1)  # Accept
-                sleep(1.5)
+                sleep(2)
                 set_servo_position(0.5)  # Neutral after accepting
                 
 
@@ -485,7 +485,7 @@ try:
                 else:
                     display_message("Rejected Bottle")
                     set_servo_position(0)  # Reject
-
+                    sleep(2)
             else:
                 # No detection at all
                 display_message("Insert bottle")
@@ -502,5 +502,3 @@ finally:
     cv2.destroyAllWindows()
     set_servo_position(0.5)
     stop_servo()
-
-threading.Thread(target=detection_loop, daemon=True).start()
