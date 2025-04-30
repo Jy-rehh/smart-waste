@@ -73,7 +73,7 @@ async function getCurrentMacWithQueueOne() {
     }
   });
   // Done button logic
-  /*document.getElementById('doneButton').addEventListener('click', async () => {
+  document.getElementById('doneButton').addEventListener('click', async () => {
     const mac = await getCurrentMacWithQueueOne();
     if (!mac) {
         alert("MAC address not found.");
@@ -86,7 +86,7 @@ async function getCurrentMacWithQueueOne() {
     // Try to fetch the time remaining
     
     try {
-        const res = await fetch(`/api/get-time-remaining?mac=${mac}`);
+      const res = await fetch('http://192.168.50.252:3000/api/get-time-remaining?mac=${mac}');
         console.log("Raw response from /api/get-time-remaining:", res);
 
         // Check if response is ok
@@ -116,64 +116,5 @@ async function getCurrentMacWithQueueOne() {
         console.error("Error fetching time remaining:", err);
         alert("An error occurred while fetching the time remaining.");
     }
-}); */
-  
-document.getElementById('doneButton').addEventListener('click', async () => {
-  const mac = await getCurrentMacWithQueueOne();
-  if (!mac) {
-      alert("MAC address not found.");
-      return;
-  }
-
-  // Finish the session first
-  await finishSession(mac);
-
-  // Fetch the remaining time from Firestore
-    try {
-        const firebaseConfig = {
-          apiKey: "AIzaSyAnY3P1JJBP6DigzoyrLw1Zikj1fH_occA",
-          authDomain: "smart-waste-c39ac.firebaseapp.com",
-          projectId: "smart-waste-c39ac",
-          databaseURL: "https://smart-waste-c39ac-default-rtdb.firebaseio.com/",
-          storageBucket: "smart-waste-c39ac.firebasestorage.app",
-          messagingSenderId: "645631527511",
-          appId: "1:645631527511:web:96117a712c70e3231ef112",
-          measurementId: "G-YNWWZDNHZZ"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Fetch the user's document from Firestore
-        const docRef = doc(db, "Users", mac);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            const timeRemaining = data.time_remaining;
-
-            // Check if time_remaining exists and is a valid number
-            if (typeof timeRemaining === 'number') {
-                // Optional: Convert seconds to HH:MM:SS format
-                const minutes = Math.floor(timeRemaining / 60);
-                const hours = Math.floor(minutes / 60);
-                const mins = minutes % 60;
-
-                // Update the UI
-                document.getElementById("wifi-time").innerText = `${hours} hr. ${mins} min.`;
-                document.getElementById("mac-display").innerText = mac;
-
-                // Redirect to index.html with time and mac in the query string
-                window.location.href = `index.html?time=${timeRemaining}&mac=${mac}`;
-              } else {
-                alert("Invalid time_remaining value.");
-            }
-        } else {
-            alert("User not found in Firestore.");
-        }
-
-    } catch (err) {
-        console.error("Error fetching data from Firestore:", err);
-        alert("An error occurred while fetching the time remaining.");
-    }
 }); 
+  
