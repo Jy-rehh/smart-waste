@@ -184,10 +184,7 @@ def monitor_firestore_for_queue():
                     print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
 
                     update_total_bottles_for_current_user()
-                    
-                    # ✅ ADD THIS LINE
-                    sync_firestore_to_realtime()
-
+                    #sync_firestore_to_realtime()
                 else:
                     print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
             else:
