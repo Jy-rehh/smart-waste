@@ -1,9 +1,62 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyAnY3P1JJBP6DigzoyrLw1Zikj1fH_occA",
+  authDomain: "smart-waste-c39ac.firebaseapp.com",
+  databaseURL: "https://smart-waste-c39ac-default-rtdb.firebaseio.com/",
+  projectId: "smart-waste-c39ac",
+  storageBucket: "smart-waste-c39ac.appspot.com",
+  messagingSenderId: "645631527511",
+  appId: "1:645631527511:web:96117a712c70e3231ef112",
+  measurementId: "G-YNWWZDNHZZ"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+
 const urlParams = new URLSearchParams(window.location.search);
 const ip  = urlParams.get('ip');
 const mac = urlParams.get('mac');
 
 document.getElementById("ip-display").textContent = ip || 'Not found';
 document.getElementById("mac-display").textContent = mac || 'Not found';
+
+let displayMac = document.getElementById("mac-display").textContent;
+
+async function fetchWifiTime(mac) {
+  if (!mac || mac === 'Not found') {
+    alert("MAC address is not available.");
+    return;
+  }
+
+  try {
+    const snapshot = await get(child(ref(db), `Users/${mac}`));
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      const wifiTime = data.WifiTimeAvailable;
+
+      if (typeof wifiTime === "number") {
+        // Convert to hours/minutes (optional)
+        const minutes = Math.floor(wifiTime / 60);
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+
+        document.getElementById("wifi-time").textContent = `${hours} hr. ${mins} min.`;
+      } else {
+        alert("WifiTimeAvailable is not a valid number.");
+      }
+    } else {
+      alert("User not found in Realtime Database.");
+    }
+  } catch (err) {
+    console.error("Error fetching WifiTimeAvailable:", err);
+    alert("Failed to fetch time from Firebase.");
+  }
+}
+
+fetchWifiTime(displayMac);
+
 
 document.getElementById("openModal").addEventListener("click", function () {
     if (!mac || !ip) {
@@ -114,5 +167,4 @@ async function getCurrentMacWithQueueOne() {
         console.error("Error fetching time remaining:", err);
         alert("An error occurred while fetching the time remaining.");
     }
-}); 
-  
+});
