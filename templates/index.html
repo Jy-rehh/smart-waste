@@ -54,8 +54,7 @@
         <button id="openModal" class="btn green">
             <i class="fa-solid fa-recycle"></i> Insert Bottles
         </button>
-        <div id="wifi-time">Loading...</div>
-
+        
             <!-- Modal 
             <div id="insertModal" class="modal">
                 <div class="modal-content insert-container">
@@ -96,7 +95,7 @@
                 </div>
 
                 <div class="info">
-                    <p>Time: <span id="time-display">0 min</span></p>
+                    <p>Time: <span id="wifi-time">0 min</span></p>
                     <p>Bottle Value: <span>0.00</span></p>
                 </div>
                 <div class="action-buttons">
@@ -133,5 +132,70 @@
      <!-- JavaScript -->
      <script src="/templates/script.js"></script>
     <script src="/controllers/index.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAnY3P1JJBP6DigzoyrLw1Zikj1fH_occA",
+            authDomain: "smart-waste-c39ac.firebaseapp.com",
+            databaseURL: "https://smart-waste-c39ac-default-rtdb.firebaseio.com/",
+            projectId: "smart-waste-c39ac",
+            storageBucket: "smart-waste-c39ac.appspot.com",
+            messagingSenderId: "645631527511",
+            appId: "1:645631527511:web:96117a712c70e3231ef112",
+            measurementId: "G-YNWWZDNHZZ"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const ip = urlParams.get('ip');
+        const mac = urlParams.get('mac');
+
+        // Display IP and MAC
+        document.getElementById("ip-display").textContent = ip || 'Not found';
+        document.getElementById("mac-display").textContent = mac || 'Not found';
+
+        // Fetch Wi-Fi Time Available from Firebase
+        async function fetchWifiTime(mac) {
+            if (!mac || mac === 'Not found') {
+                alert("MAC address is not available.");
+                return;
+            }
+
+            try {
+                const snapshot = await get(child(ref(db), `Users/${mac}`));
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    const wifiTime = data.WifiTimeAvailable;
+
+                    if (typeof wifiTime === "number") {
+                        // Convert to hours/minutes/seconds (optional)
+                        const minutes = Math.floor(wifiTime / 60);
+                        const hours = Math.floor(minutes / 60);
+                        const mins = minutes % 60;
+                        const seconds = wifiTime % 60;
+
+                        document.getElementById("wifi-time").textContent = `${hours} hr. ${mins} min. ${seconds} sec`;
+                    } else {
+                        alert("WifiTimeAvailable is not a valid number.");
+                    }
+                } else {
+                    alert("User not found in Realtime Database.");
+                }
+            } catch (err) {
+                console.error("Error fetching WifiTimeAvailable:", err);
+                alert("Failed to fetch time from Firebase.");
+            }
+        }
+
+        // Call function to fetch Wi-Fi time
+        fetchWifiTime(mac);
+    </script>
 </body>
 </html>
