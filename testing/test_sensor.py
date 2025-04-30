@@ -12,7 +12,6 @@ from lcd import display_message
 
 # ---------------- Firebase ----------------
 import firebase_admin
-from firebase_admin import firestore
 from firebase_admin import credentials, firestore
 
 cred = credentials.Certificate('firebase-key.json')  # <-- PUT YOUR JSON PATH
@@ -284,8 +283,7 @@ def update_user_by_mac(mac_address, bottle_size):
             'TotalBottlesDeposited': new_bottles,
             'WiFiTimeAvailable': new_wifi
         })
-
-        print(f"[✓] Updated user {mac_address} - Bottles: {new_bottles}, WiFi Time: {new_wifi} seconds")
+        print(f"[✔] Updated user {mac_address} in Realtime DB: Bottles={new_bottles}, WiFiTime={new_wifi}")
 
     except Exception as e:
         print(f"[!] Failed to update user by MAC: {e}")
