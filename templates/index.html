@@ -96,7 +96,7 @@
 
                 <div class="info">
                     <p>Time: <span id="wifi-time">0 min</span></p>
-                    <p>Bottle Value: <span>0.00</span></p>
+                    <p>Bottle Value: <span id="total-bottles">0.00</span></p>
                 </div>
                 <div class="action-buttons">
                     <button id="cancelButton" class="action-btn action-cancel">Cancel</button>
@@ -155,12 +155,12 @@
     
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        let mac = urlParams.get('mac'); // ✅ Use let so we can modify it
-        const ip = urlParams.get('ip');
+        let mac = urlParams.get('mac'); // Get the MAC address from URL
+        const ip = urlParams.get('ip'); // Get the IP from URL
     
-        // Remove colons from MAC address to match Firebase key format
+        // Normalize MAC address to match Firebase keys (replace ":" with "-")
         if (mac) {
-            mac = mac.replace(/:/g, '');
+            mac = mac.replace(/:/g, '-');
         }
     
         // Display IP and MAC
@@ -175,11 +175,13 @@
             }
     
             try {
+                // Reference to the user node in Firebase with the MAC address as the key
                 const snapshot = await get(child(ref(db), `users/${mac}`));
+    
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    const wifiTime = data.WiFiTimeAvailable;
-                    const totalBottles = data.TotalBottlesDeposited;
+                    const wifiTime = data.WiFiTimeAvailable; // Fetch WifiTimeAvailable
+                    const totalBottles = data.TotalBottlesDeposited; // Fetch TotalBottlesDeposited
     
                     // Display Wi-Fi time
                     if (typeof wifiTime === "number") {
@@ -193,7 +195,7 @@
                         alert("WiFiTimeAvailable is not a valid number.");
                     }
     
-                    // Display Total Bottles Deposited
+                    // Display Total Bottles Deposited (optional)
                     if (typeof totalBottles === "number") {
                         document.getElementById("total-bottles").textContent = `Total Bottles Deposited: ${totalBottles}`;
                     } else {
