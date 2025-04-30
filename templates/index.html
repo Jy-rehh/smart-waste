@@ -158,6 +158,9 @@
         const mac = urlParams.get('mac'); // Get the MAC address from URL
         const ip = urlParams.get('ip'); // Get the IP from URL
     
+        if (mac) {
+            mac = mac.replace(/:/g, '');
+        }
         // Display IP and MAC
         document.getElementById("ip-display").textContent = ip || 'Not found';
         document.getElementById("mac-display").textContent = mac || 'Not found';
