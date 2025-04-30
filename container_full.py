@@ -14,31 +14,33 @@ ECHO1 = 8   # GPIO Pin 8 (changed)
 GPIO.setup(TRIG1, GPIO.OUT)
 GPIO.setup(ECHO1, GPIO.IN)
 
-# Function to get distance from ultrasonic sensor
 def get_distance(TRIG, ECHO):
+    # Send a pulse to the TRIG pin
     GPIO.output(TRIG, GPIO.LOW)
     time.sleep(0.5)
     GPIO.output(TRIG, GPIO.HIGH)
     time.sleep(0.00001)
     GPIO.output(TRIG, GPIO.LOW)
 
+    # Measure the pulse duration from the ECHO pin
     while GPIO.input(ECHO) == GPIO.LOW:
         pulse_start = time.time()
 
     while GPIO.input(ECHO) == GPIO.HIGH:
         pulse_end = time.time()
 
+    # Calculate the distance in cm
     pulse_duration = pulse_end - pulse_start
     distance = pulse_duration * 17150
     distance = round(distance, 2)
 
     return distance
 
-# Function to send email
 def send_email():
-    sender_email = "smartwastesmartaccess@gmail.com"
+    # Sender and receiver details
+    sender_email = "your_email@gmail.com"  # Replace with your Gmail address
     receiver_email = "smartwastesmartaccess@gmail.com"
-    password = "swsa123456"  # Sender's email password
+    password = "ospk xejd cpxz djbh"  # Replace with the App Password you generated
 
     subject = "📦 RVM Notification: Bottle Bin Full – Collection Required"
     body = """
@@ -61,26 +63,25 @@ def send_email():
     This is a system-generated email. Please do not reply.
     """
 
-    # Set up MIME structure
-    msg = MIMEMultipart()
-    msg['From'] = sender_email
-    msg['To'] = receiver_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+    # Create the email
+    message = MIMEMultipart()
+    message['From'] = sender_email
+    message['To'] = receiver_email
+    message['Subject'] = subject
+    message.attach(MIMEText(body, 'plain'))
 
     try:
-        # Connect to Gmail SMTP server
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()  # Start TLS for security
-        server.login(sender_email, password)  # Login with your Gmail account
-        text = msg.as_string()
-        server.sendmail(sender_email, receiver_email, text)  # Send email
+        # Set up the server and send the email
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)  # Use 465 for SSL connection
+        server.login(sender_email, password)
+        text = message.as_string()
+        server.sendmail(sender_email, receiver_email, text)
         server.quit()
         print("Email sent successfully!")
-    except Exception as e:
-        print(f"Error: {e}")
 
-# Main loop to monitor ultrasonic sensor and send email when container is full
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
 try:
     while True:
         distance1 = get_distance(TRIG1, ECHO1)
@@ -89,7 +90,7 @@ try:
         # Logic for bottle detection
         if distance1 < 5:  # If the distance is less than 5 cm, a bottle is close
             print("Container Full!")
-            send_email()  # Send email when container is full
+            send_email()  # Send email notification
 
         time.sleep(1)
 

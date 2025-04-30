@@ -228,6 +228,30 @@ function startsWifiManager() {
   }
 }
 
+function startContainerDetection() {
+  if (!containerProcess) {
+    const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
+    const pythonScript = '/home/pi/smart-waste/container_full.py';   // Adjust if needed
+
+    containerProcess = spawn(pythonExecutable, [pythonScript]);
+
+    containerProcess.stdout.on('data', (data) => {
+      console.log(`stdout: ${data}`);
+    });
+
+    containerProcess.stderr.on('data', (data) => {
+      console.error(`stderr: ${data}`);
+    });
+
+    containerProcess.on('close', (code) => {
+      console.log(`mac_ip_logger.py exited with code ${code}`);
+      containerProcess = null;
+    });
+
+    console.log("MAC IP Logger started.");
+  }
+}
+
 // Start all scripts when the server starts
 function startAllScripts() {
   startBottleDetection();
