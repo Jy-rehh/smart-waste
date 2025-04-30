@@ -2,10 +2,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const ip  = urlParams.get('ip');
 const mac = urlParams.get('mac');
 
-      // Firebase Firestore initialization
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-
 document.getElementById("ip-display").textContent = ip || 'Not found';
 document.getElementById("mac-display").textContent = mac || 'Not found';
 
