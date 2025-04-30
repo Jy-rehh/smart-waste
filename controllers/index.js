@@ -94,7 +94,7 @@ async function getCurrentMacWithQueueOne() {
         // Check if response is ok
         if (!res.ok) {
             alert(`Server returned an error: ${res.status}`);
-            return;
+            return; 
         }
 
         // Try parsing the response JSON
@@ -108,12 +108,12 @@ async function getCurrentMacWithQueueOne() {
         }
 
         // Check if time_remaining exists in the response
-        if (data.time_remaining) {
-            window.location.href = `index.html?time=${data.time_remaining}&mac=${mac}`;
-        } else {
-            alert("Failed to get time remaining from server.");
-        }
-
+        if (data.WifiTimeAvailable) {
+          window.location.href = `index.html?time=${data.WifiTimeAvailable}&mac=${mac}`;
+      } else {
+          alert("Failed to get WifiTimeAvailable from server.");
+      }
+      
     } catch (err) {
         console.error("Error fetching time remaining:", err);
         alert("An error occurred while fetching the time remaining.");
