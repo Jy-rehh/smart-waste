@@ -5,6 +5,14 @@ const mac = urlParams.get('mac');
 document.getElementById("ip-display").textContent = ip || 'Not found';
 document.getElementById("mac-display").textContent = mac || 'Not found';
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+import { firebaseConfig } from '../config/firebase-config.js'; // relative path
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+
 document.getElementById("openModal").addEventListener("click", function () {
     if (!mac || !ip) {
         alert("MAC or IP not found in URL.");
@@ -77,47 +85,31 @@ async function getCurrentMacWithQueueOne() {
         return;
     }
 
-    // Finish the session (your existing logic)
-    await finishSession(mac);
-
     try {
-        // Reference Firebase Realtime DB
-        const dbRef = firebase.database().ref('users'); // Adjust the path as needed
-
-        // Fetch all users once
-        const snapshot = await dbRef.once('value');
+        const dbRef = ref(db, 'users');
+        const snapshot = await get(dbRef);
 
         if (!snapshot.exists()) {
-            alert("No users found in database.");
+            alert("No users found.");
             return;
         }
 
-        let matchedUser = null;
-
-        snapshot.forEach(childSnapshot => {
-            const userData = childSnapshot.val();
-
-            if (userData.UserID === mac) {
-                matchedUser = userData;
+        let foundTime = null;
+        snapshot.forEach((childSnap) => {
+            const val = childSnap.val();
+            if (val.UserID === mac) {
+                foundTime = val.WiFiTimeAvailable;
             }
         });
 
-        if (!matchedUser) {
-            alert("No user found matching the MAC address.");
-            return;
-        }
-
-        const timeRemaining = matchedUser.WiFiTimeAvailable;
-
-        if (typeof timeRemaining !== 'undefined') {
-          document.getElementById("time-display").innerText = `${timeRemaining} min`;
-          window.location.href = `index.html?time=${timeRemaining}&mac=${mac}`;
+        if (foundTime !== null) {
+            document.getElementById("time-display").innerText = `${foundTime} min`;
         } else {
-            alert("WiFiTimeAvailable not found for this user.");
+            alert("No matching MAC address found.");
         }
 
-    } catch (err) {
-        console.error("Error fetching time from Firebase:", err);
-        alert("An error occurred while fetching time from the database.");
+    } catch (error) {
+        console.error("Firebase fetch error:", error);
+        alert(`An error occurred: ${error.message}`);
     }
 });

@@ -30,6 +30,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyAnY3P1JJBP6DigzoyrLw1Zikj1fH_occA",
   authDomain: "smart-waste-c39ac.firebaseapp.com",
   projectId: "smart-waste-c39ac",
+  databaseURL: "https://smart-waste-c39ac-default-rtdb.firebaseio.com/",
   storageBucket: "smart-waste-c39ac.firebasestorage.app",
   messagingSenderId: "645631527511",
   appId: "1:645631527511:web:96117a712c70e3231ef112",
