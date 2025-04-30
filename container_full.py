@@ -37,8 +37,8 @@ def get_distance(TRIG, ECHO):
     return distance
 
 def send_email():
-    sender_email = "smartwastesmartaccess@gmail.com"  # Replace with your email
-    receiver_email = "smartwastesmartaccess@gmail.com"
+    sender_email = "smartaccesssmartwaste@gmail.com"  # Replace with your email
+    receiver_email = "smartaccesssmartwaste@gmail.com"
     password = "ospk xejd cpxz djbh"  # Replace with your generated App Password
 
     subject = "📦 RVM Notification: Bottle Bin Full – Collection Required"
