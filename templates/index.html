@@ -155,10 +155,10 @@
     
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        let mac = urlParams.get('mac'); // Get the MAC address from URL
-        const ip = urlParams.get('ip'); // Get the IP from URL
+        let mac = urlParams.get('mac'); // e.g., DC:E7:22:E2:AF:E1
+        const ip = urlParams.get('ip');
     
-        // Normalize MAC address to match Firebase keys (replace ":" with "-")
+        // Replace colons with dashes to match Firebase keys
         if (mac) {
             mac = mac.replace(/:/g, '-');
         }
@@ -167,7 +167,28 @@
         document.getElementById("ip-display").textContent = ip || 'Not found';
         document.getElementById("mac-display").textContent = mac || 'Not found';
     
-        // Fetch Wi-Fi Time Available from Firebase using MAC address (UserID)
+        // Countdown timer function
+        function startCountdown(seconds) {
+            const display = document.getElementById("wifi-time");
+    
+            const interval = setInterval(() => {
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    display.textContent = "Wi-Fi time expired!";
+                    return;
+                }
+    
+                const minutes = Math.floor(seconds / 60);
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                const sec = seconds % 60;
+    
+                display.textContent = `${hours} hr. ${mins} min. ${sec} sec`;
+                seconds--;
+            }, 1000);
+        }
+    
+        // Fetch WiFi time from Firebase
         async function fetchWifiTime(mac) {
             if (!mac || mac === 'Not found') {
                 alert("MAC address (UserID) is not available.");
@@ -175,27 +196,19 @@
             }
     
             try {
-                // Reference to the user node in Firebase with the MAC address as the key
                 const snapshot = await get(child(ref(db), `users/${mac}`));
     
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    const wifiTime = data.WiFiTimeAvailable; // Fetch WifiTimeAvailable
-                    const totalBottles = data.TotalBottlesDeposited; // Fetch TotalBottlesDeposited
+                    const wifiTime = data.WiFiTimeAvailable;
+                    const totalBottles = data.TotalBottlesDeposited;
     
-                    // Display Wi-Fi time
                     if (typeof wifiTime === "number") {
-                        const minutes = Math.floor(wifiTime / 60);
-                        const hours = Math.floor(minutes / 60);
-                        const mins = minutes % 60;
-                        const seconds = wifiTime % 60;
-    
-                        document.getElementById("wifi-time").textContent = `${hours} hr. ${mins} min. ${seconds} sec`;
+                        startCountdown(wifiTime);
                     } else {
                         alert("WiFiTimeAvailable is not a valid number.");
                     }
     
-                    // Display Total Bottles Deposited (optional)
                     if (typeof totalBottles === "number") {
                         document.getElementById("total-bottles").textContent = `Total Bottles Deposited: ${totalBottles}`;
                     } else {
@@ -210,8 +223,8 @@
             }
         }
     
-        // Call function to fetch Wi-Fi time based on the MAC address
+        // Start
         fetchWifiTime(mac);
-    </script>    
+    </script>     
 </body>
 </html>
