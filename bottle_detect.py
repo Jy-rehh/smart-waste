@@ -183,7 +183,7 @@ def monitor_firestore_for_queue():
                     TARGET_MAC = mac
                     print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
 
-                    update_total_bottles_for_current_user()
+                    #update_total_bottles_for_current_user()
                     #sync_firestore_to_realtime()
                 else:
                     print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
@@ -196,6 +196,13 @@ def monitor_firestore_for_queue():
         except Exception as outer_err:
             print(f"[!] Firestore monitoring error: {outer_err}", flush=True)
             time.sleep(2)
+
+def process_bottle_detected(mac_address, bottle_size):
+    try:
+        print(f"[✔] Processing bottle detected for {mac_address}...")
+        update_user_by_mac(mac_address, bottle_size)  # Handles Realtime DB and bottle count
+    except Exception as e:
+        print(f"[!] Error processing bottle: {e}")
 
 # Start monitoring in a separate thread
 threading.Thread(target=monitor_firestore_for_queue, daemon=True).start()
@@ -438,6 +445,9 @@ try:
             neutral_classes = ["bottle", "toilet", "surfboard", "bottles"]
 
             if bottle_detected and not container_full:
+                if TARGET_MAC:  # Make sure there's an active user
+                    process_bottle_detected(TARGET_MAC, bottle_size='small')  # or 'large'
+                    bottle_detected = False  # reset if needed
                 display_message("Accepting Bottle")
                 
                 if bottle_size == 'small':
