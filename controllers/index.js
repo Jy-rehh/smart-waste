@@ -86,7 +86,9 @@ async function getCurrentMacWithQueueOne() {
     // Try to fetch the time remaining
     
     try {
-      const res = await fetch('http://192.168.50.252:3000/api/get-time-remaining?mac=${mac}');
+      
+      const res = await fetch(`http://192.168.50.252:3000/api/get-time-remaining?mac=${mac}`);
+
         console.log("Raw response from /api/get-time-remaining:", res);
 
         // Check if response is ok
