@@ -5,14 +5,6 @@ const mac = urlParams.get('mac');
 document.getElementById("ip-display").textContent = ip || 'Not found';
 document.getElementById("mac-display").textContent = mac || 'Not found';
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
-import { firebaseConfig } from '../config/firebase-config.js'; // relative path
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-
 document.getElementById("openModal").addEventListener("click", function () {
     if (!mac || !ip) {
         alert("MAC or IP not found in URL.");
@@ -78,38 +70,46 @@ async function getCurrentMacWithQueueOne() {
   });
   // Done button logic
   document.getElementById('doneButton').addEventListener('click', async () => {
-    const mac = document.getElementById("mac-display").textContent.trim();
-
-    if (!mac || mac === 'Not found') {
+    const mac = await getCurrentMacWithQueueOne();
+    if (!mac) {
         alert("MAC address not found.");
         return;
     }
 
-    try {
-        const dbRef = ref(db, 'users');
-        const snapshot = await get(dbRef);
+    // Finish the session first
+    await finishSession(mac);
 
-        if (!snapshot.exists()) {
-            alert("No users found.");
+    // Try to fetch the time remaining
+    try {
+        const res = await fetch(`/api/get-time-remaining?mac=${mac}`);
+        console.log("Raw response from /api/get-time-remaining:", res);
+
+        // Check if response is ok
+        if (!res.ok) {
+            alert(`Server returned an error: ${res.status}`);
             return;
         }
 
-        let foundTime = null;
-        snapshot.forEach((childSnap) => {
-            const val = childSnap.val();
-            if (val.UserID === mac) {
-                foundTime = val.WiFiTimeAvailable;
-            }
-        });
-
-        if (foundTime !== null) {
-            document.getElementById("time-display").innerText = `${foundTime} min`;
-        } else {
-            alert("No matching MAC address found.");
+        // Try parsing the response JSON
+        let data;
+        try {
+            data = await res.json();
+        } catch (parseErr) {
+            console.error("Failed to parse JSON:", parseErr);
+            alert("Received an invalid response format.");
+            return;
         }
 
-    } catch (error) {
-        console.error("Firebase fetch error:", error);
-        alert(`An error occurred: ${error.message}`);
+        // Check if time_remaining exists in the response
+        if (data.time_remaining) {
+            window.location.href = `index.html?time=${data.time_remaining}&mac=${mac}`;
+        } else {
+            alert("Failed to get time remaining from server.");
+        }
+
+    } catch (err) {
+        console.error("Error fetching time remaining:", err);
+        alert("An error occurred while fetching the time remaining.");
     }
 });
+  
