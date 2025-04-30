@@ -452,7 +452,13 @@ try:
                     TotalBottlesDeposited += 1
                     print("[+] Large bottle detected: +10 mins Wi-Fi")
 
-                update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
+                #update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
+                try:
+                    result = update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
+                    if not result:
+                        print("❗ update_user_by_mac failed or returned no result.")
+                except Exception as e:
+                    print(f"❌ Exception in update_user_by_mac: {e}")
 
                 set_servo_position(1)  # Accept
                 sleep(1.5)
