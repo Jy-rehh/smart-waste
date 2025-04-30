@@ -75,10 +75,9 @@ bindings = api.path('ip', 'hotspot', 'ip-binding')
 TARGET_MAC = None
 previous_user_id = None
 
-# Function to get the current user with queuePosition == 1
 def get_mac_with_queue_position_1():
     try:
-        print("[*] Checking Firestore for user with queuePosition == 1...")
+        print("[*] Checking Firestore...")
         users_ref = db.collection('Users Collection')
         query = users_ref.where('queuePosition', '==', 1).limit(1)
         results = query.get()
@@ -98,40 +97,49 @@ def get_mac_with_queue_position_1():
     except Exception as e:
         print(f"[!] Firestore error: {e}")
     return None
-
-def sync_firestore_to_realtime(mac_address, bottle_size):
+def sync_firestore_to_realtime():
     try:
-        mac_sanitized = mac_address.replace(":", "-")
-        user_ref = realtime_db.reference(f'users/{mac_sanitized}')
-        user_data = user_ref.get()
+        firestore_users = db.collection('Users Collection').where('queuePosition', '==', 1).stream()
 
-        if user_data:
-            current_wifi_time = user_data.get('WiFiTimeAvailable', 0)
-            wifi_time_increment = 5 * 60  # Default for small bottle
-            if bottle_size == 'large':
-                wifi_time_increment = 10 * 60  # For large bottle
+        for user_doc in firestore_users:
+            user_data = user_doc.to_dict()
+            mac_address = user_data.get('UserID')
+            if not mac_address:
+                continue
 
-            new_wifi_time = current_wifi_time + wifi_time_increment
-            new_bottle_count = user_data.get('TotalBottlesDeposited', 0) + 1
+            mac_sanitized = mac_address.replace(":", "-")
+            rt_ref = realtime_db.reference(f'users/{mac_sanitized}')
+            rt_user = rt_ref.get()
 
-            user_ref.update({
-                'WiFiTimeAvailable': new_wifi_time,
-                'TotalBottlesDeposited': new_bottle_count
-            })
+            if rt_user and rt_user.get('UserID') == mac_address:
+                # Get the current value from Realtime DB
+                current_wifi_time = rt_user.get('WiFiTimeAvailable', 0)
 
-            print(f"[✓] Synced user {mac_address} to Realtime DB. New WiFiTimeAvailable: {new_wifi_time}, Bottles: {new_bottle_count}")
-        else:
-            print(f"[!] No matching user found in Realtime DB for {mac_address}")
+                # Get the WiFi time increment based on the bottle size (5 minutes for small, 10 for large)
+                wifi_time_increment = 5 * 60  # Default to 5 minutes (in seconds)
 
+                if user_data.get('bottle_size') == 'large':
+                    wifi_time_increment = 10 * 60  # 10 minutes for large bottle
+
+                # Update only if the new WiFi time is different
+                new_wifi_time = current_wifi_time + wifi_time_increment
+                rt_ref.update({
+                    'WiFiTimeAvailable': new_wifi_time,
+                    'TotalBottlesDeposited': user_data.get('TotalBottlesDeposited', 0)
+                })
+                print(f"[✓] Synced user {mac_address} to Realtime DB. New WiFiTimeAvailable: {new_wifi_time}")
+            else:
+                print(f"[!] Realtime DB entry for {mac_address} not found or mismatched.")
     except Exception as e:
         print(f"[!] Sync failed: {e}")
 
+        
+# Function to update the TotalBottlesDeposited for the current device with queuePosition == 1
 def update_total_bottles_for_current_user():
-    global previous_user_id
     try:
-        print("[*] Updating TotalBottlesDeposited for the active user with queuePosition == 1...")
+        print("[*] Updating TotalBottlesDeposited for the current active user with queuePosition == 1...")
 
-        # Fetch the current active user with queuePosition == 1
+        # Fetch the current active user (with queuePosition == 1)
         users_ref = db.collection('Users Collection')
         query = users_ref.where('queuePosition', '==', 1)
         results = query.get()
@@ -141,10 +149,13 @@ def update_total_bottles_for_current_user():
             data = user_doc.to_dict()
             user_id = data.get('UserID')
 
+            # Check if the user ID has changed (this means a new device is now queuePosition == 1)
+            global previous_user_id
             if user_id != previous_user_id:
-                # If the user has changed, stop the old user from updating
+                # Reset the bottles count for the old user if they no longer have queuePosition == 1
                 if previous_user_id:
                     print(f"[✔] Stopping bottle count for the previous user {previous_user_id}")
+                # Now, the previous user is this one, so we update their TotalBottlesDeposited
                 previous_user_id = user_id
 
             # Increment the TotalBottlesDeposited for the current user
@@ -155,40 +166,36 @@ def update_total_bottles_for_current_user():
 
             print(f"[✔] TotalBottlesDeposited updated for user {user_id}. New count: {new_bottle_count}")
 
-            # Sync to Realtime DB
-            bottle_size = data.get('bottle_size', 'small')  # Assuming bottle size info exists in Firestore
-            sync_firestore_to_realtime(user_id, bottle_size)
         else:
             print("[!] No active user with queuePosition == 1.")
     except Exception as e:
         print(f"[!] Error while updating TotalBottlesDeposited: {e}")
 
+# Infinite loop that never exits unless you kill it
 def monitor_firestore_for_queue():
     global TARGET_MAC
     while True:
         try:
             print("[*] Running Firestore queue check...", flush=True)
             mac = get_mac_with_queue_position_1()
-
             if mac:
                 if mac != TARGET_MAC:
-                    # New user with queuePosition == 1, start updating their data
                     TARGET_MAC = mac
                     print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
+
                     update_total_bottles_for_current_user()
+                    
+                    # ✅ ADD THIS LINE
+                    sync_firestore_to_realtime()
 
                 else:
-                    # Continue adding for the same user as long as queuePosition == 1
-                    print(f"[✔] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
-                    update_total_bottles_for_current_user()
+                    print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
             else:
                 if TARGET_MAC is not None:
-                    # TARGET_MAC no longer valid (queuePosition != 1), stop adding
                     print("[*] No valid user found. Clearing TARGET_MAC.", flush=True)
                     TARGET_MAC = None
 
             time.sleep(1)
-
         except Exception as outer_err:
             print(f"[!] Firestore monitoring error: {outer_err}", flush=True)
             time.sleep(2)
@@ -384,8 +391,6 @@ def monitor_container():
 
 # Start the container monitoring in a separate thread
 threading.Thread(target=monitor_container, daemon=True).start()
-
-# ---------------- Main Logic ----------------
 
 try:
     while True:
