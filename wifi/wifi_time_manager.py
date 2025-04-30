@@ -1,16 +1,15 @@
-# wifi_time_manager.py
-
 import time
 from librouteros import connect
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, db as realtime_db
 
-# ---------------- Firebase ----------------
-cred = credentials.Certificate('firebase-key.json')  # <-- Put your JSON path
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+# ---------------- Firebase Realtime DB ----------------
+cred = credentials.Certificate('firebase-key.json')
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://smart-waste-c39ac-default-rtdb.firebaseio.com/'  # <-- Replace with your actual database URL
+})
 
-# ---------------- MikroTik ----------------
+# ---------------- MikroTik Router ----------------
 ROUTER_HOST = '192.168.50.1'
 ROUTER_USERNAME = 'admin'
 ROUTER_PASSWORD = ''
@@ -57,35 +56,33 @@ def add_or_update_binding(mac_address, binding_type):
         print(f"[!] Error adding/updating binding: {e}")
 
 # ---------------- Countdown Loop ----------------
-def manage_time():
-    while True:
-        try:
-            users_ref = db.collection('Users Collection')
-            users = users_ref.where('macAddress', '!=', '').stream()
+def manage_wifi_time():
+    try:
+        users_ref = realtime_db.reference('users')
+        all_users = users_ref.get()
 
-            for user in users:
-                user_data = user.to_dict()
-                mac = user_data.get('macAddress', '').upper()
-                time_left = user_data.get('WiFiTimeAvailable', 0)
+        if not all_users:
+            print("[!] No users found in Realtime DB.")
+            return
 
-                if mac:
-                    if time_left > 0:
-                        # Update the WiFi time for this user
-                        new_time = time_left - 1
-                        users_ref.document(user.id).update({'WiFiTimeAvailable': new_time})
-                        print(f"[↓] {mac} - WiFiTimeAvailable: {new_time}")
+        for mac_sanitized, user_data in all_users.items():
+            mac = user_data.get('UserID', '').upper()
+            time_left = user_data.get('WiFiTimeAvailable', 0)
 
-                        # Set the binding to 'bypassed' if it's not already
-                        add_or_update_binding(mac, 'bypassed')
-                    else:
-                        # If time is 0, change to 'regular' status
-                        add_or_update_binding(mac, 'regular')
-                        print(f"[↑] {mac} - WiFiTimeAvailable is 0, set to 'regular' status.")
+            if mac:
+                if time_left > 0:
+                    # If time left, set to 'bypassed'
+                    add_or_update_binding(mac, 'bypassed')
+                    print(f"[↓] {mac} - WiFiTimeAvailable: {time_left} (bypassed)")
+                else:
+                    # If no time left, set to 'regular'
+                    add_or_update_binding(mac, 'regular')
+                    print(f"[↑] {mac} - WiFiTimeAvailable is 0 (regular)")
 
-        except Exception as e:
-            print(f"[!] Error managing time: {e}")
+    except Exception as e:
+        print(f"[!] Error managing WiFi time: {e}")
 
         time.sleep(1)
 
 if __name__ == "__main__":
-    manage_time()
+    manage_wifi_time()
