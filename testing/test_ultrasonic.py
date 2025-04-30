@@ -40,7 +40,7 @@ try:
 
         # Logic for bottle detection
         if distance1 < 5:  # If the distance is less than 5 cm, a bottle is close
-            print("Bottle detected!")
+            print("Container Full!")
 
         time.sleep(1)
 

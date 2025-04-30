@@ -9,6 +9,7 @@ from flask import Flask, request
 from firebase_admin import firestore, db as realtime_db
 from servo import move_servo, stop_servo
 from lcd import display_message
+from container_full import monitor_container, container_full
 
 # ---------------- Firebase ----------------
 import firebase_admin
@@ -323,68 +324,13 @@ def set_servo_position(pos):
         move_servo(pos)
         last_servo_position = pos
 
-# ---------------- Ultrasonic Sensor Logic ----------------
+# ---------------- Main Logic ----------------
 
-TRIG_PIN = 11
-ECHO_PIN = 8
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(TRIG_PIN, GPIO.OUT)
-GPIO.setup(ECHO_PIN, GPIO.IN)
+container_thread = threading.Thread(target=monitor_container)
+container_thread.daemon = True  # Ensure the thread exits when the main program ends
+container_thread.start()
 
-container_full = False  # Shared flag
-
-def get_distance():
-    GPIO.output(TRIG_PIN, False)
-    time.sleep(0.05)
-
-    GPIO.output(TRIG_PIN, True)
-    time.sleep(0.00001)
-    GPIO.output(TRIG_PIN, False)
-
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 0:
-        pulse_start = time.time()
-        if time.time() > timeout:
-            return None
-
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 1:
-        pulse_end = time.time()
-        if time.time() > timeout:
-            return None
-
-    pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150
-    return round(distance, 2)
-
-# Monitoring container fullness and handling rejection
-def monitor_container():
-    global container_full
-    try:
-        while True:
-            distance = get_distance()
-            if distance is not None:
-                print(f"[Ultrasonic] Distance: {distance} cm")
-                if distance <= 4:  # Assuming distance < 4 cm indicates full
-                    container_full = True
-                    display_message("Container Full")
-                    print("[Ultrasonic] Container Full - Rejecting Bottle")
-                    set_servo_position(0)  # Reject bottle
-                    sleep(1.5)
-                    set_servo_position(0.5)  # Neutral position after rejection
-                else:
-                    container_full = False
-            else:
-                print("[Ultrasonic] Sensor error.")
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n[Ultrasonic] Monitoring stopped.")
-    finally:
-        GPIO.cleanup()
-
-# Start the container monitoring in a separate thread
-threading.Thread(target=monitor_container, daemon=True).start()
-
+# Main loop where bottle detection occurs
 try:
     while True:
         if frame is None:
@@ -403,29 +349,29 @@ try:
             if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
                 frame_height, frame_width, _ = frame.shape  # Get frame size
 
-            for box in bottle_results.boxes:
-                confidence = box.conf[0].item()
-                if confidence >= 0.7:
-                    class_id = int(box.cls[0])
-                    class_name = bottle_model.names[class_id].lower()
+                for box in bottle_results.boxes:
+                    confidence = box.conf[0].item()
+                    if confidence >= 0.7:
+                        class_id = int(box.cls[0])
+                        class_name = bottle_model.names[class_id].lower()
 
-                    x1, y1, x2, y2 = box.xyxy[0]  # Get bounding box coordinates
-                    box_width = x2 - x1
-                    box_height = y2 - y1
-                    box_area = box_width * box_height
-                    frame_area = frame_width * frame_height
-                    percentage = (box_area / frame_area) * 100
+                        x1, y1, x2, y2 = box.xyxy[0]  # Get bounding box coordinates
+                        box_width = x2 - x1
+                        box_height = y2 - y1
+                        box_area = box_width * box_height
+                        frame_area = frame_width * frame_height
+                        percentage = (box_area / frame_area) * 100
 
-                    print(f"[{class_name}] Detected area: {percentage:.2f}% of frame")
+                        print(f"[{class_name}] Detected area: {percentage:.2f}% of frame")
 
-                    if class_name == "small_bottle":
-                        bottle_detected = True
-                        bottle_size = 'small'
-                        break
-                    elif class_name == "large_bottle":
-                        bottle_detected = True
-                        bottle_size = 'large'
-                        break
+                        if class_name == "small_bottle":
+                            bottle_detected = True
+                            bottle_size = 'small'
+                            break
+                        elif class_name == "large_bottle":
+                            bottle_detected = True
+                            bottle_size = 'large'
+                            break
 
             # Check general model
             if general_results.boxes is not None and len(general_results.boxes) > 0:
@@ -435,7 +381,7 @@ try:
 
             if bottle_detected and not container_full:
                 display_message("Accepting Bottle")
-                
+
                 if bottle_size == 'small':
                     WiFiTimeAvailable += 5 * 60
                     TotalBottlesDeposited += 1
@@ -445,7 +391,6 @@ try:
                     TotalBottlesDeposited += 1
                     print("[+] Large bottle detected: +10 mins Wi-Fi")
 
-                #update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
                 try:
                     result = update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
                     if not result:
@@ -456,7 +401,6 @@ try:
                 set_servo_position(1)  # Accept
                 sleep(1.5)
                 set_servo_position(0.5)  # Neutral after accepting
-                
 
             elif general_detected:
                 go_neutral = False
@@ -483,6 +427,11 @@ try:
                 # No detection at all
                 display_message("Insert bottle")
                 set_servo_position(0.5)
+
+            # Check if the container is full and reject bottles if it is
+            if container_full:
+                display_message("Container Full!")
+                set_servo_position(0)  # Reject bottle if container is full
 
             last_detection_time = current_time
 
