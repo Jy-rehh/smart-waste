@@ -754,3 +754,50 @@ body::before {
 #cancel-btn:hover {
     background-color: #aba5a5; 
 }
+
+.please-wait-modal {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+  
+  .please-wait-content {
+    background-color: #fff;
+    padding: 30px 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    max-width: 400px;
+  }
+  
+  .please-wait-content h2 {
+    margin-bottom: 15px;
+    color: #27ae60;
+    font-size: 24px;
+  }
+  
+  .please-wait-content p {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 25px;
+  }
+  
+  .please-wait-content button {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .please-wait-content button:hover {
+    background-color: #219653;
+  }

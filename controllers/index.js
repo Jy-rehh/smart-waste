@@ -79,4 +79,3 @@ async function getCurrentMacWithQueueOne() {
     // Finish the session first
     await finishSession(mac);
 }); 
-  
