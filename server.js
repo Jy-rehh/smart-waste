@@ -227,6 +227,25 @@ function startsWifiManager() {
     });
   }
 }
+function startTestUltrasonic() {
+  const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
+  const pythonScript = '/home/pi/smart-waste/testing/test_ultrasonic.py';
+
+  const testUltrasonicProcess = spawn(pythonExecutable, [pythonScript]);
+
+  testUltrasonicProcess.stdout.on('data', (data) => {
+    console.log(`[Ultrasonic] stdout: ${data.toString()}`);
+  });
+
+  testUltrasonicProcess.stderr.on('data', (data) => {
+    console.error(`[Ultrasonic] stderr: ${data.toString()}`);
+  });
+
+  testUltrasonicProcess.on('close', (code) => {
+    console.log(`[Ultrasonic] Script exited with code ${code}`);
+  });
+}
+
 
 // Start all scripts when the server starts
 function startAllScripts() {
@@ -234,6 +253,7 @@ function startAllScripts() {
   startMacIpLogger();
   startStoreMacIp();
   startsWifiManager();
+  startTestUltrasonic();
 }
 
 // Start the server and run all scripts

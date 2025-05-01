@@ -330,6 +330,7 @@ def set_servo_position(pos):
 
 # ---------------- Ultrasonic Sensor Logic ----------------
 
+# Setup
 TRIG_PIN = 11
 ECHO_PIN = 8
 GPIO.setmode(GPIO.BOARD)
@@ -362,34 +363,6 @@ def get_distance():
     distance = pulse_duration * 17150
     return round(distance, 2)
 
-# Monitoring container fullness and handling rejection
-def monitor_container():
-    global container_full
-    try:
-        while True:
-            distance = get_distance()
-            if distance is not None:
-                print(f"[Ultrasonic] Distance: {distance} cm")
-                if distance <= 4:  # Assuming distance < 4 cm indicates full
-                    container_full = True
-                    display_message("Container Full")
-                    print("[Ultrasonic] Container Full - Rejecting Bottle")
-                    set_servo_position(0)  # Reject bottle
-                    sleep(1.5)
-                    set_servo_position(0.5)  # Neutral position after rejection
-                else:
-                    container_full = False
-            else:
-                print("[Ultrasonic] Sensor error.")
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n[Ultrasonic] Monitoring stopped.")
-    finally:
-        GPIO.cleanup()
-
-# Start the container monitoring in a separate thread
-threading.Thread(target=monitor_container, daemon=True).start()
-
 try:
     while True:
         if frame is None:
@@ -401,12 +374,12 @@ try:
             general_results = general_model(frame)[0]
 
             bottle_detected = False
-            bottle_size = None  # 'small' or 'large'
+            bottle_size = None
             general_detected = False
 
             # Check bottle model
             if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
-                frame_height, frame_width, _ = frame.shape  # Get frame size
+                frame_height, frame_width, _ = frame.shape
 
             for box in bottle_results.boxes:
                 confidence = box.conf[0].item()
@@ -414,7 +387,7 @@ try:
                     class_id = int(box.cls[0])
                     class_name = bottle_model.names[class_id].lower()
 
-                    x1, y1, x2, y2 = box.xyxy[0]  # Get bounding box coordinates
+                    x1, y1, x2, y2 = box.xyxy[0]
                     box_width = x2 - x1
                     box_height = y2 - y1
                     box_area = box_width * box_height
@@ -438,10 +411,24 @@ try:
 
             neutral_classes = ["bottle", "toilet", "surfboard", "bottles"]
 
-            if bottle_detected and not container_full:
+            if bottle_detected:
+                # Recheck container fullness
+                ultrasonic_distance = get_distance()
+                if ultrasonic_distance is not None and ultrasonic_distance <= 5:
+                    container_full = True
+                    display_message("Container Full")
+                    print(f"[Ultrasonic] Distance: {ultrasonic_distance} cm - Container Full - Rejecting Bottle")
+                    set_servo_position(0)
+                    sleep(1.5)
+                    set_servo_position(0.5)
+                    last_detection_time = current_time
+                    continue
+                else:
+                    container_full = False
+
                 update_user_by_mac(TARGET_MAC, bottle_size)
                 display_message("Accepting Bottle")
-                
+
                 if bottle_size == 'small':
                     WiFiTimeAvailable += 5 * 60
                     TotalBottlesDeposited += 1
@@ -451,7 +438,6 @@ try:
                     TotalBottlesDeposited += 1
                     print("[+] Large bottle detected: +10 mins Wi-Fi")
 
-                #update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
                 try:
                     result = update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
                     if not result:
@@ -459,17 +445,16 @@ try:
                 except Exception as e:
                     print(f"❌ Exception in update_user_by_mac: {e}")
 
-                set_servo_position(1)  # Accept
+                set_servo_position(1)
                 sleep(2)
-                set_servo_position(0.5)  # Neutral after accepting
-                
+                set_servo_position(0.5)
 
             elif general_detected:
                 go_neutral = False
                 for box in general_results.boxes:
                     confidence = box.conf[0].item()
                     if confidence < 0.6:
-                        continue  # Skip low-confidence detections
+                        continue
 
                     class_id = int(box.cls[0])
                     class_name = general_model.names[class_id].lower()
@@ -483,15 +468,13 @@ try:
                     display_message("Insert bottle")
                 else:
                     display_message("Rejected Bottle")
-                    set_servo_position(0)  # Reject
+                    set_servo_position(0)
                     sleep(2)
             else:
-                # No detection at all
                 display_message("Insert bottle")
                 set_servo_position(0.5)
 
             last_detection_time = current_time
-
 
 except KeyboardInterrupt:
     print("🛑 Exiting gracefully...")

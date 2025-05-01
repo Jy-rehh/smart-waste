@@ -80,11 +80,11 @@ def send_email():
 try:
     while True:
         distance1 = get_distance(TRIG1, ECHO1)
-        print(f"Sensor 1 Distance: {distance1} cm")
+        #print(f"Sensor 1 Distance: {distance1} cm")
 
         # Logic for bottle detection
         if distance1 < 5:  # If the distance is less than 5 cm, a bottle is close
-            print("Container Full!")
+            #print("Container Full!")
             send_email()  # Send email notification
 
         time.sleep(1)
