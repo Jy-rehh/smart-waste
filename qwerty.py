@@ -326,8 +326,7 @@ def set_servo_position(pos):
         last_servo_position = pos
 
 # Ultrasonic setup
-if not GPIO.getmode():  # Check if mode has already been set
-    GPIO.setmode(GPIO.BCM)
+GPIO.setmode(GPIO.BCM)
 
 TRIG_PIN = 10  # pin 19
 ECHO_PIN = 9   # pin 21
@@ -347,16 +346,19 @@ def get_distance():
     while GPIO.input(ECHO_PIN) == 0:
         pulse_start = time.time()
         if time.time() > timeout:
+            print("Timeout waiting for echo to start")
             return None
 
     timeout = time.time() + 0.04
     while GPIO.input(ECHO_PIN) == 1:
         pulse_end = time.time()
         if time.time() > timeout:
+            print("Timeout waiting for echo to end")
             return None
 
     pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150
+    distance = pulse_duration * 17150  # Speed of sound / 2
+
     return round(distance, 2)
 
 try:
