@@ -143,9 +143,7 @@
      <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getDatabase, ref, onValue, child } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
-        import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-        const firestore = getFirestore(app);
-
+    
         // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAnY3P1JJBP6DigzoyrLw1Zikj1fH_occA",
@@ -227,36 +225,10 @@
                 }
             });
         }
-
-        function checkIfFirstInQueue(mac) {
-            const userDocRef = doc(firestore, "users", mac);
-
-            // Listen to real-time changes
-            onSnapshot(userDocRef, (docSnapshot) => {
-                if (docSnapshot.exists()) {
-                    const data = docSnapshot.data();
-                    const queuePos = data.queuePosition;
-
-                    const modal = document.getElementById('pleaseWaitModal');
-                    const doneBtn = document.getElementById('doneButton');
-
-                    if (queuePos !== 1) {
-                        modal.style.display = 'block';
-                        doneBtn.disabled = true;
-                    } else {
-                        modal.style.display = 'none';
-                        doneBtn.disabled = false;
-                    }
-                } else {
-                    console.log("No such user document found.");
-                }
-            });
-        }
     
         // Start countdown on page load
         if (mac) {
             startCountdownLive(mac);
-            checkIfFirstInQueue(mac);
         }
         // Done button event
         document.getElementById("doneButton").addEventListener("click", () => {
@@ -274,7 +246,6 @@
                     });
             });
         });
-        
     </script>
 </body>
 </html>
