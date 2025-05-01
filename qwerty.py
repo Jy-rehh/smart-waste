@@ -325,55 +325,9 @@ def set_servo_position(pos):
         move_servo(pos)
         last_servo_position = pos
 
-# Ultrasonic setup
-if GPIO.getmode() != GPIO.BCM:
-    GPIO.setmode(GPIO.BCM)
-
-TRIG_PIN = 10  # pin 19
-ECHO_PIN = 9   # pin 21
-
-GPIO.setup(TRIG_PIN, GPIO.OUT)
-GPIO.setup(ECHO_PIN, GPIO.IN)
-
-def get_distance():
-    GPIO.output(TRIG_PIN, False)
-    time.sleep(0.05)
-
-    GPIO.output(TRIG_PIN, True)
-    time.sleep(0.00001)
-    GPIO.output(TRIG_PIN, False)
-
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 0:
-        pulse_start = time.time()
-        if time.time() > timeout:
-            print("Timeout waiting for echo to start")
-            return None
-
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 1:
-        pulse_end = time.time()
-        if time.time() > timeout:
-            print("Timeout waiting for echo to end")
-            return None
-
-    pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150  # Speed of sound / 2
-
-    return round(distance, 2)
-
 try:
     while True:
         if frame is None:
-            continue
-
-        ultrasonic_distance = get_distance()
-        if ultrasonic_distance is None:
-            continue
-
-        if ultrasonic_distance > 15:
-            display_message("Insert bottle")
-            set_servo_position(0.5)
             continue
 
         current_time = time.time()
@@ -410,16 +364,6 @@ try:
                             break
 
             if bottle_detected:
-                # Check if container is full
-                if ultrasonic_distance <= 5:
-                    display_message("Container Full")
-                    print(f"[Ultrasonic] Distance: {ultrasonic_distance} cm - Container Full - Rejecting Bottle")
-                    set_servo_position(0)
-                    sleep(1.5)
-                    set_servo_position(0.5)
-                    last_detection_time = current_time
-                    continue
-
                 update_user_by_mac(TARGET_MAC, bottle_size)
                 display_message("Accepting Bottle")
 
