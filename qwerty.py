@@ -39,7 +39,7 @@ def start_bottle_session():
     ip = data.get('ip')
 
     if mac and ip:
-        print(f"[✔] Session started with MAC: {mac}, IP: {ip}")
+        #print(f"[✔] Session started with MAC: {mac}, IP: {ip}")
         return {'status': 'ok'}
     
     return {'status': 'error', 'message': 'Missing mac or ip'}, 400
@@ -79,7 +79,7 @@ previous_user_id = None
 
 def get_mac_with_queue_position_1():
     try:
-        print("[*] Checking Firestore...")
+        #("[*] Checking Firestore...")
         users_ref = db.collection('Users Collection')
         query = users_ref.where('queuePosition', '==', 1).limit(1)
         results = query.get()
@@ -87,15 +87,15 @@ def get_mac_with_queue_position_1():
         if results:
             user_doc = results[0]
             data = user_doc.to_dict()
-            print(f"[Debug] Retrieved user data: {data}")
+            #print(f"[Debug] Retrieved user data: {data}")
 
             user_id = data.get('UserID')
             if user_id:
                 return user_id
-            else:
-                print("[!] User with queuePosition 1 has no UserID.")
-        else:
-            print("[!] No user found with queuePosition 1.")
+            #else:
+                #print("[!] User with queuePosition 1 has no UserID.")
+        #else:
+            #print("[!] No user found with queuePosition 1.")
     except Exception as e:
         print(f"[!] Firestore error: {e}")
     return None
@@ -129,7 +129,7 @@ def sync_firestore_to_realtime():
                     'WiFiTimeAvailable': new_wifi_time,
                     'TotalBottlesDeposited': user_data.get('TotalBottlesDeposited', 0)
                 })
-                print(f"[✓] Synced user {mac_address} to Realtime DB. New WiFiTimeAvailable: {new_wifi_time}")
+                #print(f"[✓] Synced user {mac_address} to Realtime DB. New WiFiTimeAvailable: {new_wifi_time}")
             else:
                 print(f"[!] Realtime DB entry for {mac_address} not found or mismatched.")
     except Exception as e:
@@ -139,7 +139,7 @@ def sync_firestore_to_realtime():
 # Function to update the TotalBottlesDeposited for the current device with queuePosition == 1
 def update_total_bottles_for_current_user():
     try:
-        print("[*] Updating TotalBottlesDeposited for the current active user with queuePosition == 1...")
+        #print("[*] Updating TotalBottlesDeposited for the current active user with queuePosition == 1...")
 
         # Fetch the current active user (with queuePosition == 1)
         users_ref = db.collection('Users Collection')
@@ -166,10 +166,10 @@ def update_total_bottles_for_current_user():
             user_ref = users_ref.document(user_doc.id)
             user_ref.update({'TotalBottlesDeposited': new_bottle_count})
 
-            print(f"[✔] TotalBottlesDeposited updated for user {user_id}. New count: {new_bottle_count}")
+            #print(f"[✔] TotalBottlesDeposited updated for user {user_id}. New count: {new_bottle_count}")
 
-        else:
-            print("[!] No active user with queuePosition == 1.")
+        #else:
+            #print("[!] No active user with queuePosition == 1.")
     except Exception as e:
         print(f"[!] Error while updating TotalBottlesDeposited: {e}")
 
@@ -290,8 +290,8 @@ def update_user_by_mac(mac_address, bottle_size):
     except Exception as e:
         print(f"[!] Failed to update user by MAC: {e}")
 
+#----------------------------Main detection------------------------
 
-# Load your custom bottle-detection model
 bottle_model = YOLO('detect/train11/weights/best.pt')
 
 esp32_cam_url = "http://192.168.8.101:81/stream"
@@ -360,7 +360,7 @@ try:
                         frame_area = frame_width * frame_height
                         percentage = (box_area / frame_area) * 100
 
-                        print(f"[{class_name}] Detected area: {percentage:.2f}% of frame")
+                        print(f"Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of the frame")
 
                         if class_name == "small_bottle":
                             bottle_detected = True
