@@ -357,6 +357,9 @@ try:
             time.sleep(0.2)
             continue  # skip detection
 
+        display_message("Analyzing Object")
+        time.sleep(5)
+
         # If distance is below or equal to 14 cm, start detection
         if frame is None:
             continue
