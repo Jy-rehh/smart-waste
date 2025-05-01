@@ -331,20 +331,34 @@ def set_servo_position(pos):
 try:
     while True:
         dist = get_distance()
-        if dist and dist < 15:
+        if dist and dist < 14:
             print(f"✅ Object detected at {dist} cm. Starting YOLO detection...")
             break
         time.sleep(0.2)
 
     while True:
-        if frame is None:
-            continue
+        # if frame is None:
+        #     continue
 
+        # dist = get_distance()
+        # if not dist or dist > 14:
+        #     display_message("Insert bottle")
+        #     set_servo_position(0.5)  # Idle position
+        #     time.sleep(0.2)
+        #     continue
         dist = get_distance()
-        if not dist or dist > 14:
+
+        if not dist:
+            continue  # skip if reading failed
+
+        if dist > 14:
             display_message("Insert bottle")
-            set_servo_position(0.5)  # Idle position
+            set_servo_position(0.5)
             time.sleep(0.2)
+            continue  # skip detection
+
+        # If distance is below or equal to 14 cm, start detection
+        if frame is None:
             continue
 
         current_time = time.time()
