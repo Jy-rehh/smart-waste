@@ -422,6 +422,7 @@ try:
 
             else:
                 print("❌ Object detected but not a valid bottle.")
+                print(f"✅ Object detected at {dist} cm...")
                 display_message("Rejected Bottle")
                 set_servo_position(0)
                 time.sleep(2)
