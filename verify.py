@@ -56,15 +56,16 @@
 # finally:
 #     GPIO.cleanup()
 # verify.py
+# verify.py
 import RPi.GPIO as GPIO
 import time
 
-TRIG_PIN = 10
-ECHO_PIN = 9
+TRIG_PIN = 10  # BCM pin
+ECHO_PIN = 9   # BCM pin
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(TRIG_PIN, GPIO.OUT)
-GPIO.setup(ECHO_PIN, GPIO.IN)
+def setup_ultrasonic():
+    GPIO.setup(TRIG_PIN, GPIO.OUT)
+    GPIO.setup(ECHO_PIN, GPIO.IN)
 
 def get_distance():
     GPIO.output(TRIG_PIN, False)
@@ -78,12 +79,14 @@ def get_distance():
     while GPIO.input(ECHO_PIN) == 0:
         pulse_start = time.time()
         if time.time() > timeout:
+            print("Timeout waiting for echo to start")
             return None
 
     timeout = time.time() + 0.04
     while GPIO.input(ECHO_PIN) == 1:
         pulse_end = time.time()
         if time.time() > timeout:
+            print("Timeout waiting for echo to end")
             return None
 
     pulse_duration = pulse_end - pulse_start

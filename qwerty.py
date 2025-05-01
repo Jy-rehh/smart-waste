@@ -7,9 +7,17 @@ from time import sleep
 import subprocess
 from flask import Flask, request
 from firebase_admin import firestore, db as realtime_db
-from servo import move_servo, stop_servo
+#from servo import move_servo, stop_servo
+from verify import setup_ultrasonic, get_distance
+from servo import setup_servo, move_servo, stop_servo
 from lcd import display_message
-from verify import get_distance 
+
+
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+
+setup_ultrasonic()
+setup_servo()
 
 # ---------------- Firebase ----------------
 import firebase_admin
@@ -66,13 +74,6 @@ except Exception as e:
 bindings = api.path('ip', 'hotspot', 'ip-binding')
 
 # ------------------- Get TARGET_MAC from queuePosition == 1 -------------------
-# start here
-# dapat ma kuha niya ang queuePosition nga naay value 1 every time, 
-# ang queuePosition mugawas sa db if naay nag click insert bottle
-# ,kung walay queuePosition nga 1 kay wala ray mugawas,
-# basta dapat makita if naay queuePosition = 1, 
-# nya dapat if walay nay queuePosition kay di na makadawat ug WiFiTimeAvailable 
-# ug TotalBottlesDeposited tong mac nga nakuha
 TARGET_MAC = None
 previous_user_id = None
 
@@ -318,7 +319,6 @@ display_message("Insert bottle")
 
 last_detection_time = time.time()
 last_servo_position = None
-last_action = None
 
 def set_servo_position(pos):
     global last_servo_position
@@ -329,18 +329,12 @@ def set_servo_position(pos):
 try:
     while True:
         dist = get_distance()
-        if dist is None:
-            print("❗ Ultrasonic sensor error.")
-            time.sleep(0.5)
-            continue
+        if dist and dist < 15:
+            #print(f"Detected at {dist} cm. Starting YOLO detection...")
+            break
+        time.sleep(0.2)
 
-        if dist > 15:
-            print(f"🔕 No bottle detected (distance: {dist} cm). Waiting...")
-            set_servo_position(0.5)  # Neutral position
-            display_message("Insert bottle")
-            time.sleep(1)
-            continue
-
+    while True:
         if frame is None:
             continue
 
