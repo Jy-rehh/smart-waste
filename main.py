@@ -32,7 +32,7 @@ container_full_event = threading.Event()
 known_macs = set()
 
 # ESP32-CAM Stream
-esp32_cam_url = "http://192.168.8.100:81/stream"
+esp32_cam_url = "http://192.168.8.101:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
