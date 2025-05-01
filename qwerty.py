@@ -179,26 +179,25 @@ def monitor_firestore_for_queue():
     while True:
         try:
             #print("[*] Running Firestore queue check...", flush=True)
-            flush=True
             mac = get_mac_with_queue_position_1()
             if mac:
                 if mac != TARGET_MAC:
                     TARGET_MAC = mac
-                    print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
+                    #print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
 
                     # update_total_bottles_for_current_user()
                     # sync_firestore_to_realtime()
 
-                else:
-                    print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
+                #else:
+                    #print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
             else:
                 if TARGET_MAC is not None:
-                    print("[*] No valid user found. Clearing TARGET_MAC.", flush=True)
+                    #print("[*] No valid user found. Clearing TARGET_MAC.", flush=True)
                     TARGET_MAC = None
 
             time.sleep(1)
         except Exception as outer_err:
-            print(f"[!] Firestore monitoring error: {outer_err}", flush=True)
+            #print(f"[!] Firestore monitoring error: {outer_err}", flush=True)
             time.sleep(2)
 
 # Start monitoring in a separate thread

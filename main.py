@@ -1,37 +1,299 @@
-import threading
+import RPi.GPIO as GPIO
 import time
+import threading
 import cv2
 from ultralytics import YOLO
 from time import sleep
 import subprocess
-import RPi.GPIO as GPIO
-from librouteros import connect
-from datetime import datetime
-import firebase_admin
-from firebase_admin import credentials, firestore
-from servo import move_servo, stop_servo
+from flask import Flask, request
+from firebase_admin import firestore, db as realtime_db
+#from servo import move_servo, stop_servo
+from verify import setup_ultrasonic, get_distance
+from servo import setup_servo, move_servo, stop_servo
 from lcd import display_message
-from container_full import monitor_container, container_full
 
-# Load YOLO models
-bottle_model = YOLO('detect/train11/weights/best.pt')
-general_model = YOLO('yolov8n.pt')
 
-# Initialize Firebase Admin with Firestore
-cred = credentials.Certificate('firebase-key.json')
-firebase_admin.initialize_app(cred)
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+
+setup_ultrasonic()
+setup_servo()
+
+# ---------------- Firebase ----------------
+import firebase_admin
+from firebase_admin import firestore
+from firebase_admin import credentials, firestore
+
+cred = credentials.Certificate('firebase-key.json')  # <-- PUT YOUR JSON PATH
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://smart-waste-c39ac-default-rtdb.firebaseio.com/'
+})
 db = firestore.client()
 
-# Connect to MikroTik Router
-api = connect(username='admin', password='', host='192.168.50.1')
+app = Flask(__name__)
 
-# Shared flag for container full status
-container_full_event = threading.Event()
+@app.route('/start-bottle-session', methods=['POST'])
+def start_bottle_session():
+    data = request.json
+    mac = data.get('mac')
+    ip = data.get('ip')
 
-# Track already added MAC addresses
-known_macs = set()
+    if mac and ip:
+        #print(f"[✔] Session started with MAC: {mac}, IP: {ip}")
+        return {'status': 'ok'}
+    
+    return {'status': 'error', 'message': 'Missing mac or ip'}, 400
 
-# ESP32-CAM Stream
+# Start Flask in a background thread
+def run_flask():
+    app.run(host='0.0.0.0', port=80)
+
+threading.Thread(target=run_flask, daemon=True).start()
+
+
+# ---------------- Wi-Fi Time Management ----------------
+from librouteros import connect
+
+# MikroTik Settings
+ROUTER_HOST = '192.168.50.1'
+ROUTER_USERNAME = 'admin'
+ROUTER_PASSWORD = ''
+#TARGET_MAC = 'A2:DE:BF:8C:50:87'  # <<< Target device MAC address
+#TARGET_MAC = None
+
+# kung ang iyang queuePosition gikab sa db kay 1, ibutang ari ang TARGET_MAC
+
+# Connect to MikroTik
+try:
+    api = connect(username=ROUTER_USERNAME, password=ROUTER_PASSWORD, host=ROUTER_HOST)
+    print("[*] Connected to MikroTik Router.")
+except Exception as e:
+    print(f"[!] MikroTik connection failed: {e}")
+    exit()
+
+bindings = api.path('ip', 'hotspot', 'ip-binding')
+
+# ------------------- Get TARGET_MAC from queuePosition == 1 -------------------
+TARGET_MAC = None
+previous_user_id = None
+
+def get_mac_with_queue_position_1():
+    try:
+        #("[*] Checking Firestore...")
+        users_ref = db.collection('Users Collection')
+        query = users_ref.where('queuePosition', '==', 1).limit(1)
+        results = query.get()
+
+        if results:
+            user_doc = results[0]
+            data = user_doc.to_dict()
+            #print(f"[Debug] Retrieved user data: {data}")
+
+            user_id = data.get('UserID')
+            if user_id:
+                return user_id
+            #else:
+                #print("[!] User with queuePosition 1 has no UserID.")
+        #else:
+            #print("[!] No user found with queuePosition 1.")
+    except Exception as e:
+        print(f"[!] Firestore error: {e}")
+    return None
+def sync_firestore_to_realtime():
+    try:
+        firestore_users = db.collection('Users Collection').where('queuePosition', '==', 1).stream()
+
+        for user_doc in firestore_users:
+            user_data = user_doc.to_dict()
+            mac_address = user_data.get('UserID')
+            if not mac_address:
+                continue
+
+            mac_sanitized = mac_address.replace(":", "-")
+            rt_ref = realtime_db.reference(f'users/{mac_sanitized}')
+            rt_user = rt_ref.get()
+
+            if rt_user and rt_user.get('UserID') == mac_address:
+                # Get the current value from Realtime DB
+                current_wifi_time = rt_user.get('WiFiTimeAvailable', 0)
+
+                # Get the WiFi time increment based on the bottle size (5 minutes for small, 10 for large)
+                wifi_time_increment = 5 * 60  # Default to 5 minutes (in seconds)
+
+                if user_data.get('bottle_size') == 'large':
+                    wifi_time_increment = 10 * 60  # 10 minutes for large bottle
+
+                # Update only if the new WiFi time is different
+                new_wifi_time = current_wifi_time + wifi_time_increment
+                rt_ref.update({
+                    'WiFiTimeAvailable': new_wifi_time,
+                    'TotalBottlesDeposited': user_data.get('TotalBottlesDeposited', 0)
+                })
+                #print(f"[✓] Synced user {mac_address} to Realtime DB. New WiFiTimeAvailable: {new_wifi_time}")
+            else:
+                print(f"[!] Realtime DB entry for {mac_address} not found or mismatched.")
+    except Exception as e:
+        print(f"[!] Sync failed: {e}")
+
+        
+# Function to update the TotalBottlesDeposited for the current device with queuePosition == 1
+def update_total_bottles_for_current_user():
+    try:
+        #print("[*] Updating TotalBottlesDeposited for the current active user with queuePosition == 1...")
+
+        # Fetch the current active user (with queuePosition == 1)
+        users_ref = db.collection('Users Collection')
+        query = users_ref.where('queuePosition', '==', 1)
+        results = query.get()
+
+        if results:
+            user_doc = results[0]
+            data = user_doc.to_dict()
+            user_id = data.get('UserID')
+
+            # Check if the user ID has changed (this means a new device is now queuePosition == 1)
+            global previous_user_id
+            if user_id != previous_user_id:
+                # Reset the bottles count for the old user if they no longer have queuePosition == 1
+                if previous_user_id:
+                    print(f"[✔] Stopping bottle count for the previous user {previous_user_id}")
+                # Now, the previous user is this one, so we update their TotalBottlesDeposited
+                previous_user_id = user_id
+
+            # Increment the TotalBottlesDeposited for the current user
+            current_bottles = data.get('TotalBottlesDeposited', 0)
+            new_bottle_count = current_bottles + 1  # Increment by 1 for each detected bottle
+            user_ref = users_ref.document(user_doc.id)
+            user_ref.update({'TotalBottlesDeposited': new_bottle_count})
+
+            #print(f"[✔] TotalBottlesDeposited updated for user {user_id}. New count: {new_bottle_count}")
+
+        #else:
+            #print("[!] No active user with queuePosition == 1.")
+    except Exception as e:
+        print(f"[!] Error while updating TotalBottlesDeposited: {e}")
+
+# Infinite loop that never exits unless you kill it
+def monitor_firestore_for_queue():
+    global TARGET_MAC
+    while True:
+        try:
+            #print("[*] Running Firestore queue check...", flush=True)
+            mac = get_mac_with_queue_position_1()
+            if mac:
+                if mac != TARGET_MAC:
+                    TARGET_MAC = mac
+                    #print(f"[✔] TARGET_MAC updated: {TARGET_MAC}", flush=True)
+
+                    # update_total_bottles_for_current_user()
+                    # sync_firestore_to_realtime()
+
+                #else:
+                    #print(f"[*] TARGET_MAC remains the same: {TARGET_MAC}", flush=True)
+            else:
+                if TARGET_MAC is not None:
+                    #print("[*] No valid user found. Clearing TARGET_MAC.", flush=True)
+                    TARGET_MAC = None
+
+            time.sleep(1)
+        except Exception as outer_err:
+            #print(f"[!] Firestore monitoring error: {outer_err}", flush=True)
+            time.sleep(2)
+
+# Start monitoring in a separate thread
+threading.Thread(target=monitor_firestore_for_queue, daemon=True).start()
+# kutob ari 
+#-------------------------------------------------------------------------
+def find_binding(mac_address):
+    try:
+        for entry in bindings('print'):
+            if entry.get('mac-address', '').upper() == mac_address.upper():
+                return entry
+    except Exception as e:
+        print(f"[!] Error fetching bindings: {e}")
+    return None
+
+def add_or_update_binding(mac_address, binding_type):
+    try:
+        existing = find_binding(mac_address)
+        if existing:
+            bindings.update(
+                **{
+                    '.id': existing['.id'],
+                    'type': binding_type
+                }
+            )
+            print(f"[*] Updated MAC {mac_address} to '{binding_type}'.")
+        else:
+            bindings.add(
+                **{
+                    'mac-address': mac_address,
+                    'type': binding_type,
+                    'comment': 'Connected'
+                }
+            )
+            print(f"[*] Added new MAC {mac_address} with type '{binding_type}'.")
+    except Exception as e:
+        print(f"[!] Error adding/updating binding: {e}")
+
+# --- Wi-Fi session variables ---
+WiFiTimeAvailable = 0  # seconds
+TotalBottlesDeposited = 0
+
+# Function to update user based on MAC address
+def update_user_by_mac(mac_address, bottle_size):
+    try:
+        # Sanitize MAC for Firebase keys
+        mac_sanitized = mac_address.replace(":", "-")
+
+        # Step 1: Check Firestore queuePosition
+        firestore_user = db.collection('Users Collection').document(mac_address).get()
+        if not firestore_user.exists:
+            print(f"[!] User {mac_address} not found in Firestore.")
+            return
+
+        firestore_data = firestore_user.to_dict()
+        queue_position = firestore_data.get('queuePosition', -1)
+
+        if queue_position != 1:
+            print(f"[!] Skipping update — User {mac_address} is not at queue position 1.")
+            return
+
+        # Step 2: Fetch current values from Realtime DB
+        user_ref = realtime_db.reference(f'users/{mac_sanitized}')
+        user_data = user_ref.get()
+
+        if not user_data:
+            print(f"[!] No user data found in Realtime DB for {mac_address}")
+            return
+
+        current_bottles = user_data.get('TotalBottlesDeposited', 0)
+        current_wifi = user_data.get('WiFiTimeAvailable', 0)
+
+        # Step 3: Determine Wi-Fi time increment based on bottle size
+        wifi_time_increment = 5 * 60  # Default to 5 minutes for small bottle
+        if bottle_size == 'large':
+            wifi_time_increment = 10 * 60  # 10 minutes for large bottle
+
+        # Increment the values
+        new_bottles = current_bottles + 1
+        new_wifi = current_wifi + wifi_time_increment
+
+        # Step 4: Update Realtime DB with new values
+        user_ref.update({
+            'TotalBottlesDeposited': new_bottles,
+            'WiFiTimeAvailable': new_wifi
+        })
+
+        print(f"[✓] Updated user {mac_address} - Bottles: {new_bottles}, WiFi Time: {new_wifi} seconds")
+
+    except Exception as e:
+        print(f"[!] Failed to update user by MAC: {e}")
+
+#----------------------------Main detection------------------------
+
+bottle_model = YOLO('detect/train11/weights/best.pt')
+
 esp32_cam_url = "http://192.168.8.101:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
@@ -48,217 +310,132 @@ def capture_frames():
         ret, new_frame = cap.read()
         if ret:
             frame = new_frame
+        time.sleep(0.01)
 
-# Start video capture thread
-frame_thread = threading.Thread(target=capture_frames, daemon=True)
-frame_thread.start()
+thread = threading.Thread(target=capture_frames, daemon=True)
+thread.start()
 
-# Start ultrasonic container monitor thread
-ultrasonic_thread = threading.Thread(target=monitor_container, daemon=True)
-ultrasonic_thread.start()
+display_message("Insert bottle")
 
-# Function to bypass the MAC address in MikroTik router
-def bypass_internet(mac_address):
-    try:
-        bindings = api.path('ip', 'hotspot', 'ip-binding')
-        binding = None
-        for b in bindings:
-            if b.get('mac-address', '').lower() == mac_address.lower():
-                binding = b
-                break
+last_detection_time = time.time()
+last_servo_position = None
 
-        if binding:
-            print(f"[*] Found binding for {mac_address}, updating to bypass...")
-            api.path('ip', 'hotspot', 'ip-binding', set={
-                '.id': binding['.id'],
-                'type': 'bypassed',
-                'comment': 'Connected'
-            })
-            print(f"[*] Successfully bypassed {mac_address}, user has internet!")
-        else:
-            print(f"[!] No binding found for MAC: {mac_address}")
-
-    except Exception as e:
-        print(f"[!] Error during bypass for MAC {mac_address}: {e}")
-
-# Function to revert to regular access when time runs out
-def revert_to_regular(mac_address):
-    try:
-        # Find the binding entry for the MAC address
-        bindings = api.path('ip', 'hotspot', 'ip-binding')
-        binding = None
-
-        for b in bindings:
-            if b.get('mac-address', '').lower() == mac_address.lower():
-                binding = b
-                break
-
-        if binding:
-            print(f"[*] Found binding for {mac_address}, reverting to regular access...")
-
-            # Revert the MAC address to regular access (remove bypass)
-            api.path('ip', 'hotspot', 'ip-binding', set={
-                '.id': binding['.id'],
-                'type': 'regular'  # This reverts the MAC address to regular, without internet access
-            })
-
-            print(f"[*] Successfully reverted {mac_address} to regular access.")
-        else:
-            print(f"[!] No binding found for MAC: {mac_address}")
-
-    except Exception as e:
-        print(f"[!] Error during revert: {e}")
-
-# Function to update user data in Firebase
-def update_user_data(mac_address):
-    try:
-        # Get the document for the user
-        doc_ref = db.collection('Users Collection').document(mac_address)
-        doc = doc_ref.get()
-
-        if doc.exists:
-            # User exists, update time and bottles deposited
-            user_data = doc.to_dict()
-            new_time = user_data['WiFiTimeAvailable'] + 5  # Add 5 minutes for bottle
-            new_bottles = user_data['TotalBottlesDeposited'] + 1  # Increment bottle count
-
-            # Update Firestore document
-            doc_ref.update({
-                'WiFiTimeAvailable': new_time,
-                'TotalBottlesDeposited': new_bottles
-            })
-
-            print(f"[*] Updated Firebase for {mac_address}. Time: {new_time}, Bottles: {new_bottles}")
-
-        else:
-            print(f"[!] No user found in Firebase for MAC: {mac_address}")
-
-    except Exception as e:
-        print(f"[!] Error while updating user data: {e}")
-
-# Function to check if the user’s time has expired
-def check_time_expiry(mac_address):
-    try:
-        # Get the document for the user
-        doc_ref = db.collection('Users Collection').document(mac_address)
-        doc = doc_ref.get()
-
-        if doc.exists:
-            user_data = doc.to_dict()
-            if user_data['WiFiTimeAvailable'] <= 0:
-                print(f"[!] User {mac_address}'s WiFi time has expired, reverting access.")
-                revert_to_regular(mac_address)
-            else:
-                print(f"[*] User {mac_address}'s WiFi time remaining: {user_data['WiFiTimeAvailable']} mins")
-
-        else:
-            print(f"[!] No user found in Firebase for MAC: {mac_address}")
-
-    except Exception as e:
-        print(f"[!] Error while checking time expiry: {e}")
-
-# Function to set servo position
 def set_servo_position(pos):
-    move_servo(pos)
+    global last_servo_position
+    if last_servo_position != pos:
+        move_servo(pos)
+        last_servo_position = pos
 
-# Monitor container full status in main loop
+# Wait for object to approach
 try:
     while True:
+        dist = get_distance()
+        if dist and dist < 14:
+            print(f"✅ Object detected at {dist} cm. Starting YOLO detection...")
+            break
+        time.sleep(0.2)
+
+    while True:
+        # if frame is None:
+        #     continue
+
+        # dist = get_distance()
+        # if not dist or dist > 14:
+        #     display_message("Insert bottle")
+        #     set_servo_position(0.5)  # Idle position
+        #     time.sleep(0.2)
+        #     continue
+        dist = get_distance()
+
+        if not dist:
+            continue  # skip if reading failed
+
+        if dist > 14:
+            display_message("Insert bottle")
+            set_servo_position(0.5)
+            time.sleep(0.2)
+            continue  # skip detection
+
+        display_message("Analyzing Object")
+        time.sleep(5)
+
+        # If distance is below or equal to 14 cm, start detection
         if frame is None:
             continue
 
-        # Check if container is full
-        if container_full_event.is_set():  # Check if container_full_event is set
-            display_message("Container Full")
-            set_servo_position(0.5)  # Neutral
-            sleep(1.5)
-            continue
-
         current_time = time.time()
+        if current_time - last_detection_time >= 5:
+            results = bottle_model(frame)[0]
+            bottle_detected = False
+            bottle_size = None
 
-        # Run both models every 5 seconds
-        bottle_results = bottle_model(frame)[0]
-        general_results = general_model(frame)[0]
+            if results.boxes is not None and len(results.boxes) > 0:
+                frame_height, frame_width, _ = frame.shape
 
-        # Flags for detection
-        bottle_detected = False
-        general_detected = False
-
-        # General detection
-        if general_results.boxes is not None and len(general_results.boxes) > 0:
-            general_detected = True
-
-        # Bottle detection
-        if bottle_results.boxes is not None and len(bottle_results.boxes) > 0:
-            for box in bottle_results.boxes:
+            for box in results.boxes:
                 confidence = box.conf[0].item()
                 if confidence >= 0.7:
                     class_id = int(box.cls[0])
                     class_name = bottle_model.names[class_id].lower()
-                    if class_name in ["small_bottle", "large_bottle"]:
+
+                    x1, y1, x2, y2 = box.xyxy[0]
+                    box_width = x2 - x1
+                    box_height = y2 - y1
+                    box_area = box_width * box_height
+                    frame_area = frame_width * frame_height
+                    percentage = (box_area / frame_area) * 100
+
+                    print(f"🧠 Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of frame")
+
+                    if class_name == "small_bottle":
                         bottle_detected = True
+                        bottle_size = 'small'
+                        break
+                    elif class_name == "large_bottle":
+                        bottle_detected = True
+                        bottle_size = 'large'
                         break
 
-        # Decision logic for bottle detection
-        neutral_classes = ["bottle", "toilet", "surfboard"]
+            if bottle_detected:
+                update_user_by_mac(TARGET_MAC, bottle_size)
+                display_message("Accepting Bottle")
 
-        if bottle_detected:
-            display_message("Accepting Bottle")
-            set_servo_position(1)
+                if bottle_size == 'small':
+                    WiFiTimeAvailable += 5 * 60
+                    TotalBottlesDeposited += 1
+                    print("[+] Small bottle detected: +5 mins Wi-Fi")
+                elif bottle_size == 'large':
+                    WiFiTimeAvailable += 10 * 60
+                    TotalBottlesDeposited += 1
+                    print("[+] Large bottle detected: +10 mins Wi-Fi")
 
-            # Example MAC address (replace with actual logic to get the MAC address)
-            mac_address = "A2:DE:BF:8C:50:87"  # Replace this with actual logic to get MAC address from MikroTik
-            update_user_data(mac_address)  # Add 5 minutes and increment bottle count
+                try:
+                    result = update_user_by_mac(TARGET_MAC, TotalBottlesDeposited, WiFiTimeAvailable)
+                    if not result:
+                        print("❗ update_user_by_mac failed or returned no result.")
+                except Exception as e:
+                    print(f"❌ Exception in update_user_by_mac: {e}")
 
-            # Bypass the internet for the user (grant them internet)
-            bypass_internet(mac_address)
-
-            # Pause for a short while before moving the servo back to neutral
-            sleep(2)  # Wait for the bottle to be processed
-
-            # Move the servo back to neutral (0.5) position after a short delay
-            set_servo_position(0.5)  # Neutral position
-
-            # Optionally, update the display to indicate the next action
-            display_message("Insert bottle")
-            continue  # Exit after handling the detected bottle
-
-        elif general_detected:
-            go_neutral = False
-            for box in general_results.boxes:
-                confidence = box.conf[0].item()
-                if confidence < 0.6:
-                    continue
-
-                class_id = int(box.cls[0])
-                class_name = general_model.names[class_id].lower()
-                print(f"Detected class from general model: {class_name} with confidence: {confidence}")
-
-                if class_name in neutral_classes:
-                    go_neutral = True
-                    break
-
-            if go_neutral:
+                set_servo_position(1)
+                time.sleep(2)
                 set_servo_position(0.5)
-                display_message("Insert bottle")
+
             else:
-                display_message("Object Rejected")
+                print("❌ Object detected but not a valid bottle.")
+                display_message("Rejected Bottle")
                 set_servo_position(0)
+                time.sleep(2)
+                set_servo_position(0.5)
 
-        else:
-            set_servo_position(0.5)
-            display_message("Insert bottle")
-            continue
-
-        sleep(1.5)
-        set_servo_position(0.5)
-        display_message("Insert bottle")
+            last_detection_time = current_time
 
 except KeyboardInterrupt:
     print("🛑 Exiting gracefully...")
 
+
 finally:
     cap.release()
-    cv2.destroyAllWindows()
     GPIO.cleanup()
+    cv2.destroyAllWindows()
+    set_servo_position(0.5)
     stop_servo()

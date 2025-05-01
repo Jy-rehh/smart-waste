@@ -124,7 +124,8 @@ function startBottleDetection() {
   if (!isDetectionRunning) {
     const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust path to Python executable if needed
     //const pythonScript = '/home/pi/smart-waste/bottle_detect.py';    // Adjust path to the script if needed
-    const pythonScript = '/home/pi/smart-waste/qwerty.py';
+    //const pythonScript = '/home/pi/smart-waste/qwerty.py';
+    const pythonScript = '/home/pi/smart-waste/main.py';
 
     detectionProcess = spawn(pythonExecutable, [pythonScript]);
 
