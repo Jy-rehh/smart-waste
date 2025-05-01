@@ -2,8 +2,8 @@ import RPi.GPIO as GPIO
 import time
 
 # --- Pin Definitions ---
-TRIG_PIN = 11  # Physical pin 23
-ECHO_PIN = 8   # Physical pin 24
+TRIG_PIN = 10  # Physical pin 19
+ECHO_PIN = 9   # Physical pin 21
 
 # --- Setup ---
 GPIO.setmode(GPIO.BCM)
