@@ -87,7 +87,7 @@ def get_mac_with_queue_position_1():
         if results:
             user_doc = results[0]
             data = user_doc.to_dict()
-            #print(f"[Debug] Retrieved user data: {data}")
+            print(f"[Debug] Retrieved user data: {data}")
 
             user_id = data.get('UserID')
             if user_id:
@@ -129,7 +129,7 @@ def sync_firestore_to_realtime():
                     'WiFiTimeAvailable': new_wifi_time,
                     'TotalBottlesDeposited': user_data.get('TotalBottlesDeposited', 0)
                 })
-                #print(f"[✓] Synced user {mac_address} to Realtime DB. New WiFiTimeAvailable: {new_wifi_time}")
+                print(f"[✓] Synced user {mac_address} to Realtime DB. New WiFiTimeAvailable: {new_wifi_time}")
             else:
                 print(f"[!] Realtime DB entry for {mac_address} not found or mismatched.")
     except Exception as e:
@@ -166,7 +166,7 @@ def update_total_bottles_for_current_user():
             user_ref = users_ref.document(user_doc.id)
             user_ref.update({'TotalBottlesDeposited': new_bottle_count})
 
-            #print(f"[✔] TotalBottlesDeposited updated for user {user_id}. New count: {new_bottle_count}")
+            print(f"[✔] TotalBottlesDeposited updated for user {user_id}. New count: {new_bottle_count}")
 
         #else:
             #print("[!] No active user with queuePosition == 1.")
