@@ -95,8 +95,8 @@
                 </div>
 
                 <div class="info">
-                    <p>Time: <span id="wifi-time">0 min</span></p>
-                    <p>Bottle Value: <span id="total-bottles">0.00</span></p>
+                    <p>Time: <span id="wifi-time" class="time">0 min</span></p>
+                    <p>Total Bottle Deposited: <span id="total-bottles">0.00</span></p>
                 </div>
                 <div class="action-buttons">
                     <button id="cancelButton" class="action-btn action-cancel">Cancel</button>
@@ -210,7 +210,7 @@
                     }
     
                     if (typeof totalBottles === "number") {
-                        bottleDisplay.textContent = `Total Bottles Deposited: ${totalBottles}`;
+                        bottleDisplay.textContent = `${totalBottles}`;
                     }
                 } else {
                     display.textContent = "User not found in database";
