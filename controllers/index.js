@@ -79,26 +79,38 @@ async function getCurrentMacWithQueueOne() {
     // Finish the session first
     await finishSession(mac);
 }); 
-function checkIfFirstInQueue(mac) {
-  const userDocRef = doc(firestore, "Users Collection", mac); // Fix collection name if needed
 
-  onSnapshot(userDocRef, (docSnapshot) => {
-      if (docSnapshot.exists()) {
-          const data = docSnapshot.data();
-          const queuePos = data.queuePosition;
-
-          const modal = document.getElementById('pleaseWaitModal');
-          const doneBtn = document.getElementById('doneButton');
-
-          if (queuePos !== 1) {
-              modal.style.display = 'block';
-              doneBtn.disabled = true;
-          } else {
-              modal.style.display = 'none';
-              doneBtn.disabled = false;
-          }
-      } else {
-          console.log("No such user document found.");
-      }
-  });
+function closePleaseWait() {
+  document.getElementById("pleaseWaitModal").style.display = "none";
 }
+
+document.getElementById("openModal").addEventListener("click", () => {
+  const mac = new URLSearchParams(window.location.search).get('mac');
+  const ip = new URLSearchParams(window.location.search).get('ip');
+
+  if (!mac || !ip) {
+      alert("MAC or IP is missing from URL.");
+      return;
+  }
+
+  fetch('http://192.168.50.252:80/start-bottle-session', {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ mac }),
+  })
+  .then(response => response.json())
+  .then(data => {
+      if (data.queuePosition === 1) {
+          console.log("✅ You're first in queue. Start inserting bottles.");
+          // Continue with bottle detection or other logic
+      } else {
+          console.log("⛔ Please wait. Showing modal.");
+          document.getElementById("pleaseWaitModal").style.display = "block";
+      }
+  })
+  .catch(error => {
+      console.error("[!] Error:", error);
+  });
+});

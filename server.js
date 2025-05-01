@@ -25,80 +25,89 @@ app.use(cors());
  /**
  * Start bottle session — assign queue position to a user in Users collection
  */
- const USERS_COLLECTION = 'Users Collection';
+app.post('/start-bottle-session', async (req, res) => {
+  const { mac } = req.body;
+  if (!mac) return res.status(400).json({ error: 'MAC is required' });
 
- app.post('/start-bottle-session', async (req, res) => {
-   const { mac, ip } = req.body;
- 
-   if (!mac || !ip) {
-     return res.status(400).json({ error: 'MAC and IP address are required' });
-   }
- 
-   const usersRef = db.collection(USERS_COLLECTION);
-   const snapshot = await usersRef.where('UserID', '==', mac).get();
- 
-   let userDoc;
-   if (snapshot.empty) {
-     const newUserDoc = usersRef.doc();
-     const queueSnapshot = await usersRef.orderBy('queuePosition', 'desc').limit(1).get();
-     const highestQueuePos = queueSnapshot.empty ? 0 : (queueSnapshot.docs[0].data().queuePosition || 0);
- 
-     await newUserDoc.set({
-       UserID: mac,
-       IP: ip,
-       queuePosition: highestQueuePos + 1,
-     });
- 
-     userDoc = newUserDoc;
-   } else {
-     userDoc = snapshot.docs[0].ref;
-   }
- 
-   const userSnapshot = await userDoc.get();
-   res.json({ message: 'Bottle session started', user: userSnapshot.data() });
- });
- 
- app.post('/finish-bottle-session', async (req, res) => {
-   const { mac } = req.body;
- 
-   if (!mac) {
-     return res.status(400).json({ error: 'MAC address is required' });
-   }
- 
-   const usersRef = db.collection(USERS_COLLECTION);
-   const snapshot = await usersRef.where('UserID', '==', mac).get();
- 
-   if (snapshot.empty) {
-     return res.status(404).json({ error: 'User not found' });
-   }
- 
-   const userDoc = snapshot.docs[0];
-   const userQueuePosition = userDoc.data().queuePosition;
- 
-   await userDoc.ref.delete();
- 
-   const queueSnapshot = await usersRef.where('queuePosition', '>', userQueuePosition).get();
-   const batch = db.batch();
-   queueSnapshot.forEach(doc => {
-     const newQueuePos = doc.data().queuePosition - 1;
-     batch.update(doc.ref, { queuePosition: newQueuePos });
-   });
- 
-   await batch.commit();
-   res.json({ message: 'Session finished and queue updated' });
- });
- 
- app.get('/api/get-queue-position-one', async (req, res) => {
-   const usersRef = db.collection(USERS_COLLECTION);
-   const snapshot = await usersRef.where('queuePosition', '==', 1).get();
- 
-   if (snapshot.empty) {
-     return res.status(404).json({ error: 'No user found with queuePosition 1' });
-   }
- 
-   const user = snapshot.docs[0].data();
-   res.json({ user });
- });
+  const usersRef = db.collection('Users Collection');
+  const snapshot = await usersRef.where('queuePosition', '!=', null).orderBy('queuePosition').get();
+
+  let nextQueuePos = 1;
+  snapshot.forEach(doc => {
+    const user = doc.data();
+    if (user.queuePosition >= nextQueuePos) {
+      nextQueuePos = user.queuePosition + 1;
+    }
+  });
+
+  // Find the user by mac (userId)
+  const userDoc = await usersRef.where('UserID', '==', mac).limit(1).get();
+  if (userDoc.empty) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const docId = userDoc.docs[0].id;
+  await usersRef.doc(docId).update({ queuePosition: nextQueuePos });
+
+  res.json({ queuePosition: nextQueuePos });
+});
+
+/**
+ * Finish session — remove the user from queue and shift others
+ */
+app.post('/finish-bottle-session', async (req, res) => {
+  const { mac } = req.body;
+  if (!mac) return res.status(400).json({ error: 'MAC is required' });
+
+  const usersRef = db.collection('Users Collection');
+  const userDocSnap = await usersRef.where('UserID', '==', mac).limit(1).get();
+
+  if (userDocSnap.empty) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const userDoc = userDocSnap.docs[0];
+  const userData = userDoc.data();
+  const currentQueue = userData.queuePosition;
+
+  if (!currentQueue) return res.status(400).json({ error: 'User is not in the queue' });
+
+  // Remove queuePosition from current user
+  await usersRef.doc(userDoc.id).update({ queuePosition: admin.firestore.FieldValue == 0 });
+
+  // Shift queuePosition down for others
+  const queueSnap = await usersRef
+    .where('queuePosition', '>', currentQueue)
+    .get();
+
+  const batch = db.batch();
+  queueSnap.forEach(doc => {
+    const current = doc.data().queuePosition;
+    batch.update(doc.ref, { queuePosition: current - 1 });
+  });
+
+  await batch.commit();
+  res.json({ message: 'User removed and queue updated' });
+});
+/**
+ * Get the MAC address of the user at queue position 1
+ */
+app.get('/api/get-queue-position-one', async (req, res) => {
+  try {
+    const usersRef = db.collection('Users Collection');
+    const snapshot = await usersRef.where('queuePosition', '==', 1).limit(1).get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({ error: 'No user with queuePosition 1' });
+    }
+
+    const user = snapshot.docs[0].data();
+    res.json({ mac: user.UserID });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 //===============================================================================
 

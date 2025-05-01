@@ -274,31 +274,7 @@
                     });
             });
         });
-        async function checkIfFirstInQueue(mac) {
-        const usersRef = firestore.collection("Users Collection");
-        const snapshot = await usersRef.where("UserID", "==", mac).get();
-
-        const modal = document.getElementById('pleaseWaitModal');
-        const doneBtn = document.getElementById('doneButton');
-
-        if (snapshot.empty) {
-            console.log("No such user found.");
-            modal.style.display = 'block';
-            doneBtn.disabled = true;
-            return;
-        }
-
-        const data = snapshot.docs[0].data();
-        const queuePos = data.queuePosition;
-
-        if (queuePos !== 1) {
-            modal.style.display = 'block';
-            doneBtn.disabled = true;
-        } else {
-            modal.style.display = 'none';
-            doneBtn.disabled = false;
-        }
-    }
+        
     </script>
 </body>
 </html>
