@@ -481,6 +481,7 @@ except KeyboardInterrupt:
 
 finally:
     cap.release()
+    GPIO.cleanup()
     cv2.destroyAllWindows()
     set_servo_position(0.5)
     stop_servo()
