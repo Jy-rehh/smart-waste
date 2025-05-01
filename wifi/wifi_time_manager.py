@@ -63,12 +63,23 @@ def manage_wifi_time():
             for mac_sanitized, user_data in all_users.items():
                 mac = user_data.get('UserID', '').upper()
                 time_left = user_data.get('WiFiTimeAvailable', 0)
+                done_clicked = user_data.get('DoneClicked', False)
 
+                # if mac:
+                #     if time_left > 0:
+                #         new_time = time_left - 1
+                #         users_ref.child(mac_sanitized).update({'WiFiTimeAvailable': new_time})
+                #         add_or_update_binding(mac, 'bypassed')
+                #     else:
+                #         add_or_update_binding(mac, 'regular')
                 if mac:
-                    if time_left > 0:
-                        new_time = time_left - 1
-                        users_ref.child(mac_sanitized).update({'WiFiTimeAvailable': new_time})
-                        add_or_update_binding(mac, 'bypassed')
+                    if done_clicked:
+                        if time_left > 0:
+                            new_time = time_left - 1
+                            users_ref.child(mac_sanitized).update({'WiFiTimeAvailable': new_time})
+                            add_or_update_binding(mac, 'bypassed')
+                        else:
+                            add_or_update_binding(mac, 'regular')
                     else:
                         add_or_update_binding(mac, 'regular')
 

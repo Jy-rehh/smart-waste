@@ -222,6 +222,23 @@
         if (mac) {
             startCountdownLive(mac);
         }
+        // Done button event
+        document.getElementById("doneButton").addEventListener("click", () => {
+            if (!mac) return;
+
+            const userRef = ref(db, `users/${mac}`);
+            import("https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js").then(({ update }) => {
+                update(userRef, { DoneClicked: true })
+                    .then(() => {
+                        console.log("DoneClicked set to true for user:", mac);
+                        alert("You're now connected to Wi-Fi!");
+                    })
+                    .catch((error) => {
+                        console.error("Error updating DoneClicked:", error);
+                    });
+            });
+        });
+
     </script>    
 </body>
 </html>

@@ -70,7 +70,8 @@ while True:
                     user_realtime_ref.set({
                         'UserID': mac,
                         'WiFiTimeAvailable': 0,
-                        'TotalBottlesDeposited': 0
+                        'TotalBottlesDeposited': 0,
+                        'DoneClicked': False
                     })
 
                     print(f"[+] Added MAC: {mac}, IP: {ip} to Firestore.")
