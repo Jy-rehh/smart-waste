@@ -341,7 +341,7 @@ try:
             continue
 
         dist = get_distance()
-        if not dist or dist > 15:
+        if not dist or dist > 14:
             display_message("Insert bottle")
             set_servo_position(0.5)  # Idle position
             time.sleep(0.2)
