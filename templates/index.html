@@ -238,7 +238,19 @@
                     });
             });
         });
-
-    </script>    
+    </script>
+    <script>
+        // Check queue position
+        const position = parseInt(localStorage.getItem("queuePosition")) || 0;
+      
+        document.getElementById("openModal").addEventListener("click", () => {
+          if (position === 1) {
+            document.getElementById("insertModal").style.display = "block";
+          } else {
+            // Redirect to the separate wait page
+            window.location.href = "queue.html";
+          }
+        });
+      </script>
 </body>
 </html>
