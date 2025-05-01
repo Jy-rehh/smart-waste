@@ -87,7 +87,7 @@ def get_mac_with_queue_position_1():
         if results:
             user_doc = results[0]
             data = user_doc.to_dict()
-            print(f"[Debug] Retrieved user data: {data}")
+            #print(f"[Debug] Retrieved user data: {data}")
 
             user_id = data.get('UserID')
             if user_id:
@@ -293,7 +293,6 @@ def update_user_by_mac(mac_address, bottle_size):
 #----------------------------Main detection------------------------
 
 bottle_model = YOLO('detect/train11/weights/best.pt')
-
 esp32_cam_url = "http://192.168.8.101:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
@@ -330,6 +329,7 @@ def set_servo_position(pos):
 try:
     while True:
         dist = get_distance()
+        set_servo_position(0.5)
         if dist and dist < 14:
             print(f"✅ Object detected at {dist} cm. Starting YOLO detection...")
             break
