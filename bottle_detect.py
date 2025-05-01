@@ -295,7 +295,7 @@ bottle_model = YOLO('detect/train11/weights/best.pt')
 # Load pre-trained YOLOv8n model (general-purpose, COCO dataset)
 general_model = YOLO('yolov8n.pt')
 
-esp32_cam_url = "http://192.168.8.100:81/stream"
+esp32_cam_url = "http://192.168.8.101:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
