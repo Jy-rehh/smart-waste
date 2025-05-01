@@ -30,22 +30,43 @@ app.use(cors());
   if (!mac) return res.status(400).json({ error: 'MAC is required' });
 
   const usersRef = db.collection('Users Collection');
+  const now = Date.now();
+  const expirationLimit = 90 * 1000; // 90 seconds in milliseconds
 
   // Check if someone already has queuePosition 1
   const activeSessionSnap = await usersRef.where('queuePosition', '==', 1).limit(1).get();
+
   if (!activeSessionSnap.empty) {
-    const currentMac = activeSessionSnap.docs[0].data().UserID;
-    if (currentMac !== mac) {
-      return res.status(403).json({ error: 'Another user is already in session' });
+    const activeDoc = activeSessionSnap.docs[0];
+    const activeData = activeDoc.data();
+    const startedAt = activeData.sessionStartedAt || 0;
+
+    if (now - startedAt < expirationLimit) {
+      if (activeData.UserID !== mac) {
+        const secondsLeft = Math.ceil((expirationLimit - (now - startedAt)) / 1000);
+        return res.status(403).json({
+          error: 'Another user is already in session',
+          secondsLeft,
+        });
+      }
+    } else {
+      // Expired — clear it
+      await usersRef.doc(activeDoc.id).update({
+        queuePosition: admin.firestore.FieldValue.delete(),
+        sessionStartedAt: admin.firestore.FieldValue.delete(),
+      });
     }
   }
 
-  // Set current user as queuePosition 1
+  // Set current user as queuePosition 1 and save timestamp
   const userDocSnap = await usersRef.where('UserID', '==', mac).limit(1).get();
   if (userDocSnap.empty) return res.status(404).json({ error: 'User not found' });
 
   const docId = userDocSnap.docs[0].id;
-  await usersRef.doc(docId).update({ queuePosition: 1 });
+  await usersRef.doc(docId).update({
+    queuePosition: 1,
+    sessionStartedAt: now,
+  });
 
   res.json({ queuePosition: 1 });
 });

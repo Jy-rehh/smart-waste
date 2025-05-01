@@ -12,34 +12,61 @@ function hideAllModals() {
 
 document.getElementById("openModal").addEventListener("click", function () {
   if (!mac || !ip) {
-      alert("MAC or IP not found in URL.");
-      return;
+    alert("MAC or IP not found in URL.");
+    return;
   }
 
   fetch('http://192.168.50.252:80/start-bottle-session', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ mac, ip })
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ mac, ip })
   })
   .then(response => response.json())
   .then(data => {
-      if (data.queuePosition === 1) {
-          // First in line: show insert modal
-          document.getElementById("insertModal").style.display = "block";
-          document.getElementById("pleaseWaitModal").style.display = "none";
-      } else {
-          // Not first: show please wait modal
-          document.getElementById("insertModal").style.display = "none";
-          document.getElementById("pleaseWaitModal").style.display = "block";
-      }
-  })
-  .catch(error => {
-      console.error("Error:", error);
-      // Fallback to pleaseWaitModal on error
+    if (data.queuePosition === 1) {
+      // First in line: show insert modal
+      document.getElementById("insertModal").style.display = "block";
+      document.getElementById("pleaseWaitModal").style.display = "none";
+    } else {
+      // Not first: show please wait modal with countdown
       document.getElementById("insertModal").style.display = "none";
       document.getElementById("pleaseWaitModal").style.display = "block";
+
+      let secondsLeft = data.secondsLeft || 90;
+      const countdownEl = document.getElementById("countdown");
+      countdownEl.textContent = secondsLeft;
+
+      const interval = setInterval(() => {
+        secondsLeft--;
+        countdownEl.textContent = secondsLeft;
+        if (secondsLeft <= 0) {
+          clearInterval(interval);
+          location.reload(); // Retry after countdown ends
+        }
+      }, 1000);
+    }
+  })
+  .catch(error => {
+    console.error("Error:", error);
+    // Fallback to pleaseWaitModal on error
+    document.getElementById("insertModal").style.display = "none";
+    document.getElementById("pleaseWaitModal").style.display = "block";
+
+    // Optional: static fallback countdown
+    let secondsLeft = 90;
+    const countdownEl = document.getElementById("countdown");
+    countdownEl.textContent = secondsLeft;
+
+    const interval = setInterval(() => {
+      secondsLeft--;
+      countdownEl.textContent = secondsLeft;
+      if (secondsLeft <= 0) {
+        clearInterval(interval);
+        location.reload();
+      }
+    }, 1000);
   });
 });
 
@@ -103,3 +130,4 @@ document.getElementById("doneButton").addEventListener("click", function () {
       modal.style.display = "none";
   }
 });
+
