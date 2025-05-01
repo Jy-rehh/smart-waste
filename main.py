@@ -314,7 +314,7 @@ def capture_frames():
 thread = threading.Thread(target=capture_frames, daemon=True)
 thread.start()
 
-display_message("Insert bottle")
+display_message("\nInsert bottle")
 
 last_detection_time = time.time()
 last_servo_position = None
@@ -329,9 +329,8 @@ def set_servo_position(pos):
 try:
     while True:
         dist = get_distance()
-        set_servo_position(0.5)
         if dist and dist < 14:
-            print(f"✅ Object detected at {dist} cm. Starting YOLO detection...")
+            print(f"✅ Object detected at {dist} cm...")
             break
         time.sleep(0.2)
 
@@ -351,15 +350,25 @@ try:
             continue  # skip if reading failed
 
         if dist > 14:
-            display_message("Insert bottle")
+            display_message("\nInsert bottle")
             set_servo_position(0.5)
             time.sleep(0.2)
             continue  # skip detection
 
-        display_message("Analyzing Object")
+        display_message("\nAnalyzing Object")
         time.sleep(5)
 
-        # If distance is below or equal to 14 cm, start detection
+        # Check if the object is still there after waiting
+        dist = get_distance()
+        if not dist or dist > 14:
+            print("❌ Object disappeared during analysis window. Skipping credit.")
+            display_message("Rejected... \nPlease Don't Cheat")
+            set_servo_position(0)  # Reject
+            time.sleep(2)
+            set_servo_position(0.5)
+            continue  # Restart loop
+
+        # If still present, proceed with detection
         if frame is None:
             continue
 
@@ -372,33 +381,33 @@ try:
             if results.boxes is not None and len(results.boxes) > 0:
                 frame_height, frame_width, _ = frame.shape
 
-            for box in results.boxes:
-                confidence = box.conf[0].item()
-                if confidence >= 0.75:
-                    class_id = int(box.cls[0])
-                    class_name = bottle_model.names[class_id].lower()
+                for box in results.boxes:
+                    confidence = box.conf[0].item()
+                    if confidence >= 0.75:
+                        class_id = int(box.cls[0])
+                        class_name = bottle_model.names[class_id].lower()
 
-                    x1, y1, x2, y2 = box.xyxy[0]
-                    box_width = x2 - x1
-                    box_height = y2 - y1
-                    box_area = box_width * box_height
-                    frame_area = frame_width * frame_height
-                    percentage = (box_area / frame_area) * 100
+                        x1, y1, x2, y2 = box.xyxy[0]
+                        box_width = x2 - x1
+                        box_height = y2 - y1
+                        box_area = box_width * box_height
+                        frame_area = frame_width * frame_height
+                        percentage = (box_area / frame_area) * 100
 
-                    print(f"🧠 Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of frame")
+                        print(f"🧠 Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of frame")
 
-                    if class_name == "small_bottle":
-                        bottle_detected = True
-                        bottle_size = 'small'
-                        break
-                    elif class_name == "large_bottle":
-                        bottle_detected = True
-                        bottle_size = 'large'
-                        break
+                        if class_name == "small_bottle":
+                            bottle_detected = True
+                            bottle_size = 'small'
+                            break
+                        elif class_name == "large_bottle":
+                            bottle_detected = True
+                            bottle_size = 'large'
+                            break
 
             if bottle_detected:
                 update_user_by_mac(TARGET_MAC, bottle_size)
-                display_message("Accepting Bottle")
+                display_message("\nAccepting Bottle")
 
                 if bottle_size == 'small':
                     WiFiTimeAvailable += 5 * 60
@@ -422,16 +431,12 @@ try:
 
             else:
                 print("❌ Object detected but not a valid bottle.")
-                display_message("Rejected Bottle")
+                display_message("\nRejected...")
                 set_servo_position(0)
                 time.sleep(2)
                 set_servo_position(0.5)
 
             last_detection_time = current_time
-
-except KeyboardInterrupt:
-    print("🛑 Exiting gracefully...")
-
 
 finally:
     cap.release()
