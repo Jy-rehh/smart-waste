@@ -331,7 +331,7 @@ try:
     while True:
         dist = get_distance()
         if dist and dist < 14:
-            print(f"✅ Object detected at {dist} cm. Starting YOLO detection...")
+            print(f"✅ Object detected at {dist} cm...")
             break
         time.sleep(0.2)
 
@@ -350,7 +350,7 @@ try:
         if not dist:
             continue  # skip if reading failed
 
-        if dist > 14:
+        if dist > 10:
             display_message("Insert bottle")
             set_servo_position(0.5)
             time.sleep(0.2)
@@ -386,7 +386,7 @@ try:
                     percentage = (box_area / frame_area) * 100
 
                     print(f"🧠 Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of frame")
-
+                    print(f"✅ Object detected at {dist} cm...")
                     if class_name == "small_bottle":
                         bottle_detected = True
                         bottle_size = 'small'
