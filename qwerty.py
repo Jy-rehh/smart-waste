@@ -178,7 +178,8 @@ def monitor_firestore_for_queue():
     global TARGET_MAC
     while True:
         try:
-            print("[*] Running Firestore queue check...", flush=True)
+            #print("[*] Running Firestore queue check...", flush=True)
+            flush=True
             mac = get_mac_with_queue_position_1()
             if mac:
                 if mac != TARGET_MAC:
@@ -352,12 +353,8 @@ try:
             bottle_detected = False
             bottle_size = None
 
-            if results.boxes is None or len(results.boxes) == 0:
-                print("❌ No objects detected by YOLO.")
-                last_detection_time = current_time
-                continue
-
-            frame_height, frame_width, _ = frame.shape
+            if results.boxes is not None and len(results.boxes) > 0:
+                frame_height, frame_width, _ = frame.shape
 
             for box in results.boxes:
                 confidence = box.conf[0].item()
