@@ -326,9 +326,10 @@ def set_servo_position(pos):
         last_servo_position = pos
 
 # Ultrasonic setup
-GPIO.setmode(GPIO.BCM)  # Change to GPIO.BOARD if you're using physical pin numbers
-TRIG_PIN = 10  # Make sure this is a valid BCM pin
-ECHO_PIN = 9   # Make sure this is a valid BCM pin
+GPIO.setmode(GPIO.BCM)  # or GPIO.BOARD, depending on your preference
+
+TRIG_PIN = 11  # 
+ECHO_PIN = 9   # 
 
 GPIO.setup(TRIG_PIN, GPIO.OUT)
 GPIO.setup(ECHO_PIN, GPIO.IN)
