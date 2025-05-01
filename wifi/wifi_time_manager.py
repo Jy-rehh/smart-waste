@@ -76,12 +76,19 @@ def manage_wifi_time():
                     if done_clicked:
                         if time_left > 0:
                             new_time = time_left - 1
-                            users_ref.child(mac_sanitized).update({'WiFiTimeAvailable': new_time})
+                            users_ref.child(mac_sanitized).update({
+                                'WiFiTimeAvailable': new_time,
+                                'DoneClicked': False  # Reset after triggering
+                            })
+                            add_or_update_binding(mac, 'bypassed')
+                        else:
+                            users_ref.child(mac_sanitized).update({'DoneClicked': False})
+                            add_or_update_binding(mac, 'regular')
+                    else:
+                        if time_left > 0:
                             add_or_update_binding(mac, 'bypassed')
                         else:
                             add_or_update_binding(mac, 'regular')
-                    else:
-                        add_or_update_binding(mac, 'regular')
 
             time.sleep(1)
 
