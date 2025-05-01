@@ -11,7 +11,7 @@ db = firestore.client()
 # ——— Connect to MikroTik Router ———
 try:
     api = connect(username='admin', password='', host='192.168.50.1')
-    print("[*] Connected to MikroTik Router.")
+    #print("[*] Connected to MikroTik Router.")
 except Exception as e:
     print(f"[!] Connection failed: {e}")
     exit()
@@ -38,13 +38,13 @@ while True:
                 doc_ref = db.collection('Users Collection').document(mac)
                 doc_ref.update({'status': 'active'})
                 known_devices[mac] = 'active'
-                print(f"[+] {mac} is now ACTIVE")
+                # print(f"[+] {mac} is now ACTIVE")
             elif mac not in connected_now and known_devices[mac] != 'inactive':
                 # MAC is not connected, update to inactive
                 doc_ref = db.collection('Users Collection').document(mac)
                 doc_ref.update({'status': 'inactive'})
                 known_devices[mac] = 'inactive'
-                print(f"[-] {mac} is now INACTIVE")
+                # print(f"[-] {mac} is now INACTIVE")
 
     except Exception as e:
         print(f"[!] Error while monitoring devices: {e}")

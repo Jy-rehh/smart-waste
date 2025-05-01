@@ -31,10 +31,10 @@ while True:
         # Try fetching active users first
         active_users = list(api.path('ip', 'hotspot', 'active'))
         if active_users:
-            print("[*] Found active hotspot users.")
+            #print("[*] Found active hotspot users.")
             mac_addresses = [user['mac-address'] for user in active_users]
         else:
-            print("[*] No active users. Trying hotspot hosts...")
+            #print("[*] No active users. Trying hotspot hosts...")
             hosts = list(api.path('ip', 'hotspot', 'host'))
             mac_addresses = [user['mac-address'] for user in hosts]
 
@@ -49,9 +49,9 @@ while True:
                 doc_ref = db.collection('Users Collection').document(mac)
                 doc = doc_ref.get()
                 
-                if doc.exists:
-                    print(f"[-] MAC {mac} already exists in Firestore. No changes made.")
-                else:
+                if not doc.exists:
+                    #print(f"[-] MAC {mac} already exists in Firestore. No changes made.")
+                #else:
                     # Add user to Firestore if not already present
                     doc_ref.set({
                         'UserID': mac,
@@ -74,9 +74,9 @@ while True:
                         'DoneClicked': False
                     })
 
-                    print(f"[+] Added MAC: {mac}, IP: {ip} to Firestore.")
+                    #print(f"[+] Added MAC: {mac}, IP: {ip} to Firestore.")
 
     except Exception as e:
         print(f"[!] Error while retrieving users: {e}")
 
-    time.sleep(5)  # Wait 5 seconds before checking again
+    time.sleep(5) 
