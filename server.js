@@ -25,31 +25,28 @@ app.use(cors());
  /**
  * Start bottle session — assign queue position to a user in Users collection
  */
-app.post('/start-bottle-session', async (req, res) => {
+ app.post('/start-bottle-session', async (req, res) => {
   const { mac } = req.body;
   if (!mac) return res.status(400).json({ error: 'MAC is required' });
 
   const usersRef = db.collection('Users Collection');
-  const snapshot = await usersRef.where('queuePosition', '!=', null).orderBy('queuePosition').get();
 
-  let nextQueuePos = 1;
-  snapshot.forEach(doc => {
-    const user = doc.data();
-    if (user.queuePosition >= nextQueuePos) {
-      nextQueuePos = user.queuePosition + 1;
-    }
-  });
+  // Check if someone already has queuePosition = 1
+  const activeSessionSnap = await usersRef.where('queuePosition', '==', 1).limit(1).get();
+  if (!activeSessionSnap.empty) {
+    return res.status(403).json({ error: 'Another user is already in session' });
+  }
 
-  // Find the user by mac (userId)
-  const userDoc = await usersRef.where('UserID', '==', mac).limit(1).get();
-  if (userDoc.empty) {
+  // Find the user by MAC
+  const userDocSnap = await usersRef.where('UserID', '==', mac).limit(1).get();
+  if (userDocSnap.empty) {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  const docId = userDoc.docs[0].id;
-  await usersRef.doc(docId).update({ queuePosition: nextQueuePos });
+  const docId = userDocSnap.docs[0].id;
+  await usersRef.doc(docId).update({ queuePosition: 1 });
 
-  res.json({ queuePosition: nextQueuePos });
+  res.json({ queuePosition: 1 });
 });
 
 /**
@@ -68,27 +65,17 @@ app.post('/finish-bottle-session', async (req, res) => {
 
   const userDoc = userDocSnap.docs[0];
   const userData = userDoc.data();
-  const currentQueue = userData.queuePosition;
 
-  if (!currentQueue) return res.status(400).json({ error: 'User is not in the queue' });
+  if (userData.queuePosition !== 1) {
+    return res.status(400).json({ error: 'User is not currently in session' });
+  }
 
-  // Remove queuePosition from current user
-  await usersRef.doc(userDoc.id).update({ queuePosition: admin.firestore.FieldValue - 1 });
+  // End session by removing the queuePosition
+  await usersRef.doc(userDoc.id).update({ queuePosition: admin.firestore.FieldValue.delete() });
 
-  // Shift queuePosition down for others
-  const queueSnap = await usersRef
-    .where('queuePosition', '>', currentQueue)
-    .get();
-
-  const batch = db.batch();
-  queueSnap.forEach(doc => {
-    const current = doc.data().queuePosition;
-    batch.update(doc.ref, { queuePosition: current - 1 });
-  });
-
-  await batch.commit();
-  res.json({ message: 'User removed and queue updated' });
+  res.json({ message: 'Session finished' });
 });
+
 /**
  * Get the MAC address of the user at queue position 1
  */
