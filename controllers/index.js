@@ -27,14 +27,14 @@ document.getElementById("openModal").addEventListener("click", function () {
       return response.json();
   })
   .then(data => {
-      console.log("[✔] Session started:", data);
+      // If successful, show the real modal
       const modal = document.getElementById("insertModal");
       if (modal) modal.style.display = "block";
   })
   .catch(error => {
       console.error("[!] Error starting session:", error);
 
-      // Show pleaseWaitModal if another user is already in session
+      // Show 'please wait' modal if session is taken
       if (error.message === "Another user is already in session") {
           const pleaseWaitModal = document.getElementById("pleaseWaitModal");
           if (pleaseWaitModal) pleaseWaitModal.style.display = "block";
