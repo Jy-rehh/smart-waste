@@ -21,31 +21,31 @@ document.getElementById("openModal").addEventListener("click", function () {
       headers: {
           'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-          mac: mac,
-          ip: ip
-      })
+      body: JSON.stringify({ mac, ip })
   })
   .then(response => response.json())
   .then(data => {
-      hideAllModals(); // Make sure all modals are hidden first
-
       if (data.queuePosition === 1) {
-          // This user is first — allow insert
+          // First in line: show insert modal
           document.getElementById("insertModal").style.display = "block";
+          document.getElementById("pleaseWaitModal").style.display = "none";
       } else {
-          // Someone else is already inserting
+          // Not first: show please wait modal
+          document.getElementById("insertModal").style.display = "none";
           document.getElementById("pleaseWaitModal").style.display = "block";
       }
-
-      console.log("[✔] Session started:", data);
   })
   .catch(error => {
-      hideAllModals();
-      console.error("[!] Error starting session:", error);
+      console.error("Error:", error);
+      // Fallback to pleaseWaitModal on error
+      document.getElementById("insertModal").style.display = "none";
       document.getElementById("pleaseWaitModal").style.display = "block";
   });
 });
+
+function closePleaseWait() {
+  document.getElementById("pleaseWaitModal").style.display = "none";
+}
 
 async function getCurrentMacWithQueueOne() {
     try {
@@ -103,7 +103,3 @@ document.getElementById("doneButton").addEventListener("click", function () {
       modal.style.display = "none";
   }
 });
-function closePleaseWait() {
-  const modal = document.getElementById("pleaseWaitModal");
-  if (modal) modal.style.display = "none";
-}
