@@ -5,6 +5,11 @@ const mac = urlParams.get('mac');
 document.getElementById("ip-display").textContent = ip || 'Not found';
 document.getElementById("mac-display").textContent = mac || 'Not found';
 
+function hideAllModals() {
+  document.getElementById("insertModal").style.display = "none";
+  document.getElementById("pleaseWaitModal").style.display = "none";  
+}
+
 document.getElementById("openModal").addEventListener("click", function () {
   if (!mac || !ip) {
       alert("MAC or IP not found in URL.");
@@ -16,31 +21,29 @@ document.getElementById("openModal").addEventListener("click", function () {
       headers: {
           'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ mac, ip })
+      body: JSON.stringify({
+          mac: mac,
+          ip: ip
+      })
   })
-  .then(response => {
-      if (!response.ok) {
-          return response.json().then(data => {
-              throw new Error(data.error || 'Failed to start session');
-          });
-      }
-      return response.json();
-  })
+  .then(response => response.json())
   .then(data => {
-      // If successful, show the real modal
-      const modal = document.getElementById("insertModal");
-      if (modal) modal.style.display = "block";
+      hideAllModals(); // Make sure all modals are hidden first
+
+      if (data.queuePosition === 1) {
+          // This user is first — allow insert
+          document.getElementById("insertModal").style.display = "block";
+      } else {
+          // Someone else is already inserting
+          document.getElementById("pleaseWaitModal").style.display = "block";
+      }
+
+      console.log("[✔] Session started:", data);
   })
   .catch(error => {
+      hideAllModals();
       console.error("[!] Error starting session:", error);
-
-      // Show 'please wait' modal if session is taken
-      if (error.message === "Another user is already in session") {
-          const pleaseWaitModal = document.getElementById("pleaseWaitModal");
-          if (pleaseWaitModal) pleaseWaitModal.style.display = "block";
-      } else {
-          alert(`Error: ${error.message}`);
-      }
+      document.getElementById("pleaseWaitModal").style.display = "block";
   });
 });
 
