@@ -73,7 +73,7 @@ app.post('/finish-bottle-session', async (req, res) => {
   if (!currentQueue) return res.status(400).json({ error: 'User is not in the queue' });
 
   // Remove queuePosition from current user
-  await usersRef.doc(userDoc.id).update({ queuePosition: admin.firestore.FieldValue == 0 });
+  await usersRef.doc(userDoc.id).update({ queuePosition: admin.firestore.FieldValue - 1 });
 
   // Shift queuePosition down for others
   const queueSnap = await usersRef

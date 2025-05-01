@@ -80,15 +80,6 @@
                 </div>
             </div>
         -->
-            
-       <!-- Please Wait Modal -->
-        <div id="pleaseWaitModal" class="please-wait-modal" style="display: none;">
-            <div class="please-wait-content">
-            <h2>Please Wait</h2>
-            <p>Someone is currently inserting bottles.<br>Kindly wait for your turn.</p>
-            <button onclick="closePleaseWait()">Back</button>
-            </div>
-        </div>
 
                     <!-- Modal -->
         <div id="insertModal" class="modal">
@@ -111,6 +102,15 @@
                     <button id="cancelButton" class="action-btn action-cancel">Cancel</button>
                     <button id="doneButton" class="action-btn action-done">Done</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Please Wait Modal -->
+        <div id="pleaseWaitModal" class="modal" style="display: none;">
+            <div class="modal-content">
+            <h2>Please Wait</h2>
+            <p>Someone is currently inserting bottles.<br>Kindly wait for your turn.</p>
+            <button onclick="closePleaseWait()">Back</button>
             </div>
         </div>
 
@@ -143,9 +143,7 @@
      <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getDatabase, ref, onValue, child } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
-        import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-        const firestore = getFirestore(app);
-
+    
         // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAnY3P1JJBP6DigzoyrLw1Zikj1fH_occA",
@@ -227,36 +225,10 @@
                 }
             });
         }
-
-        function checkIfFirstInQueue(mac) {
-            const userDocRef = doc(firestore, "users", mac);
-
-            // Listen to real-time changes
-            onSnapshot(userDocRef, (docSnapshot) => {
-                if (docSnapshot.exists()) {
-                    const data = docSnapshot.data();
-                    const queuePos = data.queuePosition;
-
-                    const modal = document.getElementById('pleaseWaitModal');
-                    const doneBtn = document.getElementById('doneButton');
-
-                    if (queuePos !== 1) {
-                        modal.style.display = 'block';
-                        doneBtn.disabled = true;
-                    } else {
-                        modal.style.display = 'none';
-                        doneBtn.disabled = false;
-                    }
-                } else {
-                    console.log("No such user document found.");
-                }
-            });
-        }
     
         // Start countdown on page load
         if (mac) {
             startCountdownLive(mac);
-            checkIfFirstInQueue(mac);
         }
         // Done button event
         document.getElementById("doneButton").addEventListener("click", () => {
@@ -274,7 +246,6 @@
                     });
             });
         });
-        
     </script>
 </body>
 </html>

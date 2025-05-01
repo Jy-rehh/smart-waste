@@ -79,38 +79,4 @@ async function getCurrentMacWithQueueOne() {
     // Finish the session first
     await finishSession(mac);
 }); 
-
-function closePleaseWait() {
-  document.getElementById("pleaseWaitModal").style.display = "none";
-}
-
-document.getElementById("openModal").addEventListener("click", () => {
-  const mac = new URLSearchParams(window.location.search).get('mac');
-  const ip = new URLSearchParams(window.location.search).get('ip');
-
-  if (!mac || !ip) {
-      alert("MAC or IP is missing from URL.");
-      return;
-  }
-
-  fetch('http://192.168.50.252:80/start-bottle-session', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ mac }),
-  })
-  .then(response => response.json())
-  .then(data => {
-      if (data.queuePosition === 1) {
-          console.log("✅ You're first in queue. Start inserting bottles.");
-          // Continue with bottle detection or other logic
-      } else {
-          console.log("⛔ Please wait. Showing modal.");
-          document.getElementById("pleaseWaitModal").style.display = "block";
-      }
-  })
-  .catch(error => {
-      console.error("[!] Error:", error);
-  });
-});
+  
