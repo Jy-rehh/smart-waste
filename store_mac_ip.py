@@ -57,7 +57,6 @@ while True:
                         'UserID': mac,
                         'macAddress': mac,
                         'ipAddress': ip,
-                        'queuePosition': 0,
                         'WiFiTimeAvailable': 0,
                         'TotalBottlesDeposited': 0,
                         'status': "active",
