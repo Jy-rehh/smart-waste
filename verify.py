@@ -92,19 +92,3 @@ def get_distance():
     pulse_duration = pulse_end - pulse_start
     distance = pulse_duration * 17150
     return round(distance, 2)
-
-try:
-    print("Ultrasonic sensor ready. Press Ctrl+C to stop.")
-    while True:
-        dist = get_distance()
-        if dist is not None:
-            print(f"Distance: {dist} cm")
-        else:
-            print("Sensor error or out of range.")
-        time.sleep(0.5)
-
-except KeyboardInterrupt:
-    print("\nMeasurement stopped by user.")
-
-finally:
-    GPIO.cleanup()
