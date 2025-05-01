@@ -100,3 +100,7 @@ document.getElementById("doneButton").addEventListener("click", function () {
       modal.style.display = "none";
   }
 });
+function closePleaseWait() {
+  const modal = document.getElementById("pleaseWaitModal");
+  if (modal) modal.style.display = "none";
+}
