@@ -31,17 +31,18 @@ app.use(cors());
 
   const usersRef = db.collection('Users Collection');
 
-  // Check if someone already has queuePosition = 1
+  // Check if someone already has queuePosition 1
   const activeSessionSnap = await usersRef.where('queuePosition', '==', 1).limit(1).get();
   if (!activeSessionSnap.empty) {
-    return res.status(403).json({ error: 'Another user is already in session' });
+    const currentMac = activeSessionSnap.docs[0].data().UserID;
+    if (currentMac !== mac) {
+      return res.status(403).json({ error: 'Another user is already in session' });
+    }
   }
 
-  // Find the user by MAC
+  // Set current user as queuePosition 1
   const userDocSnap = await usersRef.where('UserID', '==', mac).limit(1).get();
-  if (userDocSnap.empty) {
-    return res.status(404).json({ error: 'User not found' });
-  }
+  if (userDocSnap.empty) return res.status(404).json({ error: 'User not found' });
 
   const docId = userDocSnap.docs[0].id;
   await usersRef.doc(docId).update({ queuePosition: 1 });
