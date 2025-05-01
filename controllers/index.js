@@ -79,3 +79,26 @@ async function getCurrentMacWithQueueOne() {
     // Finish the session first
     await finishSession(mac);
 }); 
+function checkIfFirstInQueue(mac) {
+  const userDocRef = doc(firestore, "Users Collection", mac); // Fix collection name if needed
+
+  onSnapshot(userDocRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+          const data = docSnapshot.data();
+          const queuePos = data.queuePosition;
+
+          const modal = document.getElementById('pleaseWaitModal');
+          const doneBtn = document.getElementById('doneButton');
+
+          if (queuePos !== 1) {
+              modal.style.display = 'block';
+              doneBtn.disabled = true;
+          } else {
+              modal.style.display = 'none';
+              doneBtn.disabled = false;
+          }
+      } else {
+          console.log("No such user document found.");
+      }
+  });
+}

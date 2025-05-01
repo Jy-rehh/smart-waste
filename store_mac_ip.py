@@ -71,7 +71,8 @@ while True:
                         'UserID': mac,
                         'WiFiTimeAvailable': 0,
                         'TotalBottlesDeposited': 0,
-                        'DoneClicked': False
+                        'DoneClicked': False,
+                        'Counting': False
                     })
 
                     #print(f"[+] Added MAC: {mac}, IP: {ip} to Firestore.")
