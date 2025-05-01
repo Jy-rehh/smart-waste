@@ -326,16 +326,24 @@ def set_servo_position(pos):
         move_servo(pos)
         last_servo_position = pos
 
+# Wait for object to approach
 try:
     while True:
         dist = get_distance()
         if dist and dist < 15:
-            #print(f"Detected at {dist} cm. Starting YOLO detection...")
+            print(f"✅ Object detected at {dist} cm. Starting YOLO detection...")
             break
         time.sleep(0.2)
 
     while True:
         if frame is None:
+            continue
+
+        dist = get_distance()
+        if not dist or dist > 15:
+            display_message("Insert bottle")
+            set_servo_position(0.5)  # Idle position
+            time.sleep(0.2)
             continue
 
         current_time = time.time()
@@ -344,32 +352,36 @@ try:
             bottle_detected = False
             bottle_size = None
 
-            if results.boxes is not None and len(results.boxes) > 0:
-                frame_height, frame_width, _ = frame.shape
+            if results.boxes is None or len(results.boxes) == 0:
+                print("❌ No objects detected by YOLO.")
+                last_detection_time = current_time
+                continue
 
-                for box in results.boxes:
-                    confidence = box.conf[0].item()
-                    if confidence >= 0.7:
-                        class_id = int(box.cls[0])
-                        class_name = bottle_model.names[class_id].lower()
+            frame_height, frame_width, _ = frame.shape
 
-                        x1, y1, x2, y2 = box.xyxy[0]
-                        box_width = x2 - x1
-                        box_height = y2 - y1
-                        box_area = box_width * box_height
-                        frame_area = frame_width * frame_height
-                        percentage = (box_area / frame_area) * 100
+            for box in results.boxes:
+                confidence = box.conf[0].item()
+                if confidence >= 0.7:
+                    class_id = int(box.cls[0])
+                    class_name = bottle_model.names[class_id].lower()
 
-                        print(f"Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of the frame")
+                    x1, y1, x2, y2 = box.xyxy[0]
+                    box_width = x2 - x1
+                    box_height = y2 - y1
+                    box_area = box_width * box_height
+                    frame_area = frame_width * frame_height
+                    percentage = (box_area / frame_area) * 100
 
-                        if class_name == "small_bottle":
-                            bottle_detected = True
-                            bottle_size = 'small'
-                            break
-                        elif class_name == "large_bottle":
-                            bottle_detected = True
-                            bottle_size = 'large'
-                            break
+                    print(f"🧠 Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of frame")
+
+                    if class_name == "small_bottle":
+                        bottle_detected = True
+                        bottle_size = 'small'
+                        break
+                    elif class_name == "large_bottle":
+                        bottle_detected = True
+                        bottle_size = 'large'
+                        break
 
             if bottle_detected:
                 update_user_by_mac(TARGET_MAC, bottle_size)
@@ -392,18 +404,21 @@ try:
                     print(f"❌ Exception in update_user_by_mac: {e}")
 
                 set_servo_position(1)
-                sleep(2)
+                time.sleep(2)
                 set_servo_position(0.5)
+
             else:
+                print("❌ Object detected but not a valid bottle.")
                 display_message("Rejected Bottle")
                 set_servo_position(0)
-                sleep(2)
+                time.sleep(2)
                 set_servo_position(0.5)
 
             last_detection_time = current_time
 
 except KeyboardInterrupt:
     print("🛑 Exiting gracefully...")
+
 
 finally:
     cap.release()
