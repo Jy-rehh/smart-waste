@@ -87,7 +87,7 @@ try:
                 send_email(timestamp)
                 last_email_time = current_time
             else:
-                print(f"[{timestamp}] Bin full, email already sent. Waiting cooldown.")
+                print(f"[{timestamp}] Bin full, email already sent.")
 
         time.sleep(1)
 

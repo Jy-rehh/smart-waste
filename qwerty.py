@@ -9,6 +9,7 @@ from flask import Flask, request
 from firebase_admin import firestore, db as realtime_db
 from servo import move_servo, stop_servo
 from lcd import display_message
+from verify import get_distance 
 
 # ---------------- Firebase ----------------
 import firebase_admin
@@ -327,6 +328,19 @@ def set_servo_position(pos):
 
 try:
     while True:
+        dist = get_distance()
+        if dist is None:
+            print("❗ Ultrasonic sensor error.")
+            time.sleep(0.5)
+            continue
+
+        if dist > 15:
+            print(f"🔕 No bottle detected (distance: {dist} cm). Waiting...")
+            set_servo_position(0.5)  # Neutral position
+            display_message("Insert bottle")
+            time.sleep(1)
+            continue
+
         if frame is None:
             continue
 
@@ -396,7 +410,6 @@ try:
 
 except KeyboardInterrupt:
     print("🛑 Exiting gracefully...")
-
 
 finally:
     cap.release()
