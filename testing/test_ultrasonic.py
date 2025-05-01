@@ -2,6 +2,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import time
+import datetime
 import RPi.GPIO as GPIO
 
 # Set up GPIO for the first ultrasonic sensor
@@ -15,43 +16,36 @@ GPIO.setup(TRIG1, GPIO.OUT)
 GPIO.setup(ECHO1, GPIO.IN)
 
 def get_distance(TRIG, ECHO):
-    # Send a pulse to the TRIG pin
     GPIO.output(TRIG, GPIO.LOW)
     time.sleep(0.5)
     GPIO.output(TRIG, GPIO.HIGH)
     time.sleep(0.00001)
     GPIO.output(TRIG, GPIO.LOW)
 
-    # Measure the pulse duration from the ECHO pin
     while GPIO.input(ECHO) == GPIO.LOW:
         pulse_start = time.time()
 
     while GPIO.input(ECHO) == GPIO.HIGH:
         pulse_end = time.time()
 
-    # Calculate the distance in cm
     pulse_duration = pulse_end - pulse_start
     distance = pulse_duration * 17150
-    distance = round(distance, 2)
+    return round(distance, 2)
 
-    return distance
-
-def send_email():
-    sender_email = "smartaccesssmartwaste@gmail.com"  # Replace with your email
+def send_email(timestamp):
+    sender_email = "smartaccesssmartwaste@gmail.com"
     receiver_email = "smartaccesssmartwaste@gmail.com"
-    password = "ospk xejd cpxz djbh"  # Replace with your generated App Password
+    password = "ospk xejd cpxz djbh"
 
     subject = "📦 RVM Notification: Bottle Bin Full – Collection Required"
-    body = """
+    body = f"""
     Hello,
 
     This is an automated notification from the RVM Smart Waste Smart Access System.
 
-    The bottle bin at [Location Name] has reached full capacity as of [Date & Time]. Bottles are now ready for collection.
+    The bottle bin has reached full capacity as of {timestamp}. Bottles are now ready for collection.
 
-    Machine ID: RVM-[UniqueID]
-    Location: [Location Name]
-    Timestamp: [Date & Time]
+    Timestamp: {timestamp}
 
     To ensure continued service and prevent overflow, please schedule a pickup at your earliest convenience.
 
@@ -70,22 +64,30 @@ def send_email():
 
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()  # Secure connection
-            server.login(sender_email, password)  # Login using your email and App Password
-            server.sendmail(sender_email, receiver_email, msg.as_string())  # Send the email
-        print("Email sent successfully!")
+            server.starttls()
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, msg.as_string())
+        print(f"[{timestamp}] Email sent successfully!")
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        print(f"[{timestamp}] Failed to send email: {e}")
 
 try:
     while True:
-        distance1 = get_distance(TRIG1, ECHO1)
-        #print(f"Sensor 1 Distance: {distance1} cm")
+        last_email_time = 0  # Timestamp of last sent email
+        EMAIL_COOLDOWN = 3600  # 1 hour in seconds
 
-        # Logic for bottle detection
-        if distance1 < 5:  # If the distance is less than 5 cm, a bottle is close
-            #print("Container Full!")
-            send_email()  # Send email notification
+        distance1 = get_distance(TRIG1, ECHO1)
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{timestamp}] Sensor 1 Distance: {distance1} cm")
+
+        if distance1 < 5:
+            current_time = time.time()
+            if current_time - last_email_time >= EMAIL_COOLDOWN:
+                print(f"[{timestamp}] Container Full!")
+                send_email(timestamp)
+                last_email_time = current_time
+            else:
+                print(f"[{timestamp}] Bin full, email already sent. Waiting cooldown.")
 
         time.sleep(1)
 
