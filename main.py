@@ -374,7 +374,7 @@ try:
 
             for box in results.boxes:
                 confidence = box.conf[0].item()
-                if confidence >= 0.7:
+                if confidence >= 0.75:
                     class_id = int(box.cls[0])
                     class_name = bottle_model.names[class_id].lower()
 
