@@ -362,8 +362,8 @@ try:
         dist = get_distance()
         if not dist or dist > 14:
             print("❌ Object disappeared during analysis window. Skipping credit.")
-            display_message("Rejected... \nPlease Don't Cheat")
-            set_servo_position(0)  # Reject
+            display_message("\nPlease Don't Cheat")
+            set_servo_position(0.5)  # Reject
             time.sleep(2)
             set_servo_position(0.5)
             continue  # Restart loop
