@@ -69,30 +69,15 @@ def manage_wifi_time():
                 if not mac:
                     continue
 
-                if done_clicked:
+                if time_left > 0:
+                    new_time = time_left - 1
                     users_ref.child(mac_sanitized).update({
-                        'Counting': True,
-                        'DoneClicked': False
+                        'WiFiTimeAvailable': new_time
                     })
-
-                if counting:
-                    if time_left > 0:
-                        new_time = time_left - 1
-                        users_ref.child(mac_sanitized).update({
-                            'WiFiTimeAvailable': new_time
-                        })
-                        add_or_update_binding(mac, 'bypassed')
-                    else:
-                        users_ref.child(mac_sanitized).update({
-                            'Counting': False
-                        })
-                        add_or_update_binding(mac, 'regular')
+                    add_or_update_binding(mac, 'bypassed')
                 else:
-                    # Not counting, but check binding
-                    if time_left > 0:
-                        add_or_update_binding(mac, 'bypassed')
-                    else:
-                        add_or_update_binding(mac, 'regular')
+                    add_or_update_binding(mac, 'regular')
+
 
             time.sleep(1)
 
