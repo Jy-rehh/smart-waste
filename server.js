@@ -22,7 +22,7 @@ const db = admin.firestore();
 app.use(express.json());
 app.use(cors());
 //===============================================================================
- /**
+/**
  * Start bottle session — assign queue position to a user in Users collection
  */
 app.post('/start-bottle-session', async (req, res) => {
@@ -70,39 +70,6 @@ app.post('/start-bottle-session', async (req, res) => {
 
   res.json({ queuePosition: 1 });
 });
-/**
- * Auto delete queue
- */
-exports.cleanupExpiredSessions = functions.pubsub
-  .schedule('every 1 minutes')
-  .onRun(async (context) => {
-    const now = Date.now();
-    const expirationLimit = 90 * 1000; // 90 seconds
-
-    const usersRef = db.collection('Users Collection');
-    const snapshot = await usersRef.where('queuePosition', '==', 1).get();
-
-    if (snapshot.empty) {
-      console.log('No active sessions to check.');
-      return null;
-    }
-
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      const startedAt = data.sessionStartedAt || 0;
-      const secondsElapsed = (now - startedAt);
-
-      if (secondsElapsed >= expirationLimit) {
-        await usersRef.doc(doc.id).update({
-          queuePosition: admin.firestore.FieldValue.delete(),
-          sessionStartedAt: admin.firestore.FieldValue.delete(),
-        });
-        console.log(`Session expired and cleared for UserID: ${data.UserID}`);
-      }
-    }
-
-    return null;
-  });
 
 /**
  * Finish session — remove the user from queue and shift others
@@ -150,6 +117,7 @@ app.get('/api/get-queue-position-one', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 
 //===============================================================================
 
