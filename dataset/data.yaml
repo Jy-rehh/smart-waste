@@ -8,6 +8,6 @@ names: ['large_bottle', 'small_bottle']
 roboflow:
   workspace: smartwaste-0lzbb
   project: plastic-bottles-ukqt7
-  version: 7
+  version: 8
   license: CC BY 4.0
   url: https://universe.roboflow.com/smartwaste-0lzbb/plastic-bottles-ukqt7/dataset/7
