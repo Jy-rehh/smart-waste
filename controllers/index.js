@@ -9,6 +9,20 @@ function hideAllModals() {
   document.getElementById("insertModal").style.display = "none";
   document.getElementById("pleaseWaitModal").style.display = "none";  
 }
+// Call this before doing anything else
+fetch('http://192.168.50.252:80/check-and-clear-expired-session', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ mac })
+})
+.then(res => res.json())
+.then(data => {
+  console.log(data.message);
+})
+.catch(err => console.error("Error checking session:", err));
+
 
 document.getElementById("openModal").addEventListener("click", function () {
   if (!mac || !ip) {
