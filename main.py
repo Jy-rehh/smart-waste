@@ -330,7 +330,7 @@ def set_servo_position(pos):
 try:
     while True:
         dist = get_distance()
-        if dist and dist < 14:
+        if dist and dist < 13:
             print(f"✅ Object detected at {dist} cm...")
             break
         time.sleep(0.2)
@@ -350,7 +350,7 @@ try:
         if not dist:
             continue  # skip if reading failed
 
-        if dist > 14:
+        if dist > 13:
             display_message("\nInsert bottle")
             set_servo_position(0.5)
             time.sleep(0.2)
@@ -361,7 +361,7 @@ try:
 
         # Check if the object is still there after waiting
         dist = get_distance()
-        if not dist or dist > 14:
+        if not dist or dist > 13:
             print("❌ Object disappeared during analysis window. Skipping credit.")
             display_message("\nPlease Don't Cheat")
             set_servo_position(0.5)  # Reject
