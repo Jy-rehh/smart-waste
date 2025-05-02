@@ -350,7 +350,7 @@ try:
         if not dist:
             continue  # skip if reading failed
 
-        if dist > 13:
+        if dist > 12:
             display_message("\nInsert bottle")
             set_servo_position(0.5)
             time.sleep(0.2)
