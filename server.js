@@ -1,5 +1,6 @@
 const express = require('express');
 const admin = require('firebase-admin');
+const functions = require('firebase-functions');
 const path = require('path');
 const { spawn } = require('child_process');
 const bodyParser = require('body-parser'); 
@@ -73,6 +74,7 @@ app.post('/start-bottle-session', async (req, res) => {
 /**
  * Auto delete queue
  */
+admin.initializeApp();
 exports.cleanupExpiredSessions = functions.pubsub
   .schedule('every 1 minutes')
   .onRun(async (context) => {
