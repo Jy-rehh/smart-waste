@@ -71,28 +71,28 @@ def send_email(timestamp):
     except Exception as e:
         print(f"[{timestamp}] Failed to send email: {e}")
 
-    last_email_time = 0  # move this outside the loop
-    EMAIL_COOLDOWN = 43200  # 1 hour
+last_email_time = 0  # move this outside the loop
+EMAIL_COOLDOWN = 3600  # 1 hour
 
-    try:
-        while True:
-            distance1 = get_distance(TRIG1, ECHO1)
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"[{timestamp}] Sensor 1 Distance: {distance1} cm")
+try:
+    while True:
+        distance1 = get_distance(TRIG1, ECHO1)
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{timestamp}] Sensor 1 Distance: {distance1} cm")
 
-            if distance1 < 6:
-                current_time = time.time()
-                if current_time - last_email_time >= EMAIL_COOLDOWN:
-                    print(f"[{timestamp}] Container Full!")
-                    send_email(timestamp)
-                    last_email_time = current_time
-                else:
-                    print(f"[{timestamp}] Bin full, email already sent.")
+        if distance1 < 6:
+            current_time = time.time()
+            if current_time - last_email_time >= EMAIL_COOLDOWN:
+                print(f"[{timestamp}] Container Full!")
+                send_email(timestamp)
+                last_email_time = current_time
             else:
-                print(f"[{timestamp}] Bin not full.")
+                print(f"[{timestamp}] Bin full, email already sent.")
+        else:
+            print(f"[{timestamp}] Bin not full.")
 
-            time.sleep(1)
+        time.sleep(1)
 
-    except KeyboardInterrupt:
-        print("Program stopped.")
-        GPIO.cleanup()
+except KeyboardInterrupt:
+    print("Program stopped.")
+    GPIO.cleanup()
