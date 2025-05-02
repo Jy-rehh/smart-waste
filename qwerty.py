@@ -351,7 +351,7 @@ try:
         if not dist:
             continue  # skip if reading failed
 
-        if dist > 14:
+        if dist > 13:
             display_message("\nInsert bottle")
             set_servo_position(0.5)
             time.sleep(0.2)
@@ -362,7 +362,7 @@ try:
 
         # Check if the object is still there after waiting
         dist = get_distance()
-        if not dist or dist > 14:
+        if not dist or dist > 13:
             print("❌ Object disappeared during analysis window. Skipping credit.")
             display_message("Rejected Bottle")
             set_servo_position(0)  # Reject
