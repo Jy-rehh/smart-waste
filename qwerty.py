@@ -294,7 +294,7 @@ def update_user_by_mac(mac_address, bottle_size):
 
 #bottle_model = YOLO('detect/train11/weights/best.pt')
 bottle_model = YOLO('detect/train12/weights/best.pt')
-esp32_cam_url = "http://192.168.8.100:81/stream"
+esp32_cam_url = "http://192.168.8.103:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
 if not cap.isOpened():
@@ -385,7 +385,7 @@ try:
 
                 for box in results.boxes:
                     confidence = box.conf[0].item()
-                    if confidence >= 0.75:
+                    if confidence >= 0.87:
                         class_id = int(box.cls[0])
                         class_name = bottle_model.names[class_id].lower()
 
