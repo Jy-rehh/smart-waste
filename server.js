@@ -22,7 +22,34 @@ const db = admin.firestore();
 app.use(express.json());
 app.use(cors());
 //===============================================================================
- /**
+const expirationLimit = 90 * 1000; // 90 seconds in milliseconds
+
+/**
+ * Auto delete queuePosition after 90 seconds
+ */
+setInterval(async () => {
+  const now = Date.now();
+  
+  // Query for users with queuePosition set to 1 and check if 90 seconds have passed
+  const usersRef = db.collection('Users Collection');
+  const snapshot = await usersRef.where('queuePosition', '==', 1).get();
+
+  snapshot.forEach(async (doc) => {
+    const data = doc.data();
+    const startedAt = data.sessionStartedAt || 0;
+
+    if (now - startedAt >= expirationLimit) {
+      // If 90 seconds have passed, clear the queuePosition and sessionStartedAt
+      await usersRef.doc(doc.id).update({
+        queuePosition: admin.firestore.FieldValue.delete(),
+        sessionStartedAt: admin.firestore.FieldValue.delete(),
+      });
+      console.log(`Session expired and cleared for UserID: ${data.UserID}`);
+    }
+  });
+}, 60000); // Runs every 1 minute to check for expired sessions
+
+/**
  * Start bottle session — assign queue position to a user in Users collection
  */
 app.post('/start-bottle-session', async (req, res) => {
@@ -31,7 +58,6 @@ app.post('/start-bottle-session', async (req, res) => {
 
   const usersRef = db.collection('Users Collection');
   const now = Date.now();
-  const expirationLimit = 90 * 1000; // 90 seconds in milliseconds
 
   // Check if someone already has queuePosition 1
   const activeSessionSnap = await usersRef.where('queuePosition', '==', 1).limit(1).get();
@@ -117,6 +143,8 @@ app.get('/api/get-queue-position-one', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+module.exports = app;
 
 //===============================================================================
 
