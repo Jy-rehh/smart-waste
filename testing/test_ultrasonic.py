@@ -78,7 +78,7 @@ try:
 
         distance1 = get_distance(TRIG1, ECHO1)
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        #print(f"[{timestamp}] Sensor 1 Distance: {distance1} cm")
+        print(f"[{timestamp}] Sensor 1 Distance: {distance1} cm")
 
         if distance1 < 6:
             current_time = time.time()
