@@ -55,20 +55,6 @@ app.post('/check-and-clear-expired-session', async (req, res) => {
   res.json({ message: 'No active session to clear.' });
 });
 
-// Call this before doing anything else
-fetch('http://192.168.50.252:80/check-and-clear-expired-session', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ mac })
-})
-.then(res => res.json())
-.then(data => {
-  console.log(data.message);
-})
-.catch(err => console.error("Error checking session:", err));
-
 
 app.post('/start-bottle-session', async (req, res) => {
   const { mac } = req.body;
