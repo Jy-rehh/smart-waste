@@ -330,7 +330,7 @@ def set_servo_position(pos):
 try:
     while True:
         dist = get_distance()
-        if dist and dist < 13:
+        if dist and dist < 12:
             print(f"✅ Object detected at {dist} cm...")
             break
         time.sleep(0.2)
@@ -361,7 +361,7 @@ try:
 
         # Check if the object is still there after waiting
         dist = get_distance()
-        if not dist or dist > 13:
+        if not dist or dist > 12:
             print("❌ Object disappeared during analysis window. Skipping credit.")
             display_message("\nPlease Don't Cheat")
             set_servo_position(0.5)  # Reject

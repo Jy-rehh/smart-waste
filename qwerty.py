@@ -294,7 +294,6 @@ def update_user_by_mac(mac_address, bottle_size):
 
 #bottle_model = YOLO('detect/train11/weights/best.pt')
 bottle_model = YOLO('detect/train12/weights/best.pt')
-
 esp32_cam_url = "http://192.168.8.100:81/stream"
 cap = cv2.VideoCapture(esp32_cam_url)
 
@@ -331,7 +330,7 @@ def set_servo_position(pos):
 try:
     while True:
         dist = get_distance()
-        if dist and dist < 14:
+        if dist and dist < 12:
             print(f"✅ Object detected at {dist} cm...")
             break
         time.sleep(0.2)
@@ -362,11 +361,11 @@ try:
 
         # Check if the object is still there after waiting
         dist = get_distance()
-        if not dist or dist > 13:
+        if not dist or dist > 12:
             print(f"✅ Object detected at {dist} cm...")
             print("❌ Object disappeared during analysis window. Skipping credit.")
-            display_message("Rejected Bottle")
-            set_servo_position(0)  # Reject
+            display_message("\nPlease Don't Cheat")
+            set_servo_position(0.5)  # Reject
             time.sleep(2)
             set_servo_position(0.5)
             continue  # Restart loop
@@ -397,9 +396,9 @@ try:
                         frame_area = frame_width * frame_height
                         percentage = (box_area / frame_area) * 100
 
-                        print(f"🧠 Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of frame")
                         print(f"✅ Object detected at {dist} cm...")
-                        
+                        print(f"🧠 Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of frame")
+
                         if class_name == "small_bottle":
                             bottle_detected = True
                             bottle_size = 'small'
@@ -411,7 +410,7 @@ try:
 
             if bottle_detected:
                 update_user_by_mac(TARGET_MAC, bottle_size)
-                display_message("Accepting Bottle")
+                display_message("\nAccepting Bottle")
 
                 if bottle_size == 'small':
                     WiFiTimeAvailable += 5 * 60
@@ -435,17 +434,12 @@ try:
 
             else:
                 print("❌ Object detected but not a valid bottle.")
-                display_message("Rejected Bottle")
+                display_message("\nRejected...")
                 set_servo_position(0)
                 time.sleep(2)
                 set_servo_position(0.5)
 
             last_detection_time = current_time
-
-
-except KeyboardInterrupt:
-    print("🛑 Exiting gracefully...")
-
 
 finally:
     cap.release()
