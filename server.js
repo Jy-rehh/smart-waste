@@ -22,6 +22,54 @@ const db = admin.firestore();
 app.use(express.json());
 app.use(cors());
 //===============================================================================
+
+app.post('/check-and-clear-expired-session', async (req, res) => {
+  const { mac } = req.body;
+  if (!mac) return res.status(400).json({ error: 'MAC address required' });
+
+  const usersRef = db.collection('Users Collection');
+  const userSnap = await usersRef.where('UserID', '==', mac).limit(1).get();
+
+  if (userSnap.empty) return res.status(404).json({ error: 'User not found' });
+
+  const doc = userSnap.docs[0];
+  const data = doc.data();
+
+  if (data.queuePosition === 1 && data.sessionStartedAt) {
+    const now = Date.now();
+    const sessionAge = now - data.sessionStartedAt;
+
+    if (sessionAge > 90 * 1000) { // 90 seconds
+      await usersRef.doc(doc.id).update({
+        queuePosition: admin.firestore.FieldValue.delete(),
+        sessionStartedAt: admin.firestore.FieldValue.delete(),
+      });
+
+      return res.json({ message: 'Session expired and cleared.' });
+    } else {
+      const secondsLeft = Math.ceil((90 * 1000 - sessionAge) / 1000);
+      return res.json({ message: 'Session still active.', secondsLeft });
+    }
+  }
+
+  res.json({ message: 'No active session to clear.' });
+});
+
+// Call this before doing anything else
+fetch('http://192.168.50.252:80/check-and-clear-expired-session', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ mac })
+})
+.then(res => res.json())
+.then(data => {
+  console.log(data.message);
+})
+.catch(err => console.error("Error checking session:", err));
+
+
 app.post('/start-bottle-session', async (req, res) => {
   const { mac } = req.body;
   if (!mac) return res.status(400).json({ error: 'MAC is required' });
