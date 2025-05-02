@@ -22,18 +22,14 @@ const db = admin.firestore();
 app.use(express.json());
 app.use(cors());
 //===============================================================================
-/**
- * Start bottle session — assign queue position to a user in Users collection
- */
 app.post('/start-bottle-session', async (req, res) => {
   const { mac } = req.body;
   if (!mac) return res.status(400).json({ error: 'MAC is required' });
 
   const usersRef = db.collection('Users Collection');
   const now = Date.now();
-  const expirationLimit = 90 * 1000; // 90 seconds in milliseconds
+  const expirationLimit = 90 * 1000; // 90 seconds
 
-  // Check if someone already has queuePosition 1
   const activeSessionSnap = await usersRef.where('queuePosition', '==', 1).limit(1).get();
 
   if (!activeSessionSnap.empty) {
@@ -63,13 +59,28 @@ app.post('/start-bottle-session', async (req, res) => {
   if (userDocSnap.empty) return res.status(404).json({ error: 'User not found' });
 
   const docId = userDocSnap.docs[0].id;
+
   await usersRef.doc(docId).update({
     queuePosition: 1,
     sessionStartedAt: now,
   });
 
+  // 🔥 Auto-remove after 90 seconds
+  setTimeout(async () => {
+    const doc = await usersRef.doc(docId).get();
+    const data = doc.data();
+    if (data.queuePosition === 1) {
+      await usersRef.doc(docId).update({
+        queuePosition: admin.firestore.FieldValue.delete(),
+        sessionStartedAt: admin.firestore.FieldValue.delete(),
+      });
+      console.log(`Session for ${mac} cleared after 90s`);
+    }
+  }, expirationLimit);
+
   res.json({ queuePosition: 1 });
 });
+
 
 /**
  * Finish session — remove the user from queue and shift others
