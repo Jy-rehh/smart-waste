@@ -22,7 +22,7 @@ const db = admin.firestore();
 app.use(express.json());
 app.use(cors());
 //===============================================================================
-/**
+ /**
  * Start bottle session — assign queue position to a user in Users collection
  */
 app.post('/start-bottle-session', async (req, res) => {
@@ -53,56 +53,23 @@ app.post('/start-bottle-session', async (req, res) => {
       // Expired — clear it
       await usersRef.doc(activeDoc.id).update({
         queuePosition: admin.firestore.FieldValue.delete(),
+        sessionStartedAt: admin.firestore.FieldValue.delete(),
       });
-      console.log(`Session expired and cleared for UserID: ${activeData.UserID}`);
     }
   }
 
-  // Set current user as queuePosition 1 (no sessionStartedAt field)
+  // Set current user as queuePosition 1 and save timestamp
   const userDocSnap = await usersRef.where('UserID', '==', mac).limit(1).get();
   if (userDocSnap.empty) return res.status(404).json({ error: 'User not found' });
 
   const docId = userDocSnap.docs[0].id;
   await usersRef.doc(docId).update({
     queuePosition: 1,
+    sessionStartedAt: now,
   });
 
   res.json({ queuePosition: 1 });
 });
-
-/**
- * Auto delete queuePosition after 90 seconds
- */
-exports.cleanupExpiredSessions = functions.pubsub
-  .schedule('every 1 minutes')
-  .onRun(async (context) => {
-    const now = Date.now();
-    const expirationLimit = 90 * 1000; // 90 seconds
-
-    const usersRef = db.collection('Users Collection');
-    const snapshot = await usersRef.where('queuePosition', '==', 1).get();
-
-    if (snapshot.empty) {
-      console.log('No active sessions to check.');
-      return null;
-    }
-
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      const startedAt = data.sessionStartedAt || 0;
-      const secondsElapsed = (now - startedAt);
-
-      if (secondsElapsed >= expirationLimit) {
-        await usersRef.doc(doc.id).update({
-          queuePosition: admin.firestore.FieldValue.delete(),
-        });
-        console.log(`Session expired and cleared for UserID: ${data.UserID}`);
-      }
-    }
-
-    return null;
-  });
-
 
 /**
  * Finish session — remove the user from queue and shift others
