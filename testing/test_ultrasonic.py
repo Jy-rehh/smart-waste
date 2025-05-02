@@ -80,7 +80,7 @@ try:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         #print(f"[{timestamp}] Sensor 1 Distance: {distance1} cm")
 
-        if distance1 < 5:
+        if distance1 < 6:
             current_time = time.time()
             if current_time - last_email_time >= EMAIL_COOLDOWN:
                 print(f"[{timestamp}] Container Full!")

@@ -363,6 +363,7 @@ try:
         # Check if the object is still there after waiting
         dist = get_distance()
         if not dist or dist > 13:
+            print(f"✅ Object detected at {dist} cm...")
             print("❌ Object disappeared during analysis window. Skipping credit.")
             display_message("Rejected Bottle")
             set_servo_position(0)  # Reject
@@ -397,7 +398,8 @@ try:
                         percentage = (box_area / frame_area) * 100
 
                         print(f"🧠 Detected object: {class_name} | Confidence: {confidence*100:.2f}% | Area: {percentage:.2f}% of frame")
-
+                        print(f"✅ Object detected at {dist} cm...")
+                        
                         if class_name == "small_bottle":
                             bottle_detected = True
                             bottle_size = 'small'
