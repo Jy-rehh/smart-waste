@@ -218,8 +218,9 @@
                         display.textContent = "WiFi time not available";
                     }
     
-                    if (typeof totalBottles === "number") {
+                    if (typeof totalBottles === "number" && typeof wifiTime === "number") {
                         bottleDisplay.textContent = `${totalBottles}`;
+                        display.textContent = `${wifiTime}`;
                     }
                 } else {
                     display.textContent = "User not found in database";
