@@ -2,7 +2,7 @@ import time
 from librouteros import connect
 import firebase_admin
 from firebase_admin import credentials, db as realtime_db
-
+import datetime
 # ---------------- Firebase Realtime DB ----------------
 cred = credentials.Certificate('firebase-key.json')
 firebase_admin.initialize_app(cred, {
@@ -49,6 +49,29 @@ def add_or_update_binding(mac_address, binding_type):
     except Exception as e:
         pass  # Optional: log to file if needed
 
+def add_wifi_time(mac_sanitized, added_seconds):
+    user_ref = realtime_db.reference(f'users/{mac_sanitized}')
+    user_data = user_ref.get()
+
+    now = datetime.datetime.utcnow()
+    current_end_time = now
+
+    if user_data and 'WiFiEndTime' in user_data:
+        try:
+            current_end_time = datetime.datetime.fromisoformat(user_data['WiFiEndTime'])
+            if current_end_time < now:
+                current_end_time = now
+        except ValueError:
+            current_end_time = now
+
+    new_end_time = current_end_time + datetime.timedelta(seconds=added_seconds)
+    remaining = int((new_end_time - now).total_seconds())
+
+    user_ref.update({
+        'WiFiEndTime': new_end_time.isoformat(),
+        'WiFiTimeAvailable': remaining
+    })
+
 # ---------------- Countdown Loop ----------------
 def manage_wifi_time():
     while True:
@@ -60,34 +83,37 @@ def manage_wifi_time():
                 time.sleep(1)
                 continue
 
+            now = datetime.datetime.utcnow()
+
             for mac_sanitized, user_data in all_users.items():
                 mac = user_data.get('UserID', '').upper()
-                time_left = user_data.get('WiFiTimeAvailable', 0)
-                end_time_str = user_data.get('EndTime')  # ISO format expected
-                counting = user_data.get('Counting', False)
+                end_time_str = user_data.get('WiFiEndTime', '')
+                done_clicked = user_data.get('DoneClicked', False)
 
-                if not mac or not counting:
+                if not mac or not end_time_str:
                     continue
 
-                if time_left > 0 and not end_time_str:
-                    # If no end time yet, calculate and store it
-                    end_time = datetime.utcnow() + timedelta(seconds=time_left)
+                try:
+                    end_time = datetime.datetime.fromisoformat(end_time_str)
+                except ValueError:
+                    continue  # Skip users with invalid time format
+
+                # Compare current time to end time
+                if now < end_time:
+                    remaining_seconds = int((end_time - now).total_seconds())
                     users_ref.child(mac_sanitized).update({
-                        'EndTime': end_time.isoformat()
+                        'WiFiTimeAvailable': remaining_seconds
                     })
                     add_or_update_binding(mac, 'bypassed')
+                else:
+                    users_ref.child(mac_sanitized).update({
+                        'WiFiTimeAvailable': 0
+                    })
+                    add_or_update_binding(mac, 'regular')
 
-                elif end_time_str:
-                    end_time = datetime.fromisoformat(end_time_str)
-                    now = datetime.utcnow()
+            time.sleep(1)
 
-                    if now >= end_time:
-                        users_ref.child(mac_sanitized).update({
-                            'WiFiTimeAvailable': 0,
-                            'EndTime': None
-                        })
-                        add_or_update_binding(mac, 'regular')
-
+        except Exception as e:
             time.sleep(1)
 
         except Exception as e:
