@@ -177,57 +177,54 @@
     
         // Countdown timer function
         function startCountdownLive(mac) {
-    const display = document.getElementById("wifi-time");
-    const bottleDisplay = document.getElementById("total-bottles");
-    const userRef = ref(db, `users/${mac}`);
+            const display = document.getElementById("wifi-time");
+            const bottleDisplay = document.getElementById("total-bottles");
+            const userRef = ref(db, `users/${mac}`);
 
-    let countdownInterval;
+            let countdownInterval;
 
-    // Listen for real-time data changes from Firebase
-    onValue(userRef, (snapshot) => {
-        const data = snapshot.val();
+            // Listen for real-time data changes from Firebase
+            onValue(userRef, (snapshot) => {
+                const data = snapshot.val();
 
-        if (data) {
-            const endTimeStr = data.EndTime;
-            const totalBottles = data.TotalBottlesDeposited;
+                if (data) {
+                    const wifiEndTime = data.WiFiEndTime; // Unix timestamp in seconds
+                    const totalBottles = data.TotalBottlesDeposited;
 
-            // Clear any existing countdown
-            if (countdownInterval) {
-                clearInterval(countdownInterval);
-            }
-
-            if (endTimeStr) {
-                const endTime = new Date(endTimeStr);
-
-                countdownInterval = setInterval(() => {
-                    const now = new Date();
-                    const diff = endTime - now;
-
-                    if (diff <= 0) {
+                    // Clear any existing countdown
+                    if (countdownInterval) {
                         clearInterval(countdownInterval);
-                        display.textContent = "Wi-Fi time expired!";
-                        return;
                     }
 
-                    const totalSeconds = Math.floor(diff / 1000);
-                    const hours = Math.floor(totalSeconds / 3600);
-                    const mins = Math.floor((totalSeconds % 3600) / 60);
-                    const secs = totalSeconds % 60;
+                    if (wifiEndTime) {
+                        countdownInterval = setInterval(() => {
+                            const now = Math.floor(Date.now() / 1000); // Current Unix timestamp in seconds
+                            const diff = wifiEndTime - now;
 
-                    display.textContent = `${hours} hr. ${mins} min. ${secs} sec`;
-                }, 1000);
-            } else {
-                display.textContent = "Wi-Fi time not available";
-            }
+                            if (diff <= 0) {
+                                clearInterval(countdownInterval);
+                                display.textContent = "Wi-Fi time expired!";
+                                return;
+                            }
 
-            if (typeof totalBottles === "number") {
-                bottleDisplay.textContent = `${totalBottles}`;
-            }
-        } else {
-            display.textContent = "User not found in database";
+                            const hours = Math.floor(diff / 3600);
+                            const mins = Math.floor((diff % 3600) / 60);
+                            const secs = diff % 60;
+
+                            display.textContent = `${hours} hr. ${mins} min. ${secs} sec`;
+                        }, 1000);
+                    } else {
+                        display.textContent = "Wi-Fi time not available";
+                    }
+
+                    if (typeof totalBottles === "number") {
+                        bottleDisplay.textContent = `${totalBottles}`;
+                    }
+                } else {
+                    display.textContent = "User not found in database";
+                }
+            });
         }
-    });
-}
     
         // Start countdown on page load
         if (mac) {
