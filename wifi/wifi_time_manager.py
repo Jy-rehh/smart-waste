@@ -76,20 +76,15 @@ def manage_wifi_time():
                     new_end_time = current_time + time_left
                     users_ref.child(mac_sanitized).update({
                         'WiFiEndTime': new_end_time,
-                        'WiFiTimeAvailable': None  # Delete old field
+                        'WiFiTimeAvailable': None  # Optional: Delete old field
                     })
                     end_time = new_end_time  # Use the new value
 
-                # Check if WiFi time has expired
-                if end_time > 0:
-                    if current_time >= end_time:
-                        # Delete WiFiEndTime and set to regular access
-                        users_ref.child(mac_sanitized).update({
-                            'WiFiEndTime': None  # Deletes the field
-                        })
-                        add_or_update_binding(mac, 'regular')
-                    else:
-                        add_or_update_binding(mac, 'bypassed')
+                # Apply bypass/regular logic
+                if current_time < end_time:
+                    add_or_update_binding(mac, 'bypassed')
+                else:
+                    add_or_update_binding(mac, 'regular')
 
             time.sleep(1)
         except Exception as e:
