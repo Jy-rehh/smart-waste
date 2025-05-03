@@ -58,21 +58,29 @@ def manage_wifi_time():
             all_users = users_ref.get()
 
             if not all_users:
-                # No users to process
                 time.sleep(1)
                 continue
 
-            current_time = int(time.time())  # Get current Unix timestamp
+            current_time = int(time.time())
 
             for mac_sanitized, user_data in all_users.items():
                 mac = user_data.get('UserID', '').upper()
-                end_time = user_data.get('WiFiEndTime', 0)  # Now storing end timestamp instead of seconds left
-                done_clicked = user_data.get('DoneClicked', False)
-                counting = user_data.get('Counting', False)
-
+                time_left = user_data.get('WiFiTimeAvailable', 0)
+                end_time = user_data.get('WiFiEndTime', 0)
+                
                 if not mac:
                     continue
 
+                # Migrate old WiFiTimeAvailable to WiFiEndTime (if needed)
+                if time_left > 0 and end_time == 0:
+                    new_end_time = current_time + time_left
+                    users_ref.child(mac_sanitized).update({
+                        'WiFiEndTime': new_end_time,
+                        'WiFiTimeAvailable': None  # Optional: Delete old field
+                    })
+                    end_time = new_end_time  # Use the new value
+
+                # Apply bypass/regular logic
                 if current_time < end_time:
                     add_or_update_binding(mac, 'bypassed')
                 else:
@@ -80,8 +88,8 @@ def manage_wifi_time():
 
             time.sleep(1)
         except Exception as e:
-            
-            time.sleep(1)
+            print(f"Error: {e}")
+            time.sleep(5)
 
 if __name__ == "__main__":
     manage_wifi_time()
