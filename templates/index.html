@@ -183,45 +183,50 @@
 
             let countdownInterval;
 
-            // Listen for real-time data changes from Firebase
             onValue(userRef, (snapshot) => {
                 const data = snapshot.val();
+                if (!data) {
+                    display.textContent = "User not found";
+                    return;
+                }
 
-                if (data) {
-                    const wifiEndTime = data.WiFiEndTime; // Unix timestamp in seconds
-                    const totalBottles = data.TotalBottlesDeposited;
+                const wifiEndTime = data.WiFiEndTime; // Unix timestamp (seconds)
+                const totalBottles = data.TotalBottlesDeposited;
 
-                    // Clear any existing countdown
-                    if (countdownInterval) {
-                        clearInterval(countdownInterval);
-                    }
+                // Clear previous interval
+                if (countdownInterval) clearInterval(countdownInterval);
 
-                    if (wifiEndTime) {
-                        countdownInterval = setInterval(() => {
-                            const now = Math.floor(Date.now() / 1000); // Current Unix timestamp in seconds
-                            const diff = wifiEndTime - now;
+                // Handle countdown
+                if (wifiEndTime) {
+                    countdownInterval = setInterval(() => {
+                        const now = Math.floor(Date.now() / 1000);
+                        const diff = wifiEndTime - now;
 
-                            if (diff <= 0) {
-                                clearInterval(countdownInterval);
-                                display.textContent = "Wi-Fi time expired!";
-                                return;
-                            }
+                        if (diff <= 0) {
+                            clearInterval(countdownInterval);
+                            display.textContent = "Wi-Fi expired";
+                            return;
+                        }
 
+                        // Format: "X min Y sec" or "X hr Y min" if >1 hour
+                        const mins = Math.floor(diff / 60);
+                        const secs = diff % 60;
+
+                        if (diff >= 3600) {
                             const hours = Math.floor(diff / 3600);
-                            const mins = Math.floor((diff % 3600) / 60);
-                            const secs = diff % 60;
-
-                            display.textContent = `${hours} hr. ${mins} min. ${secs} sec`;
-                        }, 1000);
-                    } else {
-                        display.textContent = "Wi-Fi time not available";
-                    }
-
-                    if (typeof totalBottles === "number") {
-                        bottleDisplay.textContent = `${totalBottles}`;
-                    }
+                            const remainingMins = Math.floor((diff % 3600) / 60);
+                            display.textContent = `${hours} hr ${remainingMins} min`;
+                        } else {
+                            display.textContent = `${mins} min ${secs} sec`;
+                        }
+                    }, 1000);
                 } else {
-                    display.textContent = "User not found in database";
+                    display.textContent = "No Wi-Fi time";
+                }
+
+                // Update bottle count
+                if (typeof totalBottles === "number") {
+                    bottleDisplay.textContent = totalBottles;
                 }
             });
         }
