@@ -57,27 +57,36 @@ def manage_wifi_time():
             all_users = users_ref.get()
 
             if not all_users:
-                # No users to process
-                return
+                time.sleep(1)
+                continue
 
             for mac_sanitized, user_data in all_users.items():
                 mac = user_data.get('UserID', '').upper()
                 time_left = user_data.get('WiFiTimeAvailable', 0)
-                done_clicked = user_data.get('DoneClicked', False)
+                end_time_str = user_data.get('EndTime')  # ISO format expected
                 counting = user_data.get('Counting', False)
 
-                if not mac:
+                if not mac or not counting:
                     continue
 
-                if time_left > 0:
-                    new_time = time_left - 1
+                if time_left > 0 and not end_time_str:
+                    # If no end time yet, calculate and store it
+                    end_time = datetime.utcnow() + timedelta(seconds=time_left)
                     users_ref.child(mac_sanitized).update({
-                        'WiFiTimeAvailable': new_time
+                        'EndTime': end_time.isoformat()
                     })
                     add_or_update_binding(mac, 'bypassed')
-                else:
-                    add_or_update_binding(mac, 'regular')
 
+                elif end_time_str:
+                    end_time = datetime.fromisoformat(end_time_str)
+                    now = datetime.utcnow()
+
+                    if now >= end_time:
+                        users_ref.child(mac_sanitized).update({
+                            'WiFiTimeAvailable': 0,
+                            'EndTime': None
+                        })
+                        add_or_update_binding(mac, 'regular')
 
             time.sleep(1)
 
