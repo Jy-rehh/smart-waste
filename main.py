@@ -58,10 +58,6 @@ from librouteros import connect
 ROUTER_HOST = '192.168.50.1'
 ROUTER_USERNAME = 'admin'
 ROUTER_PASSWORD = ''
-#TARGET_MAC = 'A2:DE:BF:8C:50:87'  # <<< Target device MAC address
-#TARGET_MAC = None
-
-# kung ang iyang queuePosition gikab sa db kay 1, ibutang ari ang TARGET_MAC
 
 # Connect to MikroTik
 try:

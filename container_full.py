@@ -1,51 +1,106 @@
-import RPi.GPIO as GPIO
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import time
+import datetime
+import RPi.GPIO as GPIO
 
-TRIG_PIN = 11
-ECHO_PIN = 8
+# Set up GPIO for the first ultrasonic sensor
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(TRIG_PIN, GPIO.OUT)
-GPIO.setup(ECHO_PIN, GPIO.IN)
+TRIG1 = 11  # GPIO Pin 11 (changed)
+ECHO1 = 8   # GPIO Pin 8 (changed)
 
-container_full = False  # Shared flag
+GPIO.setup(TRIG1, GPIO.OUT)
+GPIO.setup(ECHO1, GPIO.IN)
 
-def get_distance():
-    GPIO.output(TRIG_PIN, False)
-    time.sleep(0.05)
-
-    GPIO.output(TRIG_PIN, True)
+def get_distance(TRIG, ECHO):
+    GPIO.output(TRIG, GPIO.LOW)
+    time.sleep(0.5)
+    GPIO.output(TRIG, GPIO.HIGH)
     time.sleep(0.00001)
-    GPIO.output(TRIG_PIN, False)
+    GPIO.output(TRIG, GPIO.LOW)
 
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 0:
+    while GPIO.input(ECHO) == GPIO.LOW:
         pulse_start = time.time()
-        if time.time() > timeout:
-            return None
 
-    timeout = time.time() + 0.04
-    while GPIO.input(ECHO_PIN) == 1:
+    while GPIO.input(ECHO) == GPIO.HIGH:
         pulse_end = time.time()
-        if time.time() > timeout:
-            return None
 
     pulse_duration = pulse_end - pulse_start
     distance = pulse_duration * 17150
     return round(distance, 2)
 
-def monitor_container():
-    global container_full
+def send_email(timestamp):
+    sender_email = "smartaccesssmartwaste@gmail.com"
+    receiver_email = "smartaccesssmartwaste@gmail.com"
+    password = "ospk xejd cpxz djbh"
+
+    subject = "📦 RVM Notification: Bottle Bin Full – Collection Required"
+    body = f"""
+    Hello,
+
+    This is an automated notification from the RVM Smart Waste Smart Access System.
+
+    The bottle bin has reached full capacity as of {timestamp}. Bottles are now ready for collection.
+
+    Timestamp: {timestamp}
+
+    To ensure continued service and prevent overflow, please schedule a pickup at your earliest convenience.
+
+    Thank you for your attention.
+
+    —
+    RVM System Notification
+    This is a system-generated email. Please do not reply.
+    """
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
     try:
-        while True:
-            distance = get_distance()
-            if distance is not None:
-                print(f"[Ultrasonic] Distance: {distance} cm")
-                container_full = distance <= 4
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, msg.as_string())
+        print(f"[{timestamp}] Email sent successfully!")
+    except Exception as e:
+        print(f"[{timestamp}] Failed to send email: {e}")
+
+last_email_time = 0  # move this outside the loop
+EMAIL_COOLDOWN = 43200  # 1 hour
+
+try:
+    while True:
+        distance1 = get_distance(TRIG1, ECHO1)
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        #print(f"[{timestamp}] Sensor 1 Distance: {distance1} cm")
+
+        # if distance1 < 6:
+        #     current_time = time.time()
+        #     if current_time - last_email_time >= EMAIL_COOLDOWN:
+        #         print(f"[{timestamp}] Container Full!")
+        #         send_email(timestamp)
+        #         last_email_time = current_time
+        #     else:
+        #         print(f"[{timestamp}] Bin full, email already sent.")
+        # else:
+        #     print(f"[{timestamp}] Bin not full.")
+        
+        if distance1 < 6:
+            current_time = time.time()
+            if current_time - last_email_time >= EMAIL_COOLDOWN:
+                send_email(timestamp)
+                last_email_time = current_time
+                #"Bin full, email already sent."
             else:
-                print("[Ultrasonic] Sensor error.")
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n[Ultrasonic] Monitoring stopped.")
-    finally:
-        GPIO.cleanup()
+                #"Bin not full."
+                time.sleep(1)
+
+except KeyboardInterrupt:
+    print("Program stopped.")
+    GPIO.cleanup()

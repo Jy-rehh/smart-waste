@@ -284,9 +284,9 @@ function startsWifiManager() {
     });
   }
 }
-function startTestUltrasonic() {
+function startBin_Capacity() {
   const pythonExecutable = '/home/pi/smart-waste/venv/bin/python3';  // Adjust if needed
-  const pythonScript = '/home/pi/smart-waste/testing/test_ultrasonic.py';
+  const pythonScript = '/home/pi/smart-waste/container_full.py.py';
 
   const testUltrasonicProcess = spawn(pythonExecutable, [pythonScript]);
 
@@ -310,7 +310,7 @@ function startAllScripts() {
   startMacIpLogger();
   startStoreMacIp();
   startsWifiManager();
-  startTestUltrasonic();
+  startBin_Capacity();
 }
 
 // Start the server and run all scripts
