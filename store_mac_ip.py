@@ -57,8 +57,6 @@ while True:
                         'UserID': mac,
                         'macAddress': mac,
                         'ipAddress': ip,
-                        'WiFiTimeAvailable': 0,
-                        'TotalBottlesDeposited': 0,
                         'status': "active",
                     })
                     known_macs.add(mac)
