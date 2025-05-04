@@ -71,14 +71,15 @@ def manage_wifi_time():
                 if not mac:
                     continue
 
-                # Migrate old WiFiTimeAvailable to WiFiEndTime (if needed)
-                if time_left > 0 and end_time == 0:
-                    new_end_time = current_time + time_left
+                # If new time is added, extend WiFiEndTime (instead of resetting)
+                if time_left > 0:
+                    # If WiFiEndTime is in the future, add to it. Otherwise, start from now.
+                    new_end_time = max(current_time, end_time) + time_left
                     users_ref.child(mac_sanitized).update({
                         'WiFiEndTime': new_end_time,
-                        'WiFiTimeAvailable': None  # Optional: Delete old field
+                        'WiFiTimeAvailable': None  # Clear to prevent reprocessing
                     })
-                    end_time = new_end_time  # Use the new value
+                    end_time = new_end_time  # Update for bypass check
 
                 # Apply bypass/regular logic
                 if current_time < end_time:
